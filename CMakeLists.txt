@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.9.2)
+
+project(Guider VERSION 0.0.1 DESCRIPTION "Easy gui library.")
+
+add_subdirectory(guider)
+add_subdirectory(examples)
