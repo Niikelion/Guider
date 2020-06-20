@@ -91,9 +91,15 @@ namespace Guider
 		if (clean)
 		{
 			clean = false;
-			if (parent != nullptr)
+
+			Component* p = getParent();
+			Component* c = this;
+
+			while (p != nullptr)
 			{
-				parent->onChildStain(*this);
+				p->onChildStain(*c);
+				c = p;
+				p = p->getParent();
 			}
 			invalidateVisuals();
 		}
@@ -104,9 +110,15 @@ namespace Guider
 		if (!redraw)
 		{
 			redraw = true;
-			if (parent != nullptr)
+
+			Component* p = getParent();
+			Component* c = this;
+
+			if (p != nullptr)
 			{
-				parent->onChildNeedsRedraw(*this);
+				p->onChildNeedsRedraw(*c);
+				c = p;
+				p = p->getParent();
 			}
 		}
 	}

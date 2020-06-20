@@ -688,9 +688,14 @@ namespace Guider
 	}
 	void ConstraintsContainer::removeChild(const Component::Type& child)
 	{
+		//todo
+	}
+	void ConstraintsContainer::clearChildren()
+	{
 		Rect bounds = boundaries[this];
 		children.clear();
 		boundaries.clear();
+		boundaries[this] = bounds;
 		constraints.clear();
 		clusters.clear();
 		clusterDependencies.clear();
@@ -700,10 +705,6 @@ namespace Guider
 		invalidLayout = true;
 		canWrapH = false;
 		canWrapW = false;
-	}
-	void ConstraintsContainer::clearChildren()
-	{
-		//TODO
 	}
 	void ConstraintsContainer::addChild(const Component::Type& child)
 	{
@@ -773,7 +774,7 @@ namespace Guider
 		return std::unique_ptr<ChainConstraintBuilder>();
 	}
 	void ConstraintsContainer::onDraw(RenderBackend& renderer) const
-	{
+	{//todo mask redo
 		if (needsRedraw.size() > 0)
 		{
 			Rect bounds = getGlobalBounds();
@@ -803,7 +804,7 @@ namespace Guider
 				}
 			}
 			renderer.popMaskLayer();
-			//needsRedraw.clear();
+			needsRedraw.clear();
 		}
 	}
 }
