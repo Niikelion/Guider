@@ -44,7 +44,7 @@ namespace Guider
 			lb = Rect((bounds.width - width) / 2,size, width, off);
 		}
 
-		children.emplace_back(child,size);
+		children.emplace_back(child,off,size);
 		toUpdate.insert(child.get());
 		toRedraw.insert(child.get());
 
@@ -62,7 +62,6 @@ namespace Guider
 				while (cp != children.end())
 				{
 					toRedraw.insert(cp->component.get());
-					//todo: adjust offset or move offsetting to onDraw
 					++cp;
 				}
 				children.erase(it);
@@ -95,6 +94,124 @@ namespace Guider
 			if (toRedraw.count(i.component.get()))
 			{
 				i.component->draw(backend);
+			}
+		}
+	}
+
+	void ListContainer::poke()
+	{
+		float off;
+		bool offsetting = false;
+
+		Rect bounds = getBounds();
+		DimensionDesc w(bounds.width, DimensionDesc::Max);
+		DimensionDesc h(bounds.height, DimensionDesc::Max);
+
+		if (horizontal)
+		{
+			w.value = 0;
+			w.mode = DimensionDesc::Exact;
+		}
+		else
+		{
+			h.value = 0;
+			h.mode = DimensionDesc::Exact;
+		}
+
+		for (auto& i : children)
+		{
+			if (offsetting)
+			{
+				Rect lb = i.component->getBounds();
+				if (toUpdate.count(i.component.get()))
+				{
+					//measure and stuff, why do i need to write the same part of code third time?
+					std::pair<DimensionDesc, DimensionDesc> measurements = i.component->measure(w, h);
+
+					float width = measurements.first.value;
+					float height = measurements.second.value;
+
+					if (horizontal)
+					{
+						if (height > bounds.height)
+							height = bounds.height;
+					}
+					else
+					{
+						if (width > bounds.width)
+							width = bounds.width;
+					}
+					lb.width = width;
+					lb.height = height;
+					if (horizontal)
+					{
+						lb.top = (bounds.height-height)/2;
+						lb.left = i.offset;
+						i.size = lb.width;
+					}
+					else
+					{
+						lb.left = (bounds.width-width)/2;
+						lb.top = i.offset;
+						i.size = lb.height;
+					}
+				}
+				else
+				{
+					i.offset = off;
+					if (horizontal)
+					{
+						lb.left = off;
+					}
+					else
+					{
+						lb.top = off;
+					}
+				}
+				setBounds(*i.component, lb);
+				i.offset = off;
+				off += i.size;
+			}
+			else if (toUpdate.count(i.component.get()))
+			{
+				std::pair<DimensionDesc, DimensionDesc> measurements = i.component->measure(w, h);
+				
+				float width = measurements.first.value;
+				float height = measurements.second.value;
+				
+				if (horizontal)
+				{
+					if (height > bounds.height)
+						height = bounds.height;
+				}
+				else
+				{
+					if (width > bounds.width)
+						width = bounds.width;
+				}
+
+				Rect lb = i.component->getBounds();
+
+				if (width != lb.width || height != lb.height)
+				{
+					lb.width = width;
+					lb.height = height;
+					if (horizontal)
+					{
+						lb.top = (bounds.height-height)/2;
+						lb.left = i.offset;
+						i.size = lb.width;
+					}
+					else
+					{
+						lb.left = (bounds.width-width)/2;
+						lb.top = i.offset;
+						i.size = lb.height;
+					}
+					offsetting = true;
+					setBounds(*i.component, lb);
+					off = i.offset+i.size;
+				}
 			}
 		}
 	}

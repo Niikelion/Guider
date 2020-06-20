@@ -10,14 +10,14 @@ namespace Guider
 	{
 	private:
 		bool horizontal;
-		float size;
+		float size,offset;
 		class Element
 		{
 		public:
 			std::shared_ptr<Component> component;
-			float size;
+			float size,offset;
 
-			Element(const std::shared_ptr<Component>& c, float s): component(c), size(s) {}
+			Element(const std::shared_ptr<Component>& c, float s,float o): component(c), size(s), offset(o) {}
 			Element(Element&&) noexcept = default;
 		};
 		std::list<Element> children;
