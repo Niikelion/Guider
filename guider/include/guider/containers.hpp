@@ -2,15 +2,39 @@
 
 #include <guider/base.hpp>
 #include <stdexcept>
+#include <list>
 
 namespace Guider
 {
 	class ListContainer : public Container
 	{
 	private:
-		std::vector<std::shared_ptr<Component>> children;
+		bool horizontal;
+		float size;
+		class Element
+		{
+		public:
+			std::shared_ptr<Component> component;
+			float size;
+
+			Element(const std::shared_ptr<Component>& c, float s): component(c), size(s) {}
+			Element(Element&&) noexcept = default;
+		};
+		std::list<Element> children;
+		std::unordered_set<Component*> toUpdate,toRedraw;
 	public:
-		//
+		virtual void addChild(const Component::Type& child) override;
+		virtual void removeChild(const Component::Type& child) override;
+		virtual void clearChildren() override;
+
+		virtual void drawMask(RenderBackend& backend) const override;
+		virtual void onDraw(RenderBackend& backend) const override;
+
+		virtual void poke() override;
+		virtual void onResize(const Rect& bounds) override;
+		virtual void onChildStain(Component& c) override;
+		virtual void onChildNeedsRedraw(Component& c) override;
+		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
 	};
 
 	class ConstraintsContainer : public Container
@@ -242,6 +266,8 @@ namespace Guider
 		void applyConstraints();
 
 	public:
+
+		virtual void drawMask(RenderBackend& renderer) const override;
 
 		virtual void poke() override;
 		virtual void onResize(const Rect& bounds) override;

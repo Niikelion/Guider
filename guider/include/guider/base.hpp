@@ -74,6 +74,12 @@ namespace Guider
 		Vec2& operator = (const Vec2&) = default;
 		Vec2& operator = (Vec2&&) noexcept = default;
 
+		Vec2& operator += (const Vec2& t) noexcept;
+		Vec2 operator + (const Vec2& t) const noexcept;
+
+		Vec2& operator -= (const Vec2& t) noexcept;
+		Vec2 operator - (const Vec2& t) const noexcept;
+
 		Vec2();
 		Vec2(float w, float h);
 		Vec2(const Vec2&) = default;
@@ -85,13 +91,16 @@ namespace Guider
 	{
 	private:
 		Rect bounds;
+		std::vector<Vec2> offsets;
 	protected:
 		virtual void setViewport(const Rect& rect) = 0;
 	public:
-		virtual void drawRectangle(Rect rect) = 0;
+		virtual void drawRectangle(const Rect& rect) = 0;
 		virtual void drawText(float x, float y, const String& text) = 0;
 
+		void pushDrawOffset(const Vec2& offset);
 		virtual void setDrawOrigin(float x, float y) = 0;
+		void popDrawOffset();
 
 		virtual void clearMask() = 0;
 		virtual void setupMask() = 0;
@@ -197,6 +206,8 @@ namespace Guider
 			return height;
 		}
 
+		virtual void drawMask(RenderBackend& renderer) const;
+
 		virtual void poke();
 		virtual void onResize(const Rect& bounds);
 
@@ -239,6 +250,7 @@ namespace Guider
 	class Container : public Component
 	{
 	public:
+		virtual void addChild(const Component::Type& child) = 0;
 		virtual void removeChild(const Component::Type& child) = 0;
 		virtual void clearChildren() = 0;
 	};
@@ -258,7 +270,9 @@ namespace Guider
 
 		mutable std::unordered_set<Component*> toUpdate;
 	public:
+		virtual void drawMask(RenderBackend& renderer) const override;
 
+		virtual void addChild(const Component::Type& child) override;
 		void addChild(const Component::Type& child, float x, float y);
 		virtual void removeChild(const Component::Type& child) override;
 		virtual void clearChildren() override;

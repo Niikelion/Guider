@@ -3,6 +3,102 @@
 
 namespace Guider
 {
+	void ListContainer::addChild(const Component::Type& child)
+	{
+		child->setParent(*this);
+		float off;
+		Rect bounds = getBounds();
+
+		DimensionDesc w(bounds.width, DimensionDesc::Max);
+		DimensionDesc h(bounds.height, DimensionDesc::Max);
+
+		if (horizontal)
+		{
+			w.value = 0;
+			w.mode = DimensionDesc::Exact;
+		}
+		else
+		{
+			h.value = 0;
+			h.mode = DimensionDesc::Exact;
+		}
+
+		std::pair<DimensionDesc, DimensionDesc> measurements = child->measure(w, h);
+
+		Rect lb;
+
+		if (horizontal)
+		{
+			off = measurements.first.value;
+			float height = measurements.second.value;
+			if (height > bounds.height)
+				height = bounds.height;
+			lb = Rect(size,(bounds.height-height)/2,off,height);
+		}
+		else
+		{
+			off = measurements.second.value;
+			float width = measurements.first.value;
+			if (width > bounds.width)
+				width = bounds.width;
+			lb = Rect((bounds.width - width) / 2,size, width, off);
+		}
+
+		children.emplace_back(child,size);
+		toUpdate.insert(child.get());
+		toRedraw.insert(child.get());
+
+		size += off;
+	}
+	void ListContainer::removeChild(const Component::Type& child)
+	{
+		auto it = children.begin();
+		while (it != children.end())
+		{
+			if (it->component.get() == child.get())
+			{
+				auto cp = it;
+				cp++;
+				while (cp != children.end())
+				{
+					toRedraw.insert(cp->component.get());
+					//todo: adjust offset or move offsetting to onDraw
+					++cp;
+				}
+				children.erase(it);
+				break;
+			}
+			++it;
+		}
+	}
+	void ListContainer::clearChildren()
+	{
+		children.clear();
+		toUpdate.clear();
+		toRedraw.clear();
+	}
+	void ListContainer::drawMask(RenderBackend& backend) const
+	{
+		for (const auto& i : children)
+		{
+			if (toRedraw.count(i.component.get()))
+			{
+				i.component->drawMask(backend);
+			}
+		}
+	}
+
+	void ListContainer::onDraw(RenderBackend& backend) const
+	{
+		for (const auto& i : children)
+		{
+			if (toRedraw.count(i.component.get()))
+			{
+				i.component->draw(backend);
+			}
+		}
+	}
+
 	std::vector<Component*> ConstraintsContainer::Constraint::getDeps() const
 	{
 		std::vector<Component*> ret;
@@ -590,6 +686,13 @@ namespace Guider
 		}
 		invalidLayout = false;
 	}
+	void ConstraintsContainer::drawMask(RenderBackend& renderer) const
+	{
+		for (auto element : needsRedraw)
+		{
+			element->drawMask(renderer);
+		}
+	}
 	void ConstraintsContainer::poke()
 	{
 		for (auto& i : children)
@@ -774,21 +877,17 @@ namespace Guider
 		return std::unique_ptr<ChainConstraintBuilder>();
 	}
 	void ConstraintsContainer::onDraw(RenderBackend& renderer) const
-	{//todo mask redo
+	{
 		if (needsRedraw.size() > 0)
 		{
 			Rect bounds = getGlobalBounds();
 			std::vector<Rect> base;
 			base.reserve(needsRedraw.size());
-			renderer.pushMaskLayer();
-			renderer.setupMask();
 			for (auto i : needsRedraw)
 			{
 				Rect globalBounds = i->getGlobalBounds();
-				renderer.addToMask(globalBounds);
 				base.emplace_back(globalBounds);
 			}
-			renderer.useMask();
 			for (const auto& i : children)
 			{
 				Rect localBounds = i->getBounds();
@@ -796,14 +895,12 @@ namespace Guider
 				{
 					if (localBounds.intersects(rect))
 					{
-						Rect global = i->getGlobalBounds();
-						renderer.setDrawOrigin(global.left, global.top);
+						Rect local = i->getBounds();
 						i->draw(renderer);
 						break;
 					}
 				}
 			}
-			renderer.popMaskLayer();
 			needsRedraw.clear();
 		}
 	}

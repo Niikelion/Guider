@@ -31,6 +31,30 @@ namespace Guider
 		height = h;
 	}
 
+	Vec2& Vec2::operator+=(const Vec2& t) noexcept
+	{
+		x += t.x;
+		y += t.y;
+		return *this;
+	}
+
+	Vec2 Vec2::operator+(const Vec2& t) const noexcept
+	{
+		return Vec2(*this) += t;
+	}
+
+	Vec2& Vec2::operator-=(const Vec2& t) noexcept
+	{
+		x -= t.x;
+		y -= t.y;
+		return *this;
+	}
+
+	Vec2 Vec2::operator-(const Vec2& t) const noexcept
+	{
+		return Vec2(*this) -= t;
+	}
+
 	Vec2::Vec2()
 	{
 		x = 0;
@@ -63,11 +87,28 @@ namespace Guider
 		setViewport(bounds);
 	}
 
+	void RenderBackend::pushDrawOffset(const Vec2& offset)
+	{
+		Vec2 pos = offset;
+		if (!offsets.empty())
+			pos += offsets.back();
+		offsets.emplace_back(pos);
+		setDrawOrigin(pos.x, pos.y);
+	}
+	void RenderBackend::popDrawOffset()
+	{
+		offsets.pop_back();
+	}
 
 	Component::DimensionDesc::DimensionDesc(float value, Mode mode)
 	{
 		this->value = value;
 		this->mode = mode;
+	}
+
+	void Component::drawMask(RenderBackend& renderer) const
+	{
+		renderer.addToMask(getGlobalBounds());
 	}
 
 	void Component::poke()
@@ -195,7 +236,22 @@ namespace Guider
 	void Component::draw(RenderBackend& renderer) const
 	{
 		redraw = false;
+		renderer.pushDrawOffset(Vec2(bounds.left,bounds.top));
 		onDraw(renderer);
+		renderer.popDrawOffset();
+	}
+
+	void AbsoluteContainer::drawMask(RenderBackend& renderer) const
+	{
+		for (auto i : toUpdate)
+		{
+			i->drawMask(renderer);
+		}
+	}
+
+	void AbsoluteContainer::addChild(const Component::Type& child)
+	{
+		addChild(child, 0, 0);
 	}
 
 	void AbsoluteContainer::addChild(const Component::Type& child, float x, float y)
@@ -307,15 +363,12 @@ namespace Guider
 			Rect bounds = getGlobalBounds();
 			std::vector<Rect> base;
 			base.reserve(toUpdate.size());
-			renderer.pushMaskLayer();
-			renderer.setupMask();
 			for (auto i : toUpdate)
 			{
 				Rect globalBounds = i->getGlobalBounds();
 				renderer.addToMask(globalBounds);
 				base.emplace_back(globalBounds);
 			}
-			renderer.useMask();
 			for (const auto& i : children)
 			{
 				Rect localBounds = i.component->getBounds();
@@ -323,13 +376,11 @@ namespace Guider
 				{
 					if (localBounds.intersects(rect))
 					{
-						renderer.setDrawOrigin(i.x, i.y);
 						i.component->draw(renderer);
 						break;
 					}
 				}
 			}
-			renderer.popMaskLayer();
 		}
 	}
 	AbsoluteContainer::Element::Element(const Component::Type& c, float x, float y)
@@ -357,8 +408,14 @@ namespace Guider
 		Vec2 size = backend.getSize();
 		Rect bounds(0, 0, size.x, size.y);
 		backend.setView(bounds);
+
 		backend.clearMask();
-		backend.disableMask();
+		backend.setupMask();
+		
+		container.drawMask(backend);
+
 		container.onDraw(backend);
+
+		backend.disableMask();
 	}
 }

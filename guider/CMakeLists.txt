@@ -11,4 +11,4 @@ set(headers
 )
 
 add_library(guider STATIC ${sources} ${headers})
-target_include_directories(guider PRIVATE include)
+target_include_directories(guider PUBLIC include)
