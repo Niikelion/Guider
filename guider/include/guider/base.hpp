@@ -115,6 +115,7 @@ namespace Guider
 		void setView(const Rect& rect);
 		virtual Vec2 getSize() const noexcept = 0;
 		virtual void setSize(const Vec2& size) = 0;
+
 	};
 
 	class Component
@@ -131,7 +132,7 @@ namespace Guider
 			c.bounds = r;
 			c.onResize(lastBounds);
 		}
-		inline void setClean(Component&)
+		inline void setClean()
 		{
 			clean = true;
 		}
@@ -139,6 +140,7 @@ namespace Guider
 		enum class SizingMode
 		{
 			OwnSize,
+			GivenSize,
 			MatchParent,
 			WrapContent
 		};
@@ -209,7 +211,7 @@ namespace Guider
 		virtual void drawMask(RenderBackend& renderer) const;
 
 		virtual void poke();
-		virtual void onResize(const Rect& bounds);
+		virtual void onResize(const Rect& lastBounds);
 
 		class DimensionDesc
 		{

@@ -21,17 +21,23 @@ namespace Guider
 			Element(Element&&) noexcept = default;
 		};
 		std::list<Element> children;
-		std::unordered_set<Component*> toUpdate,toRedraw;
+		std::unordered_set<Component*> toUpdate,toOffset;
+		mutable std::unordered_set<Component*> toRedraw;
+
+		bool updateElementRect(Element& element, bool needsMeasure,float localOffset,const DimensionDesc& w,const DimensionDesc& h,const Rect& bounds);
 	public:
 		virtual void addChild(const Component::Type& child) override;
 		virtual void removeChild(const Component::Type& child) override;
+		void removeChild(unsigned n);
 		virtual void clearChildren() override;
+		size_t getChildrenCount() const;
+		Component::Type getChild(unsigned i);
 
 		virtual void drawMask(RenderBackend& backend) const override;
 		virtual void onDraw(RenderBackend& backend) const override;
 
 		virtual void poke() override;
-		virtual void onResize(const Rect& bounds) override;
+		virtual void onResize(const Rect& lastBounds) override;
 		virtual void onChildStain(Component& c) override;
 		virtual void onChildNeedsRedraw(Component& c) override;
 		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;

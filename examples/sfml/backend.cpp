@@ -1,5 +1,5 @@
 #include <backend.hpp>
-#include <GL/glew.h>
+#include <SFML/OpenGL.hpp>
 
 namespace Guider
 {
@@ -14,7 +14,7 @@ namespace Guider
 		v.setCenter(rect.width / 2, rect.height / 2);
 		target.setView(v);
 	}
-	void SfmlRenderer::drawRectangle(Rect rect)
+	void SfmlRenderer::drawRectangle(const Rect& rect)
 	{
 		rectangle.setFillColor(color);
 		rectangle.setSize(sf::Vector2f(rect.width, rect.height));
@@ -31,20 +31,26 @@ namespace Guider
 	}
 	void SfmlRenderer::clearMask()
 	{
+		target.pushGLStates();
+
+		glEnable(GL_STENCIL_TEST);
+		glClearStencil(0);
 		glClear(GL_STENCIL_BUFFER_BIT);
 	}
 	void SfmlRenderer::setupMask()
 	{
-		glStencilFunc(GL_ALWAYS, maskLevel, 0xFF);
-		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+		glStencilMask(0xFF);
 	}
 	void SfmlRenderer::useMask()
 	{
-		glStencilFunc(GL_GEQUAL, maskLevel, 0xFF);
+		glStencilFunc(GL_EQUAL, 1, 0xFF);
+		glStencilMask(0x00);
 	}
 	void SfmlRenderer::disableMask()
 	{
-		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+		target.popGLStates();
 	}
 	void SfmlRenderer::pushMaskLayer()
 	{

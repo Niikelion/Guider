@@ -113,6 +113,7 @@ namespace Guider
 
 	void Component::poke()
 	{
+		setClean();
 	}
 
 	void Component::onResize(const Rect& bounds)
@@ -180,6 +181,11 @@ namespace Guider
 		}
 		case SizingMode::OwnSize:
 		{
+			w = getWidth();
+			break;
+		}
+		case SizingMode::GivenSize:
+		{
 			w = width.value;
 			break;
 		}
@@ -197,6 +203,11 @@ namespace Guider
 			break;
 		}
 		case SizingMode::OwnSize:
+		{
+			h = getHeight();
+			break;
+		}
+		case SizingMode::GivenSize:
 		{
 			h = height.value;
 			break;
@@ -268,7 +279,6 @@ namespace Guider
 		bounds.top = y;
 		bounds.width = measurements.first.value;
 		bounds.height = measurements.second.value;
-		setClean(*child);
 		setBounds(*child, bounds);
 	}
 	void AbsoluteContainer::removeChild(const Component::Type& child)
@@ -289,6 +299,7 @@ namespace Guider
 	}
 	void AbsoluteContainer::poke()
 	{
+		Component::poke();
 		for (auto& i : children)
 		{
 			//TODO: move to another method
@@ -365,9 +376,7 @@ namespace Guider
 			base.reserve(toUpdate.size());
 			for (auto i : toUpdate)
 			{
-				Rect globalBounds = i->getGlobalBounds();
-				renderer.addToMask(globalBounds);
-				base.emplace_back(globalBounds);
+				base.emplace_back(i->getBounds());
 			}
 			for (const auto& i : children)
 			{
@@ -409,11 +418,13 @@ namespace Guider
 		Rect bounds(0, 0, size.x, size.y);
 		backend.setView(bounds);
 
-		backend.clearMask();
 		backend.setupMask();
+		backend.clearMask();
 		
 		container.drawMask(backend);
 
+		backend.useMask();
+		
 		container.onDraw(backend);
 
 		backend.disableMask();

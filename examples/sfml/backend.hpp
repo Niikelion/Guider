@@ -17,7 +17,7 @@ namespace Guider
 		virtual void setViewport(const Rect& rect) override;
 	public:
 		sf::RenderTexture target;
-		virtual void drawRectangle(Rect rect) override;
+		virtual void drawRectangle(const Rect& rect) override;
 		virtual void drawText(float x, float y, const String& text) override;
 
 		virtual void setDrawOrigin(float x, float y) override;
@@ -34,6 +34,6 @@ namespace Guider
 		virtual Vec2 getSize() const noexcept override;
 		virtual void setSize(const Vec2& size) override;
 
-		SfmlRenderer() : origin(0, 0), maskLevel(0) {}
+		SfmlRenderer() : origin(0, 0), maskLevel(1) {}
 	};
 }

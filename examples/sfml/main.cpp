@@ -5,6 +5,7 @@
 #include <guider/base.hpp>
 #include <guider/containers.hpp>
 #include <guider/components.hpp>
+#include <SFML/OpenGL.hpp>
 
 using namespace sf;
 using namespace std;
@@ -22,7 +23,7 @@ int main(int argc, char* argv[])
 	unsigned width = 800;
 	unsigned height = 450;
 
-	RenderWindow window(VideoMode(width, height), "Noder", Style::Default, ContextSettings(0, 0, 2));
+	RenderWindow window(VideoMode(width, height), "Noder", Style::Default, ContextSettings(0, 8, 2));
 	/*
 	Font font;
 	font.loadFromFile("resources/Arimo-Regular.ttf");
@@ -61,6 +62,12 @@ int main(int argc, char* argv[])
 	for (unsigned i = 0; i < 2; ++i)
 		container->addChild(dividers[i]);
 
+	std::shared_ptr<Gui::ListContainer> list = std::make_shared<Gui::ListContainer>();
+	list->setSizingMode(SizingMode::GivenSize, SizingMode::GivenSize);
+	list->addChild(std::make_shared<Gui::RectangleShape>(200, 50, Gui::Color(255, 255, 255)));
+	container->addChild(list);
+	
+
 	auto r1v = container->addConstraint(Orientation::Vertical, rects[0], false);
 	auto r1h = container->addConstraint(Orientation::Horizontal, rects[0], true);
 
@@ -76,6 +83,14 @@ int main(int argc, char* argv[])
 	r2h->attachBetween(container, true, nullptr, false, 0);
 	r2h->setFlow(0);
 	r2h->setSize(200);
+
+	auto l1v = container->addConstraint(Orientation::Vertical, list, true);
+	auto l1h = container->addConstraint(Orientation::Horizontal, list, false);
+
+	l1v->attachBetween(rects[0], false, container, false, 0);
+	l1h->attachBetween(container, true, nullptr, false, 0);
+	l1h->setFlow(0);
+	l1h->setSize(200);
 
 	auto d1v = container->addConstraint(Orientation::Vertical, dividers[0], false);
 	auto d1h = container->addConstraint(Orientation::Horizontal, dividers[0], true);
@@ -158,6 +173,17 @@ int main(int argc, char* argv[])
 			{
 				if (event.key.code == Keyboard::Escape)
 					window.close();
+				else if (event.key.code == Keyboard::Add)
+				{
+					int c = 255 / (list->getChildrenCount() + 1);
+					list->addChild(std::make_shared<Gui::RectangleShape>(200, 50, Gui::Color(c, c, c)));
+				}
+				else if (event.key.code == Keyboard::Subtract)
+				{
+					if (list->getChildrenCount() > 0)
+						list->removeChild(list->getChildrenCount() - 1);
+				}
+				break;
 			}
 			default:
 				break;
@@ -166,11 +192,14 @@ int main(int argc, char* argv[])
 
 		window.clear(Color(200, 200, 200));
 
+
+		renderer.target.setActive();
 		engine.update();
 		engine.draw();
 
 		renderer.target.display();
 
+		window.setActive();
 		window.draw(gui);
 		window.display();
 	}

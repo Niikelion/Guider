@@ -1,8 +1,68 @@
 #include <guider/containers.hpp>
 #include <queue>
+#include <cstdlib>
+#include <limits>
 
 namespace Guider
 {
+	bool ListContainer::updateElementRect(Element& element, bool needsMeasure, float localOffset, const DimensionDesc& w, const DimensionDesc& h, const Rect& bounds)
+	{
+		Rect lb = element.component->getBounds();
+		Rect original = lb;
+
+		element.offset = localOffset;
+
+		if (horizontal)
+		{
+			lb.left = element.offset + offset;
+		}
+		else
+		{
+			lb.top = element.offset + offset;
+		}
+
+		if (needsMeasure)
+		{
+			std::pair<DimensionDesc, DimensionDesc> measurements = element.component->measure(w, h);
+
+			float width = measurements.first.value;
+			float height = measurements.second.value;
+
+			if (horizontal)
+			{
+				if (height > bounds.height)
+					height = bounds.height;
+			}
+			else
+			{
+				if (width > bounds.width)
+					width = bounds.width;
+			}
+			lb.width = width;
+			lb.height = height;
+			if (horizontal)
+			{
+				lb.top = (bounds.height - height) / 2;
+				element.size = lb.width;
+			}
+			else
+			{
+				lb.left = (bounds.width - width) / 2;
+				element.size = lb.height;
+			}
+		}
+		if (lb != original)
+		{
+			if (std::abs(lb.left - original.left) > std::numeric_limits<float>::epsilon() ||
+				std::abs(lb.top - original.top) > std::numeric_limits<float>::epsilon() ||
+				lb.width != original.width || lb.height != original.height)
+			{
+				setBounds(*element.component, lb);
+				return true;
+			}
+		}
+		return false;
+	}
 	void ListContainer::addChild(const Component::Type& child)
 	{
 		child->setParent(*this);
@@ -49,6 +109,8 @@ namespace Guider
 		toRedraw.insert(child.get());
 
 		size += off;
+
+		invalidate();
 	}
 	void ListContainer::removeChild(const Component::Type& child)
 	{
@@ -59,31 +121,59 @@ namespace Guider
 			{
 				auto cp = it;
 				cp++;
-				while (cp != children.end())
+				while (cp != children.end())//todo: stop after reaching end of parent frame
 				{
 					toRedraw.insert(cp->component.get());
+					toOffset.insert(cp->component.get());
 					++cp;
 				}
 				children.erase(it);
-				break;
+				invalidate();
+				return;
 			}
 			++it;
 		}
+	}
+	void ListContainer::removeChild(unsigned n)
+	{
+		removeChild(std::next(children.begin(),n)->component);
 	}
 	void ListContainer::clearChildren()
 	{
 		children.clear();
 		toUpdate.clear();
 		toRedraw.clear();
+		toOffset.clear();
+	}
+	size_t ListContainer::getChildrenCount() const
+	{
+		return children.size();
+	}
+	Component::Type ListContainer::getChild(unsigned i)
+	{
+		return std::next(children.begin(),i)->component;
 	}
 	void ListContainer::drawMask(RenderBackend& backend) const
 	{
-		for (const auto& i : children)
+		for (auto i : toRedraw)
 		{
-			if (toRedraw.count(i.component.get()))
-			{
-				i.component->drawMask(backend);
-			}
+			i->drawMask(backend);
+		}
+		Rect bounds = getGlobalBounds();
+		float d = 0;
+		if (horizontal)
+		{
+			d = bounds.width;
+			bounds.left += offset + size;
+		}
+		else
+		{
+			d = bounds.height;
+			bounds.top += offset + size;
+		}
+		if (offset + size < d)
+		{
+			backend.addToMask(bounds);
 		}
 	}
 
@@ -96,11 +186,13 @@ namespace Guider
 				i.component->draw(backend);
 			}
 		}
+		toRedraw.clear();
 	}
 
 	void ListContainer::poke()
 	{
-		float off;
+		Component::poke();
+		float off = 0;
 		bool offsetting = false;
 
 		Rect bounds = getBounds();
@@ -118,102 +210,78 @@ namespace Guider
 			h.mode = DimensionDesc::Exact;
 		}
 
-		for (auto& i : children)
+		for (auto& i:children)
 		{
+			bool needsMeasureing = !i.component->isClean();
+			if (!i.component->isClean())
+				i.component->poke();
+
 			if (offsetting)
 			{
-				Rect lb = i.component->getBounds();
-				if (toUpdate.count(i.component.get()))
-				{
-					//measure and stuff, why do i need to write the same part of code third time?
-					std::pair<DimensionDesc, DimensionDesc> measurements = i.component->measure(w, h);
+				updateElementRect(i, needsMeasureing, off, w, h, bounds);
+			}
+			else if (needsMeasureing)
+			{
+				updateElementRect(i, true, off, w, h, bounds);
+				offsetting = true;
+			}
+			off += i.size;
+		}
+		size = off;
+		toUpdate.clear();
+	}
 
-					float width = measurements.first.value;
-					float height = measurements.second.value;
+	void ListContainer::onResize(const Rect& lastBounds)
+	{
+		Rect bounds = getBounds();
+		
+		if (std::abs(bounds.width - lastBounds.width) > std::numeric_limits<float>::epsilon() ||
+			std::abs(bounds.height - lastBounds.height) > std::numeric_limits<float>::epsilon())
+		{//TODO: remeasure only if logical width changes
+			float off = 0;
 
-					if (horizontal)
-					{
-						if (height > bounds.height)
-							height = bounds.height;
-					}
-					else
-					{
-						if (width > bounds.width)
-							width = bounds.width;
-					}
-					lb.width = width;
-					lb.height = height;
-					if (horizontal)
-					{
-						lb.top = (bounds.height-height)/2;
-						lb.left = i.offset;
-						i.size = lb.width;
-					}
-					else
-					{
-						lb.left = (bounds.width-width)/2;
-						lb.top = i.offset;
-						i.size = lb.height;
-					}
-				}
-				else
-				{
-					i.offset = off;
-					if (horizontal)
-					{
-						lb.left = off;
-					}
-					else
-					{
-						lb.top = off;
-					}
-				}
-				setBounds(*i.component, lb);
-				i.offset = off;
+			DimensionDesc w(bounds.width, DimensionDesc::Max);
+			DimensionDesc h(bounds.height, DimensionDesc::Max);
+
+			if (horizontal)
+			{
+				w.value = 0;
+				w.mode = DimensionDesc::Exact;
+			}
+			else
+			{
+				h.value = 0;
+				h.mode = DimensionDesc::Exact;
+			}
+			for (auto& i : children)
+			{
+				updateElementRect(i, true, off, w, h, bounds);
 				off += i.size;
 			}
-			else if (toUpdate.count(i.component.get()))
-			{
-				std::pair<DimensionDesc, DimensionDesc> measurements = i.component->measure(w, h);
-				
-				float width = measurements.first.value;
-				float height = measurements.second.value;
-				
-				if (horizontal)
-				{
-					if (height > bounds.height)
-						height = bounds.height;
-				}
-				else
-				{
-					if (width > bounds.width)
-						width = bounds.width;
-				}
-
-				Rect lb = i.component->getBounds();
-
-				if (width != lb.width || height != lb.height)
-				{
-					lb.width = width;
-					lb.height = height;
-					if (horizontal)
-					{
-						lb.top = (bounds.height-height)/2;
-						lb.left = i.offset;
-						i.size = lb.width;
-					}
-					else
-					{
-						lb.left = (bounds.width-width)/2;
-						lb.top = i.offset;
-						i.size = lb.height;
-					}
-					offsetting = true;
-					setBounds(*i.component, lb);
-					off = i.offset+i.size;
-				}
-			}
+			size = off;
 		}
+		toOffset.clear();
+		for (auto& i : children)
+			toRedraw.insert(i.component.get());
+	}
+
+	void ListContainer::onChildStain(Component& c)
+	{
+		toUpdate.insert(&c);
+	}
+
+	void ListContainer::onChildNeedsRedraw(Component& c)
+	{
+		toRedraw.insert(&c);
+	}
+
+	std::pair<Component::DimensionDesc, Component::DimensionDesc> ListContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
+	{
+		if (getSizingModeHorizontal() == SizingMode::WrapContent || getSizingModeVertical() == SizingMode::WrapContent)
+		{
+			return Component::measure(w, h);//todo: proper wrapping
+		}
+		return Component::measure(w, h);
 	}
 
 	std::vector<Component*> ConstraintsContainer::Constraint::getDeps() const
@@ -812,6 +880,7 @@ namespace Guider
 	}
 	void ConstraintsContainer::poke()
 	{
+		Component::poke();
 		for (auto& i : children)
 		{
 			if (!i->isClean())
