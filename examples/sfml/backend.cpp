@@ -1,5 +1,6 @@
 #include <backend.hpp>
 #include <SFML/OpenGL.hpp>
+#include <cmath>
 
 namespace Guider
 {
@@ -23,7 +24,13 @@ namespace Guider
 	}
 	void SfmlRenderer::drawText(float x, float y, const String& text)
 	{
-		//
+		this->text.setFillColor(color);
+		this->text.setScale(sf::Vector2f(textScale, textScale));
+		this->text.setCharacterSize(textSize);
+		this->text.setPosition(origin.x+x,origin.y+y);
+		this->text.setString(text);
+
+		target.draw(this->text);
 	}
 	void SfmlRenderer::setDrawOrigin(float x, float y)
 	{
@@ -72,6 +79,18 @@ namespace Guider
 	{
 		this->color = sf::Color(color.hex());
 	}
+	void SfmlRenderer::setTextSize(float size)
+	{
+		textSize = std::ceil(size);
+		textScale = size / textSize;
+	}
+	void SfmlRenderer::setFont(const std::string& font)
+	{
+		if (fonts.count(font))
+		{
+			text.setFont(fonts.at(font));
+		}
+	}
 	Vec2 SfmlRenderer::getSize() const noexcept
 	{
 		sf::Vector2u size = target.getSize();
@@ -80,5 +99,9 @@ namespace Guider
 	void SfmlRenderer::setSize(const Vec2& size)
 	{
 		target.create((unsigned)size.x, (unsigned)size.y, sf::ContextSettings(0, 8));
+	}
+	void SfmlRenderer::loadFont(const std::string& name, const sf::Font& font)
+	{
+		fonts.emplace(name, font);
 	}
 }

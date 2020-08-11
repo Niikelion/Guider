@@ -110,6 +110,8 @@ namespace Guider
 		virtual void popMaskLayer() = 0;
 		virtual void addToMask(const Rect& rect) = 0;
 		virtual void setColor(const Color& color) = 0;
+		virtual void setTextSize(float size) = 0;
+		virtual void setFont(const std::string& font) = 0;
 
 		void limitView(const Rect& rect);
 		void setView(const Rect& rect);

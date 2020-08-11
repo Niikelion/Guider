@@ -1,0 +1,80 @@
+<containers.ConstraintsContainer
+	width="match_parent"
+	height="match_parent"
+	tmp_backgroundColor="1c1e20ff"
+>
+	<containers.ConstraintsContainer
+		name="toolbar"
+	
+		width = "match_parent"
+		height = "40"
+		backgroundColor = "202020ff"
+		
+		horizontalConstraint="regular"
+		horizontalSizing="const_offset"
+		
+		attachLeftTo="parent left"
+		attachRightTo="parent right"
+		
+		verticalConstraint="regular"
+		verticalSizing="const_size"
+		verticalFlow="0"
+		
+		attachTopTo="parent top"
+		attachBottomTo="parent bottom"
+	>
+		<containers.ListContainer
+			name="optionsList"
+			width="wrap_content"
+			height="match_parent"
+			
+			orientation="horizontal"
+			
+			horizontalConstraint="regular"
+			horizontalSizing="const_size"
+			horizontalFlow="0"
+			
+			attachLeftTo="parent left"
+			attachRightTo="parent right"
+			
+			verticalConstraint="regular"
+			verticaSizing="const_offset"
+			
+			attachTopTo="parent top"
+			attachBottomTo="parent bottom"
+		>
+			<components.Text
+				width="100"
+				height="40"
+				text="File"
+				textSize="20"
+				color="a8a8a8ff"
+			/>
+			<components.Text
+				width="100"
+				height="40"
+				text="Edit"
+				textSize="20"
+				color="a8a8a8ff"
+			/>
+		</containers.ListContainer>
+	</containers.ConstraintsContainer>
+	<shapes.Rectangle
+		name="sidebar"
+	
+		width = "240"
+		height = "given_size"
+		fillColor = "282a2eff"
+		
+		horizontalConstraint="regular"
+		horizontalSizing="const_size"
+		
+		attachLeftTo="parent left"
+		
+		verticalConstraint="regular"
+		verticalSizing="const_offset"
+		
+		attachTopTo="toolbar bottom"
+		attachBottomTo="parent bottom"
+	/>
+</containers.ConstraintsContainer>

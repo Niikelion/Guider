@@ -2,7 +2,7 @@
 
 #include <guider/base.hpp>
 #include <SFML/Graphics.hpp>
-
+#include <unordered_map>
 
 namespace Guider
 {
@@ -12,7 +12,11 @@ namespace Guider
 		sf::Vector2f origin;
 		sf::Color color;
 		sf::RectangleShape rectangle;
+		sf::Text text;
 		unsigned char maskLevel;
+		std::unordered_map<std::string, sf::Font> fonts;
+		float textScale;
+		int textSize;
 	protected:
 		virtual void setViewport(const Rect& rect) override;
 	public:
@@ -30,10 +34,14 @@ namespace Guider
 		virtual void popMaskLayer() override;
 		virtual void addToMask(const Rect& rect) override;
 		virtual void setColor(const Color& color) override;
+		virtual void setTextSize(float size) override;
+		virtual void setFont(const std::string& font) override;
 
 		virtual Vec2 getSize() const noexcept override;
 		virtual void setSize(const Vec2& size) override;
 
-		SfmlRenderer() : origin(0, 0), maskLevel(1) {}
+		void loadFont(const std::string& name, const sf::Font& font);
+
+		SfmlRenderer() : origin(0, 0), maskLevel(1), textScale(1), textSize(12) {}
 	};
 }

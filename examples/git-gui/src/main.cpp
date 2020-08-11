@@ -5,7 +5,11 @@
 #include <guider/base.hpp>
 #include <guider/containers.hpp>
 #include <guider/components.hpp>
-#include <SFML/OpenGL.hpp>
+
+#include <git.hpp>
+
+#include <string>
+#include <fstream>
 
 using namespace sf;
 using namespace std;
@@ -20,10 +24,151 @@ using SizingMode = Gui::Component::SizingMode;
 
 int main(int argc, char* argv[])
 {
+	Git::Bridge bridge("D:/projects/sources/Guider/");
+	if (bridge.isInRepository())
+	{
+		cout << "current:" << bridge.getCurrentBranch() << endl;
+		auto branches = bridge.getBranches(true, true);
+		for (const auto& branch : branches)
+		{
+			cout << "  " << branch.getName();
+			if (!branch.isLocal())
+			{
+				cout << " remote:" << branch.getOrigin();
+			}
+			cout << "\n";
+		}
+		cout << "commits:" << endl;
+		auto commits = bridge.getCommitDescriptions(10);
+		for (const auto& commit : commits)
+		{
+			cout << "  " << commit.getAuthor() << "/" << commit.getHash() << endl;
+		}
+	}
+	else
+	{
+		cout << "not in git repository" << endl;
+	}
+
 	unsigned width = 800;
 	unsigned height = 450;
 
 	RenderWindow window(VideoMode(width, height), "Noder", Style::Default, ContextSettings(0, 8, 2));
+
+	Guider::Manager resourceManager;
+
+	Gui::SfmlRenderer renderer;
+
+	Font font;
+	font.loadFromFile("resources/Arimo-Regular.ttf");
+
+	renderer.loadFont("default",font);
+	renderer.setFont("default");
+
+	Gui::Engine engine(renderer);
+	engine.resize(Gui::Vec2((float)width, (float)height));
+
+	resourceManager.registerTypeCreator([](Guider::Manager& m, const Guider::XML::Tag& config)
+	{
+		std::shared_ptr<Guider::ConstraintsContainer> ret = std::make_shared<Guider::ConstraintsContainer>(m,config);
+		ret->postXmlConstruction(m, config);
+		return ret;
+	}, "containers.ConstraintsContainer");
+	resourceManager.registerType<Guider::ConstraintsContainer>("containers.ConstraintsContainer");
+	resourceManager.registerType<Guider::ListContainer>("containers.ListContainer");
+	resourceManager.registerType<Guider::RectangleShape>("shapes.Rectangle");
+	resourceManager.registerType<Guider::EmptyComponent>("components.Guide");
+	resourceManager.registerType<Guider::TextComponent>("components.Text");
+
+	std::string mainLayout;
+	{
+		std::ifstream t("resources/main_layout.xml");
+
+		if (t.is_open())
+		{
+			t.seekg(0, std::ios::end);
+			mainLayout.reserve(t.tellg());
+			t.seekg(0, std::ios::beg);
+
+			mainLayout.assign((std::istreambuf_iterator<char>(t)),
+				std::istreambuf_iterator<char>());
+		}
+		else
+		{
+			std::cout << argv[0] << std::endl;
+		}
+	}
+
+	auto xmlRoot = Guider::XML::parse(mainLayout);
+
+	Guider::Component::Type root = resourceManager.instantiate(*static_cast<Guider::XML::Tag*>(xmlRoot->children[0].get()));
+
+	engine.container.addChild(root);
+
+	Sprite gui;
+	gui.setTexture(renderer.target.getTexture());
+	//gui.setOrigin(width / 2.0f, height / 2.0f);
+
+	while (window.isOpen())
+	{
+		Event event;
+		while (window.pollEvent(event))
+		{
+			switch (event.type)
+			{
+			case Event::Closed:
+			{
+				window.close();
+				break;
+			}
+			case Event::Resized:
+			{
+				Vector2u size(event.size.width, event.size.height);
+			
+				sf::FloatRect visibleArea(0, 0, size.x, size.y);
+				window.setView(sf::View(visibleArea));
+				engine.resize(Gui::Vec2((float)size.x, (float)size.y));
+			
+				gui.setTexture(renderer.target.getTexture(), true);
+				break;
+			}
+			case Event::KeyPressed:
+			{
+				if (event.key.code == Keyboard::Escape)
+					window.close();
+				/*
+				else if (event.key.code == Keyboard::Add)
+				{
+					int c = 255 / (list->getChildrenCount() + 1);
+					list->addChild(std::make_shared<Gui::RectangleShape>(200, 50, Gui::Color(c, c, c)));
+				}
+				else if (event.key.code == Keyboard::Subtract)
+				{
+					if (list->getChildrenCount() > 0)
+						list->removeChild(list->getChildrenCount() - 1);
+				}
+				break;
+				*/
+			}
+			default:
+				break;
+			}
+		}
+
+		window.clear(Color(200, 200, 200));
+
+		renderer.target.setActive();
+		engine.update();
+		engine.draw();
+
+		renderer.target.display();
+
+		window.setActive();
+		window.draw(gui);
+		window.display();
+	}
+
+	//RenderWindow window(VideoMode(width, height), "Noder", Style::Default, ContextSettings(0, 8, 2));
 	/*
 	Font font;
 	font.loadFromFile("resources/Arimo-Regular.ttf");
@@ -34,7 +179,7 @@ int main(int argc, char* argv[])
 	text.setFillColor(Color::White);
 	text.setFont(font);
 	*/
-
+	/*
 	Gui::SfmlRenderer renderer;
 	Gui::Engine engine(renderer);
 	engine.resize(Gui::Vec2((float)width, (float)height));
@@ -44,7 +189,7 @@ int main(int argc, char* argv[])
 	engine.container.addChild(container, 0, 0);
 
 	Gui::Component::Type rects[] = {
-		make_shared<Gui::RectangleShape>(SizingMode::MatchParent,Gui::Color(255,0,0)),
+		make_shared<Gui::RectangleShape>(SizingMode::MatchParent,Gui::Color(0x202020ff)),
 		make_shared<Gui::RectangleShape>(SizingMode::MatchParent,Gui::Color(0,255,0)),
 		make_shared<Gui::RectangleShape>(SizingMode::MatchParent,Gui::Color(0,0,255)),
 		make_shared<Gui::RectangleShape>(SizingMode::MatchParent,Gui::Color(255,255,0)),
@@ -73,7 +218,7 @@ int main(int argc, char* argv[])
 
 	r1v->attachBetween(container, true, nullptr, false, 0);
 	r1v->setFlow(0);
-	r1v->setSize(25);
+	r1v->setSize(45);
 	r1h->attachBetween(container, true, container, false, 0);
 
 	auto r2v = container->addConstraint(Orientation::Vertical, rects[1], true);
@@ -203,5 +348,5 @@ int main(int argc, char* argv[])
 		window.draw(gui);
 		window.display();
 	}
-
+	*/
 }

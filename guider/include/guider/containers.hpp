@@ -1,6 +1,7 @@
 #pragma once
 
 #include <guider/base.hpp>
+#include <guider/manager.hpp>
 #include <stdexcept>
 #include <list>
 
@@ -10,22 +11,27 @@ namespace Guider
 	{
 	private:
 		bool horizontal;
-		float size,offset;
+		float size, offset;
 		class Element
 		{
 		public:
 			std::shared_ptr<Component> component;
-			float size,offset;
+			float size, offset;
 
-			Element(const std::shared_ptr<Component>& c, float s,float o): component(c), size(s), offset(o) {}
+			Element(const std::shared_ptr<Component>& c, float s, float o) : component(c), size(s), offset(o) {}
 			Element(Element&&) noexcept = default;
 		};
 		std::list<Element> children;
-		std::unordered_set<Component*> toUpdate,toOffset;
+		std::unordered_set<Component*> toUpdate, toOffset;
 		mutable std::unordered_set<Component*> toRedraw;
 
-		bool updateElementRect(Element& element, bool needsMeasure,float localOffset,const DimensionDesc& w,const DimensionDesc& h,const Rect& bounds);
+		Color backgroundColor;
+
+		bool updateElementRect(Element& element, bool needsMeasure, float localOffset, const DimensionDesc& w, const DimensionDesc& h, const Rect& bounds);
 	public:
+		void setOrientation(bool horizontal);
+
+		void setBackgroundColor(const Color& color);
 		virtual void addChild(const Component::Type& child) override;
 		virtual void removeChild(const Component::Type& child) override;
 		void removeChild(unsigned n);
@@ -41,9 +47,36 @@ namespace Guider
 		virtual void onChildStain(Component& c) override;
 		virtual void onChildNeedsRedraw(Component& c) override;
 		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
+
+		ListContainer() : horizontal(false), size(0), offset(0) {}
+
+		ListContainer(Manager& manager, const XML::Tag& config) : ListContainer()
+		{
+			Manager::handleDefaultArguments(*this, config);
+
+			XML::Value tmp = config.getAttribute("orientation");
+			if (tmp.exists())
+			{
+				if (tmp.val == "horizontal")
+					setOrientation(true);
+				else if (tmp.val == "vertical")
+					setOrientation(false);
+			}
+
+			for (const auto& child : config.children)
+			{
+				if (!child->isTextNode())
+				{
+					XML::Tag& tag = static_cast<XML::Tag&>(*child);
+					Component::Type t = manager.instantiate(tag);
+
+					addChild(t);
+				}
+			}
+		}
 	};
 
-	class ConstraintsContainer : public Container
+	class ConstraintsContainer : public Container, public std::enable_shared_from_this<ConstraintsContainer>
 	{
 	private:
 		class Cluster;
@@ -258,6 +291,8 @@ namespace Guider
 		bool invalidLayout;
 		bool canWrapW, canWrapH;//TODO: add updating this values;
 
+		Color backgroundColor;
+
 		float getEdge(Component* c, Constraint::Edge e);
 
 		bool reorderClusters();
@@ -272,6 +307,7 @@ namespace Guider
 		void applyConstraints();
 
 	public:
+		void setBackgroundColor(const Color& color);
 
 		virtual void drawMask(RenderBackend& renderer) const override;
 
@@ -288,9 +324,12 @@ namespace Guider
 		std::unique_ptr<RegularConstraintBuilder> addConstraint(Constraint::Orientation orientation, const Component::Type& target, bool constOffset);
 		std::unique_ptr<ChainConstraintBuilder> addChainConstraint(Constraint::Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset);
 
-		ConstraintsContainer() : messyClusters(true), invalidLayout(true), canWrapW(false), canWrapH(false) {}
-
 		virtual void onDraw(RenderBackend& renderer) const override;
+
+		virtual void postXmlConstruction(Manager& m, const XML::Tag& config);
+
+		ConstraintsContainer() : messyClusters(true), invalidLayout(true), canWrapW(false), canWrapH(false), backgroundColor(0) {}
+		ConstraintsContainer(Manager& manager, const XML::Tag& config) : ConstraintsContainer() {}
 	};
 
 }

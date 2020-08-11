@@ -118,6 +118,7 @@ namespace Guider
 
 	void Component::onResize(const Rect& bounds)
 	{
+		invalidateVisuals();
 	}
 
 	void Component::onChildStain(Component& c)

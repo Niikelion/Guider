@@ -2,6 +2,7 @@
 #include <queue>
 #include <cstdlib>
 #include <limits>
+#include <map>
 
 namespace Guider
 {
@@ -62,6 +63,19 @@ namespace Guider
 			}
 		}
 		return false;
+	}
+	void ListContainer::setOrientation(bool horizontal)
+	{
+		this->horizontal = horizontal;
+		//TODO: recalc offsets
+		invalidate();
+	}
+	void ListContainer::setBackgroundColor(const Color& color)
+	{
+		backgroundColor = color;
+		if (backgroundColor.a > 0)
+			backgroundColor.a = 255;
+		invalidateVisuals();
 	}
 	void ListContainer::addChild(const Component::Type& child)
 	{
@@ -155,25 +169,32 @@ namespace Guider
 	}
 	void ListContainer::drawMask(RenderBackend& backend) const
 	{
-		for (auto i : toRedraw)
+		if (backgroundColor.a > 0)
 		{
-			i->drawMask(backend);
-		}
-		Rect bounds = getGlobalBounds();
-		float d = 0;
-		if (horizontal)
-		{
-			d = bounds.width;
-			bounds.left += offset + size;
+			Component::drawMask(backend);
 		}
 		else
 		{
-			d = bounds.height;
-			bounds.top += offset + size;
-		}
-		if (offset + size < d)
-		{
-			backend.addToMask(bounds);
+			for (auto i : toRedraw)
+			{
+				i->drawMask(backend);
+			}
+			Rect bounds = getGlobalBounds();
+			float d = 0;
+			if (horizontal)
+			{
+				d = bounds.width;
+				bounds.left += offset + size;
+			}
+			else
+			{
+				d = bounds.height;
+				bounds.top += offset + size;
+			}
+			if (offset + size < d)
+			{
+				backend.addToMask(bounds);
+			}
 		}
 	}
 
@@ -181,7 +202,7 @@ namespace Guider
 	{
 		for (const auto& i : children)
 		{
-			if (toRedraw.count(i.component.get()))
+			if (backgroundColor.a > 0 || toRedraw.count(i.component.get()))
 			{
 				i.component->draw(backend);
 			}
@@ -202,12 +223,12 @@ namespace Guider
 		if (horizontal)
 		{
 			w.value = 0;
-			w.mode = DimensionDesc::Exact;
+			w.mode = DimensionDesc::Min;
 		}
 		else
 		{
 			h.value = 0;
-			h.mode = DimensionDesc::Exact;
+			h.mode = DimensionDesc::Min;
 		}
 
 		for (auto& i:children)
@@ -246,12 +267,12 @@ namespace Guider
 			if (horizontal)
 			{
 				w.value = 0;
-				w.mode = DimensionDesc::Exact;
+				w.mode = DimensionDesc::Min;
 			}
 			else
 			{
 				h.value = 0;
-				h.mode = DimensionDesc::Exact;
+				h.mode = DimensionDesc::Min;
 			}
 			for (auto& i : children)
 			{
@@ -277,11 +298,16 @@ namespace Guider
 
 	std::pair<Component::DimensionDesc, Component::DimensionDesc> ListContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
 	{
-		if (getSizingModeHorizontal() == SizingMode::WrapContent || getSizingModeVertical() == SizingMode::WrapContent)
+		std::pair<DimensionDesc, DimensionDesc> measurements = Component::measure(w,h);
+		if (getSizingModeHorizontal() == SizingMode::WrapContent && horizontal)
 		{
-			return Component::measure(w, h);//todo: proper wrapping
+			measurements.first = DimensionDesc(size, DimensionDesc::Exact);
 		}
-		return Component::measure(w, h);
+		else if (getSizingModeVertical() == SizingMode::WrapContent && !horizontal)
+		{
+			measurements.second = DimensionDesc(size, DimensionDesc::Exact);
+		}
+		return measurements;
 	}
 
 	std::vector<Component*> ConstraintsContainer::Constraint::getDeps() const
@@ -871,11 +897,25 @@ namespace Guider
 		}
 		invalidLayout = false;
 	}
+	void ConstraintsContainer::setBackgroundColor(const Color& color)
+	{
+		backgroundColor = color;
+		if (backgroundColor.a > 0)
+			backgroundColor.a = 255;
+		invalidateVisuals();
+	}
 	void ConstraintsContainer::drawMask(RenderBackend& renderer) const
 	{
-		for (auto element : needsRedraw)
+		if (backgroundColor.a > 0)
 		{
-			element->drawMask(renderer);
+			Component::drawMask(renderer);
+		}
+		else
+		{
+			for (auto element : needsRedraw)
+			{
+				element->drawMask(renderer);
+			}
 		}
 	}
 	void ConstraintsContainer::poke()
@@ -894,13 +934,14 @@ namespace Guider
 	}
 	void ConstraintsContainer::onResize(const Rect& bounds)
 	{
-		if (bounds != boundaries[this] || invalidLayout)
+		if (getBounds() != boundaries[this] || invalidLayout)
 		{
 			solveConstraints();
 			invalidLayout = false;
 			applyConstraints();
 			for (auto& i : children)
 				needsRedraw.insert(i.get());
+			invalidateVisuals();
 		}
 	}
 	void ConstraintsContainer::onChildStain(Component& c)
@@ -1066,14 +1107,28 @@ namespace Guider
 	{
 		if (needsRedraw.size() > 0)
 		{
-			Rect bounds = getGlobalBounds();
+			Rect bounds = getBounds();
+			bounds.left = 0;
+			bounds.top = 0;
 			std::vector<Rect> base;
-			base.reserve(needsRedraw.size());
-			for (auto i : needsRedraw)
+
+			if (backgroundColor.a > 0)
 			{
-				Rect globalBounds = i->getGlobalBounds();
-				base.emplace_back(globalBounds);
+				base.emplace_back(bounds);
+				renderer.setColor(backgroundColor);
+				renderer.drawRectangle(bounds);
+
 			}
+			else
+			{
+				base.reserve(needsRedraw.size());
+				for (auto i : needsRedraw)
+				{
+					Rect localBounds = i->getBounds();
+					base.emplace_back(localBounds);
+				}
+			}
+
 			for (const auto& i : children)
 			{
 				Rect localBounds = i->getBounds();
@@ -1081,13 +1136,470 @@ namespace Guider
 				{
 					if (localBounds.intersects(rect))
 					{
-						Rect local = i->getBounds();
 						i->draw(renderer);
 						break;
 					}
 				}
 			}
 			needsRedraw.clear();
+		}
+	}
+	void ConstraintsContainer::postXmlConstruction(Manager& manager, const XML::Tag& config)
+	{
+		std::unordered_map<std::string, Component::Type> nameMapping;
+		Manager::handleDefaultArguments(*this, config);
+
+		std::vector<Component::Type> childMapping;
+
+		XML::Value tmp = config.getAttribute("backgroundColor");
+		if (tmp.exists())
+		{
+			bool failed = false;
+			Color color = Manager::strToColor(tmp.val,failed);
+			if (!failed)
+				setBackgroundColor(color);
+		}
+
+		for (const auto& child : config.children)
+		{
+			if (!child->isTextNode())
+			{
+				XML::Tag& tag = static_cast<XML::Tag&>(*child);
+				Component::Type t = manager.instantiate(tag);
+				auto it = tag.attributes.find("name");
+				if (it != tag.attributes.end())
+				{
+					nameMapping.emplace(it->second.val, t);
+				}
+				addChild(t);
+				childMapping.push_back(t);
+			}
+		}
+		unsigned i = 0;
+		for (const auto& child : config.children)
+		{
+			if (!child->isTextNode())
+			{
+				XML::Tag& c = static_cast<XML::Tag&>(*child);
+
+				tmp = c.getAttribute("horizontalConstraint");
+				if (tmp.exists())
+				{
+					//creating horizontal constraint
+					if (tmp.val == "regular")
+					{
+						bool constOffset = true;
+
+						tmp = c.getAttribute("horizontalSizing");
+						if (tmp.exists())
+						{
+							if (tmp.val == "const_offset")
+							{
+								constOffset = true;
+							}
+							else if (tmp.val == "const_size")
+							{
+								constOffset = false;
+							}
+						}
+
+						auto builder = addConstraint(Constraint::Orientation::Horizontal, childMapping[i], constOffset);
+
+						tmp = c.getAttribute("attachLeftTo");
+						if (tmp.exists())
+						{
+							bool toLeft = false;
+							float offset = 0;
+							Component::Type target;
+
+							if (tmp.val.find(" ") != tmp.val.npos)
+							{
+								std::vector<std::string> options = Manager::splitString(tmp.val);
+								if (options.size() > 0)
+								{
+									if (options[0] == "parent")
+									{
+										target = shared_from_this();
+									}
+									else
+									{
+										auto it = nameMapping.find(options[0]);
+										if (it != nameMapping.end())
+										{
+											target = it->second;
+										}
+									}
+									if (options.size() > 1)
+									{
+										if (options[1] == "left")
+											toLeft = true;
+										else if (options[1] == "right")
+											toLeft = false;
+
+										if (options.size() > 2)
+										{
+											bool failed = false;
+											float v = Manager::strToFloat(options[2], failed);
+											if (!failed)
+												offset = v;
+										}
+									}
+								}
+							}
+							else
+							{
+								if (tmp.val == "parent")
+								{
+									target = shared_from_this();
+								}
+								else
+								{
+									auto it = nameMapping.find(tmp.val);
+									if (it != nameMapping.end())
+									{
+										target = it->second;
+									}
+								}
+
+								tmp = c.getAttribute("leftAttachmentSide");
+								if (tmp.exists())
+								{
+									if (tmp.val == "left")
+										toLeft = true;
+									else if (tmp.val == "right")
+										toLeft = false;
+								}
+
+								tmp = c.getAttribute("leftAttachmentOffset");
+								if (tmp.exists())
+								{
+									bool failed = false;
+									float v = Manager::strToFloat(tmp.val, failed);
+									if (!failed)
+										offset = v;
+								}
+							}
+
+							builder->attachLeftTo(target, toLeft, offset);
+						}
+
+						tmp = c.getAttribute("attachRightTo");
+						if (tmp.exists())
+						{
+							bool toLeft = false;
+							float offset = 0;
+							Component::Type target;
+
+							if (tmp.val.find(" ") != tmp.val.npos)
+							{
+								std::vector<std::string> options = Manager::splitString(tmp.val);
+								if (options.size() > 0)
+								{
+									if (options[0] == "parent")
+									{
+										target = shared_from_this();
+									}
+									else
+									{
+										auto it = nameMapping.find(options[0]);
+										if (it != nameMapping.end())
+										{
+											target = it->second;
+										}
+									}
+									if (options.size() > 1)
+									{
+										if (options[1] == "left")
+											toLeft = true;
+										else if (options[1] == "right")
+											toLeft = false;
+
+										if (options.size() > 2)
+										{
+											bool failed = false;
+											float v = Manager::strToFloat(options[2], failed);
+											if (!failed)
+												offset = v;
+										}
+									}
+								}
+							}
+							else
+							{
+								if (tmp.val == "parent")
+								{
+									target = shared_from_this();
+								}
+								else
+								{
+									auto it = nameMapping.find(tmp.val);
+									if (it != nameMapping.end())
+									{
+										target = it->second;
+									}
+								}
+
+								tmp = c.getAttribute("rightAttachmentSide");
+								if (tmp.exists())
+								{
+									if (tmp.val == "left")
+										toLeft = true;
+									else if (tmp.val == "right")
+										toLeft = false;
+								}
+
+								tmp = c.getAttribute("rightAttachmentOffset");
+								if (tmp.exists())
+								{
+									bool failed = false;
+									float v = Manager::strToFloat(tmp.val, failed);
+									if (!failed)
+										offset = v;
+								}
+							}
+
+							builder->attachRightTo(target, toLeft, offset);
+						}
+
+						tmp = c.getAttribute("horizontalFlow");
+						if (tmp.exists())
+						{
+							bool failed = false;
+							float flow = Manager::strToFloat(tmp.val, failed);
+							if (!failed)
+								builder->setFlow(flow);
+						}
+
+						tmp = c.getAttribute("width");
+						if (tmp.exists())
+						{
+							bool failed = false;
+							float size = Manager::strToFloat(tmp.val, failed);
+							if (!failed)
+								builder->setSize(size);
+						}
+					}
+					else if (tmp.val == "chain")
+					{
+						//
+					}
+					else
+					{
+						//error i guess
+					}
+				}
+
+				tmp = c.getAttribute("verticalConstraint");
+				if (tmp.exists())
+				{
+					//creating horizontal constraint
+					if (tmp.val == "regular")
+					{
+						bool constOffset = true;
+
+						tmp = c.getAttribute("verticalSizing");
+						if (tmp.exists())
+						{
+							if (tmp.val == "const_offset")
+							{
+								constOffset = true;
+							}
+							else if (tmp.val == "const_size")
+							{
+								constOffset = false;
+							}
+						}
+
+						auto builder = addConstraint(Constraint::Orientation::Vertical, childMapping[i], constOffset);
+
+						tmp = c.getAttribute("attachTopTo");
+						if (tmp.exists())
+						{
+							bool toTop = false;
+							float offset = 0;
+							Component::Type target;
+
+							if (tmp.val.find(" ") != tmp.val.npos)
+							{
+								std::vector<std::string> options = Manager::splitString(tmp.val);
+								if (options.size() > 0)
+								{
+									if (options[0] == "parent")
+									{
+										target = shared_from_this();
+									}
+									else
+									{
+										auto it = nameMapping.find(options[0]);
+										if (it != nameMapping.end())
+										{
+											target = it->second;
+										}
+									}
+									if (options.size() > 1)
+									{
+										if (options[1] == "top")
+											toTop = true;
+										else if (options[1] == "bottom")
+											toTop = false;
+
+										if (options.size() > 2)
+										{
+											bool failed = false;
+											float v = Manager::strToFloat(options[2], failed);
+											if (!failed)
+												offset = v;
+										}
+									}
+								}
+							}
+							else
+							{
+								if (tmp.val == "parent")
+								{
+									target = shared_from_this();
+								}
+								else
+								{
+									auto it = nameMapping.find(tmp.val);
+									if (it != nameMapping.end())
+									{
+										target = it->second;
+									}
+								}
+
+								tmp = c.getAttribute("topAttachmentSide");
+								if (tmp.exists())
+								{
+									if (tmp.val == "top")
+										toTop = true;
+									else if (tmp.val == "bottom")
+										toTop = false;
+								}
+
+								tmp = c.getAttribute("topAttachmentOffset");
+								if (tmp.exists())
+								{
+									bool failed = false;
+									float v = Manager::strToFloat(tmp.val, failed);
+									if (!failed)
+										offset = v;
+								}
+							}
+
+							builder->attachTopTo(target, toTop, offset);
+						}
+
+						tmp = c.getAttribute("attachBottomTo");
+						if (tmp.exists())
+						{
+							bool toTop = false;
+							float offset = 0;
+							Component::Type target;
+
+							if (tmp.val.find(" ") != tmp.val.npos)
+							{
+								std::vector<std::string> options = Manager::splitString(tmp.val);
+								if (options.size() > 0)
+								{
+									if (options[0] == "parent")
+									{
+										target = shared_from_this();
+									}
+									else
+									{
+										auto it = nameMapping.find(options[0]);
+										if (it != nameMapping.end())
+										{
+											target = it->second;
+										}
+									}
+									if (options.size() > 1)
+									{
+										if (options[1] == "top")
+											toTop = true;
+										else if (options[1] == "bottom")
+											toTop = false;
+
+										if (options.size() > 2)
+										{
+											bool failed = false;
+											float v = Manager::strToFloat(options[2], failed);
+											if (!failed)
+												offset = v;
+										}
+									}
+								}
+							}
+							else
+							{
+								if (tmp.val == "parent")
+								{
+									target = shared_from_this();
+								}
+								else
+								{
+									auto it = nameMapping.find(tmp.val);
+									if (it != nameMapping.end())
+									{
+										target = it->second;
+									}
+								}
+
+								tmp = c.getAttribute("bottomAttachmentSide");
+								if (tmp.exists())
+								{
+									if (tmp.val == "top")
+										toTop = true;
+									else if (tmp.val == "bottom")
+										toTop = false;
+								}
+
+								tmp = c.getAttribute("bottomAttachmentOffset");
+								if (tmp.exists())
+								{
+									bool failed = false;
+									float v = Manager::strToFloat(tmp.val, failed);
+									if (!failed)
+										offset = v;
+								}
+							}
+
+							builder->attachRightTo(target, toTop, offset);
+						}
+
+						tmp = c.getAttribute("verticalFlow");
+						if (tmp.exists())
+						{
+							bool failed = false;
+							float flow = Manager::strToFloat(tmp.val, failed);
+							if (!failed)
+								builder->setFlow(flow);
+						}
+
+						tmp = c.getAttribute("height");
+						if (tmp.exists())
+						{
+							bool failed = false;
+							float size = Manager::strToFloat(tmp.val, failed);
+							if (!failed)
+								builder->setSize(size);
+						}
+					}
+					else if (tmp.val == "chain")
+					{
+						//
+					}
+					else
+					{
+						//error i guess
+					}
+				}
+
+				childMapping[i]->invalidate();
+
+				++i;
+			}
 		}
 	}
 }
