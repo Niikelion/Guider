@@ -80,6 +80,7 @@ namespace Guider
 	void ListContainer::addChild(const Component::Type& child)
 	{
 		child->setParent(*this);
+		child->poke();
 		float off;
 		Rect bounds = getBounds();
 
@@ -89,12 +90,12 @@ namespace Guider
 		if (horizontal)
 		{
 			w.value = 0;
-			w.mode = DimensionDesc::Exact;
+			w.mode = DimensionDesc::Min;
 		}
 		else
 		{
 			h.value = 0;
-			h.mode = DimensionDesc::Exact;
+			h.mode = DimensionDesc::Min;
 		}
 
 		std::pair<DimensionDesc, DimensionDesc> measurements = child->measure(w, h);
@@ -167,7 +168,7 @@ namespace Guider
 	{
 		return std::next(children.begin(),i)->component;
 	}
-	void ListContainer::drawMask(RenderBackend& backend) const
+	void ListContainer::drawMask(Backend& backend) const
 	{
 		if (backgroundColor.a > 0)
 		{
@@ -198,7 +199,7 @@ namespace Guider
 		}
 	}
 
-	void ListContainer::onDraw(RenderBackend& backend) const
+	void ListContainer::onDraw(Backend& backend) const
 	{
 		for (const auto& i : children)
 		{
@@ -280,6 +281,7 @@ namespace Guider
 				off += i.size;
 			}
 			size = off;
+			invalidate();
 		}
 		toOffset.clear();
 		for (auto& i : children)
@@ -296,8 +298,55 @@ namespace Guider
 		toRedraw.insert(&c);
 	}
 
+	void ListContainer::propagateEvent(const Event& event)
+	{
+		//TODO: optimize
+		for (auto& i : children)
+		{
+			handleEventForComponent(event, *i.component);
+		}
+	}
+
 	std::pair<Component::DimensionDesc, Component::DimensionDesc> ListContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
 	{
+		//TODO: move to function i guess
+		float off = 0;
+		bool offsetting = false;
+
+		Rect bounds = getBounds();
+		DimensionDesc ww(bounds.width, DimensionDesc::Max);
+		DimensionDesc hh(bounds.height, DimensionDesc::Max);
+
+		if (horizontal)
+		{
+			ww.value = 0;
+			ww.mode = DimensionDesc::Min;
+		}
+		else
+		{
+			hh.value = 0;
+			hh.mode = DimensionDesc::Min;
+		}
+
+		for (auto& i : children)
+		{
+			bool needsMeasureing = !i.component->isClean();
+			if (!i.component->isClean())
+				i.component->poke();
+
+			if (offsetting)
+			{
+				updateElementRect(i, needsMeasureing, off, ww, hh, bounds);
+			}
+			else if (needsMeasureing)
+			{
+				updateElementRect(i, true, off, ww, hh, bounds);
+				offsetting = true;
+			}
+			off += i.size;
+		}
+		size = off;
+
 		std::pair<DimensionDesc, DimensionDesc> measurements = Component::measure(w,h);
 		if (getSizingModeHorizontal() == SizingMode::WrapContent && horizontal)
 		{
@@ -904,7 +953,7 @@ namespace Guider
 			backgroundColor.a = 255;
 		invalidateVisuals();
 	}
-	void ConstraintsContainer::drawMask(RenderBackend& renderer) const
+	void ConstraintsContainer::drawMask(Backend& renderer) const
 	{
 		if (backgroundColor.a > 0)
 		{
@@ -956,6 +1005,15 @@ namespace Guider
 	void ConstraintsContainer::onChildNeedsRedraw(Component& c)
 	{
 		needsRedraw.insert(&c);
+	}
+	void ConstraintsContainer::propagateEvent(const Event& event)
+	{
+		if (event.type == Event::Type::BackendConnected)
+			invalidLayout = true;
+		for (auto& i : children)
+		{
+			handleEventForComponent(event, *i);
+		}
 	}
 	std::pair<Component::DimensionDesc, Component::DimensionDesc> ConstraintsContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
 	{
@@ -1040,6 +1098,7 @@ namespace Guider
 	{
 		children.emplace_back(child);
 		child->setParent(*this);
+		child->poke();
 		needsRedraw.insert(child.get());
 	}
 	std::unique_ptr<ConstraintsContainer::RegularConstraintBuilder> ConstraintsContainer::addConstraint(Constraint::Orientation orientation, const Component::Type& target, bool constOffset)
@@ -1103,7 +1162,7 @@ namespace Guider
 	{
 		return std::unique_ptr<ChainConstraintBuilder>();
 	}
-	void ConstraintsContainer::onDraw(RenderBackend& renderer) const
+	void ConstraintsContainer::onDraw(Backend& renderer) const
 	{
 		if (needsRedraw.size() > 0)
 		{
@@ -1115,8 +1174,7 @@ namespace Guider
 			if (backgroundColor.a > 0)
 			{
 				base.emplace_back(bounds);
-				renderer.setColor(backgroundColor);
-				renderer.drawRectangle(bounds);
+				renderer.drawRectangle(bounds,backgroundColor);
 
 			}
 			else

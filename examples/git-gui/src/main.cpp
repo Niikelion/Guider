@@ -53,17 +53,16 @@ int main(int argc, char* argv[])
 	unsigned width = 800;
 	unsigned height = 450;
 
-	RenderWindow window(VideoMode(width, height), "Noder", Style::Default, ContextSettings(0, 8, 2));
+	RenderWindow window(VideoMode(width, height), "Git-gui", Style::Default, ContextSettings(0, 8, 2));
 
 	Guider::Manager resourceManager;
 
-	Gui::SfmlRenderer renderer;
+	Gui::SfmlBackend renderer;
 
 	Font font;
 	font.loadFromFile("resources/Arimo-Regular.ttf");
 
-	renderer.loadFont("default",font);
-	renderer.setFont("default");
+	renderer.loadFont("",font);
 
 	Gui::Engine engine(renderer);
 	engine.resize(Gui::Vec2((float)width, (float)height));
@@ -77,8 +76,9 @@ int main(int argc, char* argv[])
 	resourceManager.registerType<Guider::ConstraintsContainer>("containers.ConstraintsContainer");
 	resourceManager.registerType<Guider::ListContainer>("containers.ListContainer");
 	resourceManager.registerType<Guider::RectangleShape>("shapes.Rectangle");
-	resourceManager.registerType<Guider::EmptyComponent>("components.Guide");
-	resourceManager.registerType<Guider::TextComponent>("components.Text");
+	resourceManager.registerType<Guider::EmptyComponent>("common.Guide");
+	resourceManager.registerType<Guider::TextComponent>("common.Text");
+	resourceManager.registerType<Guider::BasicButtonComponent>("common.Button");
 
 	std::string mainLayout;
 	{
@@ -123,13 +123,28 @@ int main(int argc, char* argv[])
 			}
 			case Event::Resized:
 			{
-				Vector2u size(event.size.width, event.size.height);
+				Vector2f size(event.size.width, event.size.height);
 			
 				sf::FloatRect visibleArea(0, 0, size.x, size.y);
 				window.setView(sf::View(visibleArea));
 				engine.resize(Gui::Vec2((float)size.x, (float)size.y));
 			
 				gui.setTexture(renderer.target.getTexture(), true);
+				break;
+			}
+			case Event::MouseMoved:
+			{
+				engine.container.handleEvent(Guider::Event::createMouseEvent(Guider::Event::MouseEvent::Subtype::Moved,static_cast<float>(event.mouseMove.x),static_cast<float>(event.mouseMove.y),0));
+				break;
+			}
+			case Event::MouseButtonPressed:
+			{
+				engine.container.handleEvent(Guider::Event::createMouseEvent(Guider::Event::MouseEvent::Subtype::ButtonDown, static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y), event.mouseButton.button));
+				break;
+			}
+			case Event::MouseButtonReleased:
+			{
+				engine.container.handleEvent(Guider::Event::createMouseEvent(Guider::Event::MouseEvent::Subtype::ButtonUp, static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y), event.mouseButton.button));
 				break;
 			}
 			case Event::KeyPressed:

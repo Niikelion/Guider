@@ -21,6 +21,7 @@ namespace Guider
 		{
 			return std::make_shared<T>(m,config);
 		}
+		std::unordered_map<std::string, Component::Type> idMapping;
 	public:
 		static void handleDefaultArguments(Component& c, const XML::Tag& config);
 		static bool isDigitInBase(char c, unsigned base);

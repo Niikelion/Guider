@@ -11,6 +11,25 @@
 
 namespace Guider
 {
+	class Vec2
+	{
+	public:
+		float x, y;
+
+		Vec2& operator = (const Vec2&) = default;
+		Vec2& operator = (Vec2&&) noexcept = default;
+
+		Vec2& operator += (const Vec2& t) noexcept;
+		Vec2 operator + (const Vec2& t) const noexcept;
+
+		Vec2& operator -= (const Vec2& t) noexcept;
+		Vec2 operator - (const Vec2& t) const noexcept;
+
+		Vec2();
+		Vec2(float w, float h);
+		Vec2(const Vec2&) = default;
+		Vec2(Vec2&&) noexcept = default;
+	};
 	class Rect
 	{
 	public:
@@ -23,6 +42,20 @@ namespace Guider
 		bool operator != (const Rect&) const noexcept;
 
 		bool intersects(const Rect&) const noexcept;
+		bool contains(const Vec2&) const noexcept;
+
+		inline Rect at(const Vec2& pos) const noexcept
+		{
+			return Rect(pos.x,pos.y,width,height);
+		}
+		inline Vec2 position() const noexcept
+		{
+			return Vec2(left,top);
+		}
+		inline Vec2 size() const noexcept
+		{
+			return Vec2(width,height);
+		}
 
 		Rect();
 		Rect(float l, float t, float w, float h);
@@ -66,37 +99,80 @@ namespace Guider
 		}
 		Color(const Color& t) : value(t.value) {}
 	};
-	class Vec2
-	{
-	public:
-		float x, y;
-
-		Vec2& operator = (const Vec2&) = default;
-		Vec2& operator = (Vec2&&) noexcept = default;
-
-		Vec2& operator += (const Vec2& t) noexcept;
-		Vec2 operator + (const Vec2& t) const noexcept;
-
-		Vec2& operator -= (const Vec2& t) noexcept;
-		Vec2 operator - (const Vec2& t) const noexcept;
-
-		Vec2();
-		Vec2(float w, float h);
-		Vec2(const Vec2&) = default;
-		Vec2(Vec2&&) noexcept = default;
-	};
+	
 	using String = std::string;
 
-	class RenderBackend
+	//TODO: add objects for caching
+	class Backend
 	{
+	public:
+		class Resource
+		{
+		private:
+			uint64_t id;
+		public:
+			inline uint64_t getId() const noexcept
+			{
+				return id;
+			}
+			Resource(uint64_t i) : id(i) {};
+			Resource(const Resource& r) : id(r.id) {}
+			virtual ~Resource() = default;
+		};
+
+		class Drawable: public Resource
+		{
+		public:
+			virtual void draw(const Vec2& offset) = 0;
+
+			using Resource::Resource;
+		};
+
+		class RectangleShape : public Drawable
+		{
+		public:
+			virtual void setSize(const Vec2& size) = 0;
+			virtual void setColor(const Color& color) = 0;
+
+			using Drawable::Drawable;
+		};
+
+		class FontResource : public Resource
+		{
+		public:
+			virtual float getLineHeight(float textSize) const = 0;
+			virtual float getLineWidth(float textSize, const std::string& text) const = 0;
+
+			using Resource::Resource;
+		};
+
+		class TextResource : public Drawable
+		{
+		public:
+			virtual void setText(const std::string& text) = 0;
+			virtual void setTextSize(float size) = 0;
+			virtual void setFont(const FontResource& font) = 0;
+			virtual void setColor(const Color& color) = 0;
+			virtual float getLineHeight() const = 0;
+			virtual float getLineWidth() const = 0;
+
+			using Drawable::Drawable;
+		};
 	private:
 		Rect bounds;
 		std::vector<Vec2> offsets;
+
+		std::shared_ptr<RectangleShape> rectangle;
 	protected:
 		virtual void setViewport(const Rect& rect) = 0;
 	public:
-		virtual void drawRectangle(const Rect& rect) = 0;
-		virtual void drawText(float x, float y, const String& text) = 0;
+		virtual std::shared_ptr<RectangleShape> createRectangle(const Vec2& size, const Color& color) = 0;
+		virtual std::shared_ptr<TextResource> createText(const std::string& text, const FontResource& font, float size, const Color& color) = 0;
+		
+		virtual std::shared_ptr<FontResource> getFontByName(const std::string& name) = 0;
+
+		virtual void deleteResource(Resource& resource) = 0;
+		virtual void deleteResource(uint64_t id) = 0;
 
 		void pushDrawOffset(const Vec2& offset);
 		virtual void setDrawOrigin(float x, float y) = 0;
@@ -109,24 +185,94 @@ namespace Guider
 		virtual void pushMaskLayer() = 0;
 		virtual void popMaskLayer() = 0;
 		virtual void addToMask(const Rect& rect) = 0;
-		virtual void setColor(const Color& color) = 0;
-		virtual void setTextSize(float size) = 0;
-		virtual void setFont(const std::string& font) = 0;
 
 		void limitView(const Rect& rect);
 		void setView(const Rect& rect);
 		virtual Vec2 getSize() const noexcept = 0;
 		virtual void setSize(const Vec2& size) = 0;
 
+		void drawRectangle(const Rect& rect,const Color& color);
+	};
+
+	class Event
+	{
+	public:
+		struct BackendConnectedEvent
+		{
+			Backend& backend;
+
+			BackendConnectedEvent(Backend& b) : backend(b) {}
+			BackendConnectedEvent(const BackendConnectedEvent& t) : backend(t.backend) {}
+		};
+
+		struct MouseEvent
+		{
+			float x, y;
+			uint8_t button;
+
+			enum Subtype
+			{
+				Moved,
+				ButtonDown,
+				ButtonUp,
+				Left
+			};
+
+			MouseEvent(float xpos,float ypos, uint8_t buttonCode) : x(xpos), y(ypos), button(buttonCode) {}
+			MouseEvent(const MouseEvent& t, const Rect& bounds) : MouseEvent(t)
+			{
+				x -= bounds.left;
+				y -= bounds.top;
+			}
+			MouseEvent(const MouseEvent& t) = default;
+		};
+
+		enum Type
+		{
+			None,
+			Invalidated,
+			BackendConnected,
+			MouseMoved,
+			MouseButtonDown,
+			MouseButtonUp,
+			MouseLeft
+		};
+		Type type;
+
+		union
+		{
+			BackendConnectedEvent backendConnected;
+			MouseEvent mouseEvent;
+		};
+
+		static inline Event createInvalidatedEvent()
+		{
+			return Event(Type::Invalidated);
+		}
+		static inline Event createBackendConnectedEvent(Backend& backend)
+		{
+			Event e(Type::BackendConnected);
+			new(&e.backendConnected) BackendConnectedEvent(backend);
+			return e;
+		}
+		static Event createMouseEvent(MouseEvent::Subtype subtype,float x,float y, uint8_t button);
+
+		void dispose();
+
+		Event(const Event&);
+	private:
+		Event(Type type);
 	};
 
 	class Component
 	{
 	private:
+		Backend* backend;
 		Component* parent;
 		bool clean;
 		mutable bool redraw;
 		Rect bounds;
+		bool hasMouseOver;
 	protected:
 		inline void setBounds(Component& c, const Rect& r) const
 		{
@@ -139,6 +285,18 @@ namespace Guider
 			clean = true;
 		}
 	public:
+		inline void _resetMouseOver()
+		{
+			hasMouseOver = false;
+		}
+		inline void _setMouseOver()
+		{
+			hasMouseOver = true;
+		}
+		inline bool _getMouseOver() const
+		{
+			return hasMouseOver;
+		}
 		enum class SizingMode
 		{
 			OwnSize,
@@ -174,6 +332,8 @@ namespace Guider
 		inline void setParent(Component& p)
 		{
 			parent = &p;
+			if (parent->backend != nullptr)
+				handleEvent(Event::createBackendConnectedEvent(*parent->backend));
 			invalidate();
 		}
 		inline bool isClean() const noexcept
@@ -210,7 +370,16 @@ namespace Guider
 			return height;
 		}
 
-		virtual void drawMask(RenderBackend& renderer) const;
+		inline Backend* getBackend() const noexcept
+		{
+			return backend;
+		}
+		inline void setBackend(Backend& b)
+		{
+			handleEvent(Event::createBackendConnectedEvent(b));
+		}
+
+		virtual void drawMask(Backend& renderer) const;
 
 		virtual void poke();
 		virtual void onResize(const Rect& lastBounds);
@@ -234,6 +403,8 @@ namespace Guider
 		virtual void onChildStain(Component& c);
 		virtual void onChildNeedsRedraw(Component& c);
 
+		virtual void handleEvent(const Event& event);
+
 		void invalidate();
 		void invalidateVisuals();
 		virtual std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& width, const DimensionDesc& height);
@@ -245,10 +416,12 @@ namespace Guider
 		Rect getGlobalBounds() const;
 
 		using Type = std::shared_ptr<Component>;
-		virtual void onDraw(RenderBackend& renderer) const = 0;
-		void draw(RenderBackend& renderer) const;
+		virtual void onDraw(Backend& renderer) const = 0;
+		void draw(Backend& renderer) const;
 
-		Component() : parent(nullptr), redraw(true), clean(false), sizingModeH(SizingMode::OwnSize), sizingModeW(SizingMode::OwnSize), width(0), height(0) {}
+		Component() :backend(nullptr), parent(nullptr), redraw(true), clean(false), hasMouseOver(false), sizingModeH(SizingMode::OwnSize), sizingModeW(SizingMode::OwnSize), width(0), height(0) {}
+
+		virtual ~Component() = default;
 	};
 
 	class Container : public Component
@@ -257,6 +430,12 @@ namespace Guider
 		virtual void addChild(const Component::Type& child) = 0;
 		virtual void removeChild(const Component::Type& child) = 0;
 		virtual void clearChildren() = 0;
+
+		void handleEvent(const Event& event) override;
+		static Event adjustEventForComponent(const Event& event, Component& component);
+		void handleEventForComponent(const Event& event, Component& component);
+
+		virtual void propagateEvent(const Event& event) = 0;
 	};
 
 	class AbsoluteContainer : public Container
@@ -274,7 +453,7 @@ namespace Guider
 
 		mutable std::unordered_set<Component*> toUpdate;
 	public:
-		virtual void drawMask(RenderBackend& renderer) const override;
+		virtual void drawMask(Backend& renderer) const override;
 
 		virtual void addChild(const Component::Type& child) override;
 		void addChild(const Component::Type& child, float x, float y);
@@ -287,21 +466,26 @@ namespace Guider
 		virtual void onChildStain(Component& c) override;
 		virtual void onChildNeedsRedraw(Component& c) override;
 
-		virtual void onDraw(RenderBackend& renderer) const override;
+		virtual void propagateEvent(const Event& event) override;
+
+		virtual void onDraw(Backend& renderer) const override;
 	};
 
 	class Engine : public Component
 	{
 	private:
-		RenderBackend& backend;
+		Backend& backend;
 	public:
 		AbsoluteContainer container;
 
 		void resize(const Vec2& size);
 		void update();
-		void onDraw(RenderBackend& renderer) const override;
+		void onDraw(Backend& renderer) const override;
 		void draw() const;
 
-		Engine(RenderBackend& b) : backend(b) {};
+		Engine(Backend& b) : backend(b)
+		{
+			container.setBackend(b);
+		};
 	};
 }

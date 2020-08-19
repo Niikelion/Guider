@@ -49,7 +49,7 @@ namespace Guider
 	}
 	bool Manager::isDigitInBase(char c, unsigned base)
 	{
-		return base <= 10 ? (c >= '0' && c < '0' + base) : ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'A'+base-10) || (c >= 'a' && c < 'a'+base-10));
+		return base <= 10 ? (c >= '0' && c < '0' + static_cast<int>(base)) : ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'A'+static_cast<int>(base)-10) || (c >= 'a' && c < 'a'+static_cast<int>(base)-10));
 	}
 	unsigned Manager::digitFromChar(char c)
 	{
@@ -118,7 +118,7 @@ namespace Guider
 	}
 	Color Manager::strToColor(const std::string& str, bool& failed)
 	{
-		uint32_t value = strToInt(str, failed, 16);
+		uint32_t value = static_cast<uint32_t>(strToInt(str, failed, 16));
 
 		if (failed)
 		{

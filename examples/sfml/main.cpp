@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 	text.setFont(font);
 	*/
 
-	Gui::SfmlRenderer renderer;
+	Gui::SfmlBackend renderer;
 	Gui::Engine engine(renderer);
 	engine.resize(Gui::Vec2((float)width, (float)height));
 

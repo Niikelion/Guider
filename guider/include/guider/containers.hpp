@@ -39,13 +39,16 @@ namespace Guider
 		size_t getChildrenCount() const;
 		Component::Type getChild(unsigned i);
 
-		virtual void drawMask(RenderBackend& backend) const override;
-		virtual void onDraw(RenderBackend& backend) const override;
+		virtual void drawMask(Backend& backend) const override;
+		virtual void onDraw(Backend& backend) const override;
 
 		virtual void poke() override;
 		virtual void onResize(const Rect& lastBounds) override;
 		virtual void onChildStain(Component& c) override;
 		virtual void onChildNeedsRedraw(Component& c) override;
+
+		virtual void propagateEvent(const Event& event) override;
+
 		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
 
 		ListContainer() : horizontal(false), size(0), offset(0) {}
@@ -309,12 +312,15 @@ namespace Guider
 	public:
 		void setBackgroundColor(const Color& color);
 
-		virtual void drawMask(RenderBackend& renderer) const override;
+		virtual void drawMask(Backend& renderer) const override;
 
 		virtual void poke() override;
 		virtual void onResize(const Rect& bounds) override;
 		virtual void onChildStain(Component& c) override;
 		virtual void onChildNeedsRedraw(Component& c) override;
+		
+		virtual void propagateEvent(const Event& event) override;
+		
 		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
 
 		virtual void removeChild(const Component::Type& child) override;
@@ -324,7 +330,7 @@ namespace Guider
 		std::unique_ptr<RegularConstraintBuilder> addConstraint(Constraint::Orientation orientation, const Component::Type& target, bool constOffset);
 		std::unique_ptr<ChainConstraintBuilder> addChainConstraint(Constraint::Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset);
 
-		virtual void onDraw(RenderBackend& renderer) const override;
+		virtual void onDraw(Backend& renderer) const override;
 
 		virtual void postXmlConstruction(Manager& m, const XML::Tag& config);
 

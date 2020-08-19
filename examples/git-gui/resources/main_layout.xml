@@ -7,7 +7,7 @@
 		name="toolbar"
 	
 		width = "match_parent"
-		height = "40"
+		height = "32"
 		backgroundColor = "202020ff"
 		
 		horizontalConstraint="regular"
@@ -31,7 +31,7 @@
 			orientation="horizontal"
 			
 			horizontalConstraint="regular"
-			horizontalSizing="const_size"
+			horizontalSizing="const_offset"
 			horizontalFlow="0"
 			
 			attachLeftTo="parent left"
@@ -43,18 +43,24 @@
 			attachTopTo="parent top"
 			attachBottomTo="parent bottom"
 		>
-			<components.Text
-				width="100"
-				height="40"
+			<common.Button
+				width="wrap_content"
+				height="match_parent"
+				
+				padding="6 0"
+				
 				text="File"
-				textSize="20"
+				textSize="16"
 				color="a8a8a8ff"
 			/>
-			<components.Text
-				width="100"
-				height="40"
+			<common.Button
+				width="wrap_content"
+				height="match_parent"
+				
+				padding="6 0"
+				
 				text="Edit"
-				textSize="20"
+				textSize="16"
 				color="a8a8a8ff"
 			/>
 		</containers.ListContainer>

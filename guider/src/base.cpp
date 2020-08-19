@@ -16,6 +16,11 @@ namespace Guider
 			(rect.top <= top + height && rect.top + rect.height >= top);
 	}
 
+	bool Rect::contains(const Vec2& pos) const noexcept
+	{
+		return left <= pos.x && top <= pos.y && left+width >= pos.x && top+height >= pos.y;
+	}
+
 	Rect::Rect()
 	{
 		left = 0;
@@ -66,7 +71,7 @@ namespace Guider
 		y = h;
 	}
 
-	void RenderBackend::limitView(const Rect& rect)
+	void Backend::limitView(const Rect& rect)
 	{
 		float left = rect.left > bounds.left ? rect.left : bounds.left;
 		float right = rect.left + rect.width < bounds.left + bounds.width ? rect.left + rect.width : bounds.left + bounds.width;
@@ -81,13 +86,27 @@ namespace Guider
 		bounds.height = height > 0 ? height : 0;
 		setViewport(bounds);
 	}
-	void RenderBackend::setView(const Rect& rect)
+	void Backend::setView(const Rect& rect)
 	{
 		bounds = rect;
 		setViewport(bounds);
 	}
 
-	void RenderBackend::pushDrawOffset(const Vec2& offset)
+	void Backend::drawRectangle(const Rect& rect, const Color& color)
+	{
+		if (!rectangle)
+		{
+			rectangle = createRectangle(Vec2(0, 0), Color(0, 0, 0));
+		}
+		if (rectangle)
+		{
+			rectangle->setColor(color);
+			rectangle->setSize(Vec2(rect.width, rect.height));
+			rectangle->draw(Vec2(rect.left, rect.top));
+		}
+	}
+
+	void Backend::pushDrawOffset(const Vec2& offset)
 	{
 		Vec2 pos = offset;
 		if (!offsets.empty())
@@ -95,9 +114,87 @@ namespace Guider
 		offsets.emplace_back(pos);
 		setDrawOrigin(pos.x, pos.y);
 	}
-	void RenderBackend::popDrawOffset()
+	void Backend::popDrawOffset()
 	{
 		offsets.pop_back();
+	}
+
+	Event Event::createMouseEvent(MouseEvent::Subtype subtype,float  x, float y, uint8_t button)
+	{
+		Event e(Type::MouseMoved);
+		switch (subtype)
+		{
+		case MouseEvent::Subtype::ButtonDown:
+		{
+			e.type = Type::MouseButtonDown;
+			break;
+		}
+		case MouseEvent::Subtype::ButtonUp:
+		{
+			e.type = Type::MouseButtonUp;
+			break;
+		}
+		case MouseEvent::Subtype::Left:
+		{
+			e.type = Type::MouseLeft;
+			break;
+		}
+		}
+		new (&e.mouseEvent) MouseEvent(x,y,button);
+		return e;
+	}
+
+	void Event::dispose()
+	{
+		switch (type)
+		{
+		case Guider::Event::None:
+			break;
+		case Guider::Event::Invalidated:
+			break;
+		case Guider::Event::BackendConnected:
+		{
+			backendConnected.~backendConnected();
+			break;
+		}
+		case Guider::Event::MouseMoved:
+		case Guider::Event::MouseButtonDown:
+		case Guider::Event::MouseButtonUp:
+		case Guider::Event::MouseLeft:
+		{
+			mouseEvent.~mouseEvent();
+			break;
+		}
+		default:
+			break;
+		}
+	}
+
+	Event::Event(const Event& t): type(t.type)
+	{
+		switch (t.type)
+		{
+		case Type::BackendConnected:
+		{
+			new(&backendConnected) BackendConnectedEvent(t.backendConnected);
+			break;
+		}
+		case Type::MouseButtonDown:
+		case Type::MouseButtonUp:
+		case Type::MouseMoved:
+		case Type::MouseLeft:
+		{
+			new(&mouseEvent) MouseEvent(t.mouseEvent);
+			break;
+		}
+		default:
+			break;
+		}
+	}
+
+	Event::Event(Type type)
+	{
+		this->type = type;
 	}
 
 	Component::DimensionDesc::DimensionDesc(float value, Mode mode)
@@ -106,7 +203,7 @@ namespace Guider
 		this->mode = mode;
 	}
 
-	void Component::drawMask(RenderBackend& renderer) const
+	void Component::drawMask(Backend& renderer) const
 	{
 		renderer.addToMask(getGlobalBounds());
 	}
@@ -127,6 +224,36 @@ namespace Guider
 
 	void Component::onChildNeedsRedraw(Component& c)
 	{
+	}
+
+	void Component::handleEvent(const Event& event)
+	{
+		switch (event.type)
+		{
+		case Event::Type::BackendConnected:
+		{
+			backend = &event.backendConnected.backend;
+			invalidate();
+			break;
+		}
+		case Event::Type::Invalidated:
+		{
+			invalidate();
+			break;
+		}
+		case Event::Type::MouseButtonDown:
+		case Event::Type::MouseButtonUp:
+		case Event::Type::MouseMoved:
+		{
+			if (getBounds().at(Vec2(0,0)).contains(Vec2(event.mouseEvent.x, event.mouseEvent.y)))
+			{
+				_setMouseOver();
+			}
+			break;
+		}
+		default:
+			break;
+		}
 	}
 
 	void Component::invalidate()
@@ -157,7 +284,7 @@ namespace Guider
 			Component* p = getParent();
 			Component* c = this;
 
-			if (p != nullptr)
+			while (p != nullptr)
 			{
 				p->onChildNeedsRedraw(*c);
 				c = p;
@@ -245,7 +372,7 @@ namespace Guider
 		}
 		return b;
 	}
-	void Component::draw(RenderBackend& renderer) const
+	void Component::draw(Backend& renderer) const
 	{
 		redraw = false;
 		renderer.pushDrawOffset(Vec2(bounds.left,bounds.top));
@@ -253,7 +380,63 @@ namespace Guider
 		renderer.popDrawOffset();
 	}
 
-	void AbsoluteContainer::drawMask(RenderBackend& renderer) const
+
+	void Container::handleEvent(const Event& event)
+	{
+		Component::handleEvent(event);
+		propagateEvent(event);
+	}
+
+	Event Container::adjustEventForComponent(const Event& event, Component& component)
+	{
+		Event copy(event);
+		switch (copy.type)
+		{
+		case Event::Type::MouseButtonDown:
+		case Event::Type::MouseButtonUp:
+		case Event::Type::MouseMoved:
+		case Event::Type::MouseLeft:
+		{
+			copy.mouseEvent = Event::MouseEvent(copy.mouseEvent, component.getBounds());
+			break;
+		}
+		}
+		return copy;
+	}
+
+	void Container::handleEventForComponent(const Event& event, Component& component)
+	{
+		Event copy(event);
+		bool shouldHandle = true;
+		switch (copy.type)
+		{
+		case Event::Type::MouseButtonDown:
+		case Event::Type::MouseButtonUp:
+		case Event::Type::MouseMoved:
+		{
+			if (!component.getBounds().contains(Vec2(copy.mouseEvent.x, copy.mouseEvent.y)))
+			{
+				if (component._getMouseOver())
+				{
+					copy.type = Event::Type::MouseLeft;
+				}
+				else
+					shouldHandle = false;
+			}
+			
+			break;
+		}
+		case Event::Type::MouseLeft:
+		{
+			shouldHandle = component._getMouseOver();
+			break;
+		}
+		}
+		if (shouldHandle)
+			component.handleEvent(adjustEventForComponent(copy,component));
+	}
+
+	void AbsoluteContainer::drawMask(Backend& renderer) const
 	{
 		for (auto i : toUpdate)
 		{
@@ -271,6 +454,7 @@ namespace Guider
 		Rect bounds = getBounds();
 		children.emplace_back(child, x, y);
 		child->setParent(*this);
+		child->poke();
 		toUpdate.insert(child.get());
 		std::pair<Component::DimensionDesc, Component::DimensionDesc> measurements = child->measure(
 			Component::DimensionDesc(bounds.width, Component::DimensionDesc::Mode::Max),
@@ -368,7 +552,14 @@ namespace Guider
 	{
 		toUpdate.insert(&c);
 	}
-	void AbsoluteContainer::onDraw(RenderBackend& renderer) const
+	void AbsoluteContainer::propagateEvent(const Event& event)
+	{
+		for (auto& i : children)
+		{
+			handleEventForComponent(event, *i.component);
+		}
+	}
+	void AbsoluteContainer::onDraw(Backend& renderer) const
 	{
 		if (toUpdate.size() > 0)
 		{
@@ -409,7 +600,7 @@ namespace Guider
 	{
 		container.poke();
 	}
-	void Engine::onDraw(RenderBackend& renderer) const
+	void Engine::onDraw(Backend& renderer) const
 	{
 		container.onDraw(renderer);
 	}
