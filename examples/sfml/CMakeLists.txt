@@ -1,4 +1,4 @@
-find_package(SFML REQUIRED network audio graphics window system)
+find_package(SFML REQUIRED COMPONENTS network audio graphics window system)
 find_package(OpenGL REQUIRED)
 
 add_library(sfml_backend backend.cpp backend.hpp)

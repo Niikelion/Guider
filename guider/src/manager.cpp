@@ -2,6 +2,19 @@
 
 namespace Guider
 {
+	void ComponentBindings::registerElement(const std::string name, Component::Type& component)
+	{
+		idMapping.emplace(name,component);
+	}
+
+	Component::Type ComponentBindings::getElementById(const std::string& name)
+	{
+		auto it = idMapping.find(name);
+		if (it != idMapping.end())
+			return it->second;
+		return Component::Type();
+	}
+
 	void Manager::handleDefaultArguments(Component& c, const XML::Tag& config)
 	{
 		Component::SizingMode w = Component::SizingMode::OwnSize , h = Component::SizingMode::OwnSize;
@@ -136,12 +149,12 @@ namespace Guider
 
 		return std::vector<std::string>(begin,end);
 	}
-	void Manager::registerTypeCreator(const std::function<Component::Type (Manager&, const XML::Tag&)>& f, const std::string& name)
+	void Manager::registerTypeCreator(const std::function<Component::Type (Manager&, const XML::Tag&, ComponentBindings&)>& f, const std::string& name)
 	{
 		creators.emplace(name, f);
 	}
 
-	Component::Type Manager::instantiate(const XML::Tag& xml)
+	Component::Type Manager::instantiate(const XML::Tag& xml,ComponentBindings& bindings)
 	{
 		auto it = creators.find(xml.name);
 		if (it == creators.end())
@@ -149,6 +162,6 @@ namespace Guider
 			//TODO: throw(type not supported)
 			return Component::Type();
 		}
-		return Component::Type(it->second(*this, xml));
+		return Component::Type(it->second(*this, xml,bindings));
 	}
 }

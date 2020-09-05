@@ -5,6 +5,7 @@
 >
 	<containers.ConstraintsContainer
 		name="toolbar"
+		id="toolbar"
 	
 		width = "match_parent"
 		height = "32"
@@ -26,7 +27,7 @@
 		<containers.ListContainer
 			name="optionsList"
 			width="wrap_content"
-			height="match_parent"
+			height="20"
 			
 			orientation="horizontal"
 			
@@ -34,11 +35,59 @@
 			horizontalSizing="const_offset"
 			horizontalFlow="0"
 			
-			attachLeftTo="parent left"
+			attachLeftTo="parent left 6"
 			attachRightTo="parent right"
 			
 			verticalConstraint="regular"
-			verticaSizing="const_offset"
+			verticaSizing="const_size"
+			verticalFlow="0.5"
+			
+			attachTopTo="parent top"
+			attachBottomTo="parent bottom"
+		>
+			<common.Button
+				id="repo_button"
+			
+				width="wrap_content"
+				height="match_parent"
+				
+				padding="6 0"
+				
+				text="Repo"
+				textSize="12"
+				color="a8a8a8ff"
+			/>
+			<common.Button
+				id="branch_button"
+			
+				width="wrap_content"
+				height="match_parent"
+				
+				padding="6 0"
+				
+				text="branch"
+				textSize="12"
+				color="a8a8a8ff"
+			/>
+		</containers.ListContainer>
+		<containers.ListContainer
+			name="toolsList"
+			
+			width="wrap_content"
+			height="20"
+			
+			orientation="horizontal"
+			
+			horizontalConstraint="regular"
+			horizontalSizing="const_offset"
+			horizontalFlow="1"
+			
+			attachLeftTo="parent left"
+			attachRightTo="parent right 6"
+			
+			verticalConstraint="regular"
+			verticaSizing="const_size"
+			verticalFlow="0.5"
 			
 			attachTopTo="parent top"
 			attachBottomTo="parent bottom"
@@ -49,18 +98,8 @@
 				
 				padding="6 0"
 				
-				text="File"
-				textSize="16"
-				color="a8a8a8ff"
-			/>
-			<common.Button
-				width="wrap_content"
-				height="match_parent"
-				
-				padding="6 0"
-				
-				text="Edit"
-				textSize="16"
+				text="Menu"
+				textSize="12"
 				color="a8a8a8ff"
 			/>
 		</containers.ListContainer>

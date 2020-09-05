@@ -6,6 +6,8 @@
 #include <guider/containers.hpp>
 #include <guider/components.hpp>
 
+#include <paths.hpp>
+
 #include <git.hpp>
 
 #include <string>
@@ -24,10 +26,9 @@ using SizingMode = Gui::Component::SizingMode;
 
 int main(int argc, char* argv[])
 {
-	Git::Bridge bridge("D:/projects/sources/Guider/");
+	Git::Bridge bridge(repo_path);
 	if (bridge.isInRepository())
 	{
-		cout << "current:" << bridge.getCurrentBranch() << endl;
 		auto branches = bridge.getBranches(true, true);
 		for (const auto& branch : branches)
 		{
@@ -67,15 +68,20 @@ int main(int argc, char* argv[])
 	Gui::Engine engine(renderer);
 	engine.resize(Gui::Vec2((float)width, (float)height));
 
-	resourceManager.registerTypeCreator([](Guider::Manager& m, const Guider::XML::Tag& config)
+	resourceManager.registerTypeCreator([](Guider::Manager& m, const Guider::XML::Tag& config,Guider::ComponentBindings& bindings)
 	{
 		std::shared_ptr<Guider::ConstraintsContainer> ret = std::make_shared<Guider::ConstraintsContainer>(m,config);
 		ret->postXmlConstruction(m, config);
+		Guider::XML::Value tmp = config.getAttribute("id");
+		if (tmp.exists())
+		{
+			bindings.registerElement(tmp.val,std::static_pointer_cast<Guider::Component>(ret));
+		}
 		return ret;
 	}, "containers.ConstraintsContainer");
 	resourceManager.registerType<Guider::ConstraintsContainer>("containers.ConstraintsContainer");
 	resourceManager.registerType<Guider::ListContainer>("containers.ListContainer");
-	resourceManager.registerType<Guider::RectangleShape>("shapes.Rectangle");
+	resourceManager.registerType<Guider::RectangleShapeComponent>("shapes.Rectangle");
 	resourceManager.registerType<Guider::EmptyComponent>("common.Guide");
 	resourceManager.registerType<Guider::TextComponent>("common.Text");
 	resourceManager.registerType<Guider::BasicButtonComponent>("common.Button");
@@ -102,6 +108,23 @@ int main(int argc, char* argv[])
 	auto xmlRoot = Guider::XML::parse(mainLayout);
 
 	Guider::Component::Type root = resourceManager.instantiate(*static_cast<Guider::XML::Tag*>(xmlRoot->children[0].get()));
+
+	if (bridge.isInRepository())
+	{
+		std::shared_ptr<Guider::BasicButtonComponent> branchButton = static_pointer_cast<Guider::BasicButtonComponent>(resourceManager.getElementById("branch_button"));
+		branchButton->setText(bridge.getCurrentBranch().getName());
+		branchButton->setOnClickCallback([&bridge](Guider::Component& c) {
+			Guider::BasicButtonComponent& button = static_cast<Guider::BasicButtonComponent&>(c);
+			if (bridge.isInRepository())
+			{
+				button.setText(bridge.getCurrentBranch().getName());
+			}
+			else
+			{
+				button.setText("none");
+			}
+		});
+	}
 
 	engine.container.addChild(root);
 

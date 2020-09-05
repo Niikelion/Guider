@@ -100,10 +100,183 @@ namespace Guider
 		Color(const Color& t) : value(t.value) {}
 	};
 	
+	class Padding
+	{
+	public:
+		float left, right, top, bottom;
+
+		Rect calcContentArea(const Rect& bounds) const;
+
+		Padding() : left(0), right(0), top(0), bottom(0) {}
+		Padding(float l, float r, float t, float b) : left(l), right(r), top(t), bottom(b) {}
+		Padding(const Padding&) = default;
+	};
+
 	using String = std::string;
 
-	//TODO: add objects for caching
+	enum class Gravity
+	{
+		Start = 0,
+		Left = Start,
+		Top = Start,
+
+		Middle = 1,
+		Center = Middle,
+
+		End = 2,
+		Right = End,
+		Bottom = End
+	};
+
+	namespace Resources
+	{
+		class Drawable;
+	}
+
+	class Canvas
+	{
+	public:
+		virtual void drawRectangle(const Rect& rect, const Color& color) = 0;
+		void draw(Resources::Drawable& drawable, const Rect& rect);
+	};
+
+	namespace Resources
+	{
+		class Resource
+		{
+		private:
+			uint64_t id;
+		public:
+			inline uint64_t getId() const noexcept
+			{
+				return id;
+			}
+			Resource(uint64_t i) : id(i) {};
+			Resource(const Resource& r) : id(r.id) {}
+			virtual ~Resource() = default;
+		};
+
+		class Drawable : public Resource
+		{
+		public:
+			virtual void draw(Canvas& canvas, const Rect& bounds) = 0;
+
+			using Resource::Resource;
+		};
+
+		class ImageResource : public Drawable
+		{
+		private:
+			size_t width, height;
+		public:
+			inline size_t getWidth() const noexcept
+			{
+				return width;
+			}
+			inline size_t getHeight() const noexcept
+			{
+				return height;
+			}
+			ImageResource(uint64_t id, size_t w, size_t h) : Drawable(id), width(w), height(h) {}
+			ImageResource(const ImageResource& t) : Drawable(t.getId()), width(t.width), height(t.height) {}
+		};
+
+		class ImageCanvas : public Canvas
+		{
+		public:
+			virtual ImageResource& getImage() = 0;
+		};
+
+		class RectangleShape : public Drawable
+		{
+		public:
+			virtual void setSize(const Vec2& size) = 0;
+			virtual void setColor(const Color& color) = 0;
+
+			using Drawable::Drawable;
+		};
+
+		class FontResource : public Resource
+		{
+		public:
+			virtual float getLineHeight(float textSize) const = 0;
+			virtual float getLineWidth(float textSize, const std::string& text) const = 0;
+
+			using Resource::Resource;
+		};
+
+		class TextResource : public Drawable
+		{
+		public:
+			virtual void setText(const std::string& text) = 0;
+			virtual void setTextSize(float size) = 0;
+			virtual void setFont(const FontResource& font) = 0;
+			virtual void setColor(const Color& color) = 0;
+			virtual float getLineHeight() const = 0;
+			virtual float getLineWidth() const = 0;
+
+			using Drawable::Drawable;
+		};
+
+		class CompositeDrawable : public Drawable
+		{
+		public:
+			class ElementData
+			{
+			public:
+				Padding padding;
+				Gravity horizontalGravity, verticalGravity;
+				std::shared_ptr<Drawable> drawable;
+			};
+		private:
+			std::vector<ElementData> elements;
+		public:
+			virtual void draw(Canvas& canvas, const Rect& bounds);
+
+			CompositeDrawable(uint64_t id, const std::vector<ElementData>& drawables) : Drawable(id), elements(drawables) {}
+			CompositeDrawable(const CompositeDrawable&) = default;
+		};
+	}
+
 	class Backend
+	{
+	private:
+		Rect bounds;
+		std::vector<Vec2> offsets;
+	protected:
+		virtual void setViewport(const Rect& rect) = 0;
+	public:
+		virtual std::shared_ptr<Resources::RectangleShape> createRectangle(const Vec2& size, const Color& color) = 0;
+		virtual std::shared_ptr<Resources::TextResource> createText(const std::string& text, const Resources::FontResource& font, float size, const Color& color) = 0;
+
+		virtual std::shared_ptr<Resources::FontResource> getFontByName(const std::string& name) = 0;
+		virtual std::shared_ptr<Resources::FontResource> loadFontFromFile(const std::string& filename, const std::string& name) = 0;
+		virtual std::shared_ptr<Resources::ImageResource> loadImageFromFile(const std::string& filename) = 0;
+
+		virtual std::shared_ptr<Resources::ImageCanvas> createImage(const Vec2& size) = 0;
+
+		virtual void deleteResource(Resources::Resource& resource) = 0;
+		virtual void deleteResource(uint64_t id) = 0;
+
+		void pushDrawOffset(const Vec2& offset);
+		virtual void setDrawOrigin(float x, float y) = 0;
+		void popDrawOffset();
+
+		virtual void clearMask() = 0;
+		virtual void setupMask() = 0;
+		virtual void useMask() = 0;
+		virtual void disableMask() = 0;
+		virtual void pushMaskLayer() = 0;
+		virtual void popMaskLayer() = 0;
+		virtual void addToMask(const Rect& rect) = 0;
+
+		void limitView(const Rect& rect);
+		void setView(const Rect& rect);
+		virtual Vec2 getSize() const noexcept = 0;
+		virtual void setSize(const Vec2& size) = 0;
+	};
+
+	/*class Backend
 	{
 	public:
 		class Resource
@@ -123,7 +296,7 @@ namespace Guider
 		class Drawable: public Resource
 		{
 		public:
-			virtual void draw(const Vec2& offset) = 0;
+			virtual void draw(Canvas& canvas,const Rect& bounds) = 0;
 
 			using Resource::Resource;
 		};
@@ -161,8 +334,6 @@ namespace Guider
 	private:
 		Rect bounds;
 		std::vector<Vec2> offsets;
-
-		std::shared_ptr<RectangleShape> rectangle;
 	protected:
 		virtual void setViewport(const Rect& rect) = 0;
 	public:
@@ -190,9 +361,7 @@ namespace Guider
 		void setView(const Rect& rect);
 		virtual Vec2 getSize() const noexcept = 0;
 		virtual void setSize(const Vec2& size) = 0;
-
-		void drawRectangle(const Rect& rect,const Color& color);
-	};
+	};*/
 
 	class Event
 	{

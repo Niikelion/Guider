@@ -44,16 +44,16 @@ int main(int argc, char* argv[])
 	engine.container.addChild(container, 0, 0);
 
 	Gui::Component::Type rects[] = {
-		make_shared<Gui::RectangleShape>(SizingMode::MatchParent,Gui::Color(255,0,0)),
-		make_shared<Gui::RectangleShape>(SizingMode::MatchParent,Gui::Color(0,255,0)),
-		make_shared<Gui::RectangleShape>(SizingMode::MatchParent,Gui::Color(0,0,255)),
-		make_shared<Gui::RectangleShape>(SizingMode::MatchParent,Gui::Color(255,255,0)),
-		make_shared<Gui::RectangleShape>(SizingMode::MatchParent,Gui::Color(0,255,255))
+		make_shared<Gui::RectangleShapeComponent>(SizingMode::MatchParent,Gui::Color(255,0,0)),
+		make_shared<Gui::RectangleShapeComponent>(SizingMode::MatchParent,Gui::Color(0,255,0)),
+		make_shared<Gui::RectangleShapeComponent>(SizingMode::MatchParent,Gui::Color(0,0,255)),
+		make_shared<Gui::RectangleShapeComponent>(SizingMode::MatchParent,Gui::Color(255,255,0)),
+		make_shared<Gui::RectangleShapeComponent>(SizingMode::MatchParent,Gui::Color(0,255,255))
 	};
 
 	Gui::Component::Type dividers[] = {
-		make_shared<Gui::RectangleShape>(0,0,Gui::Color(0)),
-		make_shared<Gui::RectangleShape>(0,0,Gui::Color(0))
+		make_shared<Gui::RectangleShapeComponent>(0,0,Gui::Color(0)),
+		make_shared<Gui::RectangleShapeComponent>(0,0,Gui::Color(0))
 	};
 
 	for (unsigned i = 0; i < 5; ++i)
@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
 
 	std::shared_ptr<Gui::ListContainer> list = std::make_shared<Gui::ListContainer>();
 	list->setSizingMode(SizingMode::GivenSize, SizingMode::GivenSize);
-	list->addChild(std::make_shared<Gui::RectangleShape>(200, 50, Gui::Color(255, 255, 255)));
+	list->addChild(std::make_shared<Gui::RectangleShapeComponent>(200, 50, Gui::Color(255, 255, 255)));
 	container->addChild(list);
 
 
@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
 				else if (event.key.code == Keyboard::Add)
 				{
 					int c = 255 / (list->getChildrenCount() + 1);
-					list->addChild(std::make_shared<Gui::RectangleShape>(200, 50, Gui::Color(c, c, c)));
+					list->addChild(std::make_shared<Gui::RectangleShapeComponent>(200, 50, Gui::Color(c, c, c)));
 				}
 				else if (event.key.code == Keyboard::Subtract)
 				{

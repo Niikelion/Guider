@@ -129,7 +129,7 @@ namespace Git
 			return call(re);
 		}
 
-		std::string getCurrentBranch();
+		Branch getCurrentBranch();
 
 		std::vector<Branch> getBranches(bool remote = true, bool local = true);
 		std::vector<CommitDescription> getCommitDescriptions(size_t count = 0,size_t start = 0);

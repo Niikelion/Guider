@@ -71,6 +71,30 @@ namespace Guider
 		y = h;
 	}
 
+	Rect Padding::calcContentArea(const Rect& bounds) const
+	{
+		Rect ret = Rect(bounds.left + left, bounds.top + top, bounds.width - left - right, bounds.height - top - bottom);
+
+		if (ret.width < 0)
+		{
+			ret.width = 0;
+			ret.left = (2 * bounds.left + left + bounds.width - right) / 2;
+		}
+
+		if (ret.height < 0)
+		{
+			ret.height = 0;
+			ret.top = (2 * bounds.top + top + bounds.height - bottom) / 2;
+		}
+
+		return ret;
+	}
+
+	void Canvas::draw(Resources::Drawable& drawable, const Rect& bounds)
+	{
+		drawable.draw(*this, bounds);
+	}
+
 	void Backend::limitView(const Rect& rect)
 	{
 		float left = rect.left > bounds.left ? rect.left : bounds.left;
@@ -92,20 +116,6 @@ namespace Guider
 		setViewport(bounds);
 	}
 
-	void Backend::drawRectangle(const Rect& rect, const Color& color)
-	{
-		if (!rectangle)
-		{
-			rectangle = createRectangle(Vec2(0, 0), Color(0, 0, 0));
-		}
-		if (rectangle)
-		{
-			rectangle->setColor(color);
-			rectangle->setSize(Vec2(rect.width, rect.height));
-			rectangle->draw(Vec2(rect.left, rect.top));
-		}
-	}
-
 	void Backend::pushDrawOffset(const Vec2& offset)
 	{
 		Vec2 pos = offset;
@@ -117,6 +127,19 @@ namespace Guider
 	void Backend::popDrawOffset()
 	{
 		offsets.pop_back();
+	}
+
+	namespace Resources
+	{
+		void CompositeDrawable::draw(Canvas& canvas, const Rect& bounds)
+		{
+			for (auto& sub : elements)
+			{
+				Rect b = sub.padding.calcContentArea(bounds);
+				//TODO: apply gravity
+				sub.drawable->draw(canvas, bounds);
+			}
+		}
 	}
 
 	Event Event::createMouseEvent(MouseEvent::Subtype subtype,float  x, float y, uint8_t button)

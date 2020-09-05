@@ -3,25 +3,6 @@
 
 namespace Guider
 {
-	Rect Padding::calcContentArea(const Rect& bounds) const
-	{
-		Rect ret = Rect(bounds.left+left,bounds.top+top,bounds.width-left-right,bounds.height-top-bottom);
-
-		if (ret.width < 0)
-		{
-			ret.width = 0;
-			ret.left = (2 * bounds.left + left + bounds.width - right) / 2;
-		}
-
-		if (ret.height < 0)
-		{
-			ret.height = 0;
-			ret.top = (2 * bounds.top + top + bounds.height - bottom) / 2;
-		}
-
-		return ret;
-	}
-
 	Rect CommonComponent::getContentRect() const noexcept
 	{
 		return paddings.calcContentArea(getBounds());
@@ -125,7 +106,7 @@ namespace Guider
 	{
 	}
 
-	void RectangleShape::setColor(const Color& c)
+	void RectangleShapeComponent::setColor(const Color& c)
 	{
 		color = c;
 		if (shape != nullptr)
@@ -134,13 +115,13 @@ namespace Guider
 		}
 	}
 
-	void RectangleShape::onDraw(Backend& renderer) const
+	void RectangleShapeComponent::onDraw(Backend& renderer) const
 	{
 		Rect bounds = getBounds();
 		shape->setSize(Vec2(bounds.width,bounds.height));
 		shape->draw(Vec2(0,0));
 	}
-	void RectangleShape::handleEvent(const Event& event)
+	void RectangleShapeComponent::handleEvent(const Event& event)
 	{
 		if (event.type == Event::BackendConnected)
 		{

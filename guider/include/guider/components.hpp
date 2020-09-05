@@ -6,18 +6,6 @@
 
 namespace Guider
 {
-	class Padding
-	{
-	public:
-		float left, right, top, bottom;
-
-		Rect calcContentArea(const Rect& bounds) const;
-
-		Padding() : left(0), right(0), top(0), bottom(0) {}
-		Padding(float l, float r, float t, float b) : left(l), right(r), top(t), bottom(b) {}
-		Padding(const Padding&) = default;
-	};
-
 	class CommonComponent : public Component
 	{
 	private:
@@ -45,10 +33,10 @@ namespace Guider
 		EmptyComponent(Manager& m, const XML::Tag& config);
 	};
 
-	class RectangleShape : public Component
+	class RectangleShapeComponent : public Component
 	{
 	private:
-		Backend::RectangleShape* shape;
+		Resources::RectangleShape* shape;
 		Color color;
 	public:
 		void setColor(const Color& c);
@@ -61,18 +49,18 @@ namespace Guider
 
 		virtual void handleEvent(const Event& event) override;
 
-		RectangleShape() : shape(nullptr), color(255, 255, 255, 255) {}
-		RectangleShape(SizingMode mode, const Color& c): shape(nullptr), color(c)
+		RectangleShapeComponent() : shape(nullptr), color(255, 255, 255, 255) {}
+		RectangleShapeComponent(SizingMode mode, const Color& c): shape(nullptr), color(c)
 		{
 			setSizingMode(mode, mode);
 		}
-		RectangleShape(float w, float h, const Color& c) : Component(), shape(nullptr), color(c)
+		RectangleShapeComponent(float w, float h, const Color& c) : Component(), shape(nullptr), color(c)
 		{
 			setSize(Vec2(w, h));
 			setSizingMode(SizingMode::OwnSize, SizingMode::OwnSize);
 		}
 
-		RectangleShape(Manager& m, const XML::Tag& config) : RectangleShape()
+		RectangleShapeComponent(Manager& m, const XML::Tag& config) : RectangleShapeComponent()
 		{
 			Manager::handleDefaultArguments(*this, config);
 			{

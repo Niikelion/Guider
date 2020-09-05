@@ -9,7 +9,7 @@ namespace Guider
 	class SfmlBackend : public Backend
 	{
 	private:
-		class SfmlRectangle: public RectangleShape
+		class SfmlRectangle: public RectangleShapeComponent
 		{
 		private:
 			SfmlBackend& backend;
@@ -20,7 +20,7 @@ namespace Guider
 
 			void draw(const Vec2& offset) override;
 
-			SfmlRectangle(SfmlBackend& b,uint64_t id) : RectangleShape(id), backend(b) {}
+			SfmlRectangle(SfmlBackend& b,uint64_t id) : RectangleShapeComponent(id), backend(b) {}
 		};
 
 		class SfmlFont : public FontResource
@@ -81,7 +81,7 @@ namespace Guider
 		sf::Vector2f getCurrentDrawingoffset() const noexcept;
 
 		sf::RenderTexture target;
-		virtual std::shared_ptr<RectangleShape> createRectangle(const Vec2& size, const Color& color) override;
+		virtual std::shared_ptr<RectangleShapeComponent> createRectangle(const Vec2& size, const Color& color) override;
 		virtual std::shared_ptr<TextResource> createText(const std::string& text, const FontResource& font, float size, const Color& color) override;
 
 		std::shared_ptr<FontResource> loadFontFromFile(const std::string& file,const std::string& name);

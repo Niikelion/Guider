@@ -12,14 +12,30 @@ namespace Guider
 	{
 		using namespace ParseLib::XML;
 	}
-	class Manager
+
+	class ComponentBindings
 	{
 	private:
-		std::unordered_map<std::string, std::function<Component::Type (Manager&,const XML::Tag&)>> creators;
+		std::unordered_map<std::string, Component::Type> idMapping;
+	public:
+		void registerElement(const std::string name, Component::Type& component);
+		Component::Type getElementById(const std::string& name);
+	};
 
-		template<typename T> static Component::Type creator(Manager& m,const XML::Tag& config)
+	class Manager : public ComponentBindings
+	{
+	private:
+		std::unordered_map<std::string, std::function<Component::Type (Manager&,const XML::Tag&,ComponentBindings&)>> creators;
+
+		template<typename T> static Component::Type creator(Manager& m,const XML::Tag& config,ComponentBindings& bindings)
 		{
-			return std::make_shared<T>(m,config);
+			Component::Type ret = std::make_shared<T>(m, config);
+			XML::Value tmp = config.getAttribute("id");
+			if (tmp.exists())
+			{
+				bindings.registerElement(tmp.val, ret);
+			}
+			return ret;
 		}
 		std::unordered_map<std::string, Component::Type> idMapping;
 	public:
@@ -53,13 +69,17 @@ namespace Guider
 		}
 		static std::vector<std::string> splitString(const std::string& str);
 
-		void registerTypeCreator(const std::function<Component::Type (Manager&, const XML::Tag&)>& f, const std::string& name);
+		void registerTypeCreator(const std::function<Component::Type (Manager&, const XML::Tag&,ComponentBindings&)>& f, const std::string& name);
 
 		template<typename T>void registerType(const std::string& name)
 		{
 			registerTypeCreator(creator<T>,name);
 		}
 
-		Component::Type instantiate(const XML::Tag& xml = XML::Tag());
+		Component::Type instantiate(const XML::Tag& xml,ComponentBindings& bindings);
+		inline Component::Type instantiate(const XML::Tag& xml)
+		{
+			return instantiate(xml, *this);
+		}
 	};
 }

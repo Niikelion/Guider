@@ -74,7 +74,7 @@ namespace Git
 			{
 				std::string remote = item.substr(pos + 1);
 				if (remote != "HEAD")
-					ret.emplace_back(item.substr(0,pos),remote);
+					ret.emplace_back(remote, item.substr(0, pos));
 			}
 			else
 			{
@@ -99,11 +99,9 @@ namespace Git
 		}
 		return result;
 	}
-	std::string Bridge::getCurrentBranch()
+	Bridge::Branch Bridge::getCurrentBranch()
 	{
-		if (!isInRepository())
-			return "";
-		return rtrim(call("rev-parse --abbrev-ref HEAD"));
+		return Branch(rtrim(call("rev-parse --abbrev-ref HEAD")));
 	}
 	std::vector<Bridge::Branch> Bridge::getBranches(bool remote, bool local)
 	{
