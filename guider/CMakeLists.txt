@@ -1,4 +1,5 @@
 find_package(parselib REQUIRED)
+find_package(skia REQUIRED)
 
 set(sources
 	src/base.cpp
@@ -16,4 +17,4 @@ set(headers
 
 add_library(guider STATIC ${sources} ${headers})
 target_include_directories(guider PUBLIC include)
-target_link_libraries(guider PUBLIC parselib::xml)
+target_link_libraries(guider PUBLIC parselib::xml skia skia::skia)
