@@ -40,14 +40,12 @@ namespace Guider
 		Component::Type getChild(unsigned i);
 
 		virtual void drawMask(Backend& backend) const override;
-		virtual void onDraw(Backend& backend) const override;
+		virtual void onDraw(Canvas& canvas) const override;
 
 		virtual void poke() override;
 		virtual void onResize(const Rect& lastBounds) override;
 		virtual void onChildStain(Component& c) override;
 		virtual void onChildNeedsRedraw(Component& c) override;
-
-		virtual void propagateEvent(const Event& event) override;
 
 		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
 
@@ -318,8 +316,8 @@ namespace Guider
 		virtual void onResize(const Rect& bounds) override;
 		virtual void onChildStain(Component& c) override;
 		virtual void onChildNeedsRedraw(Component& c) override;
-		
-		virtual void propagateEvent(const Event& event) override;
+
+		virtual void handleEvent(const Event& event) override;
 		
 		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
 
@@ -330,7 +328,7 @@ namespace Guider
 		std::unique_ptr<RegularConstraintBuilder> addConstraint(Constraint::Orientation orientation, const Component::Type& target, bool constOffset);
 		std::unique_ptr<ChainConstraintBuilder> addChainConstraint(Constraint::Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset);
 
-		virtual void onDraw(Backend& renderer) const override;
+		virtual void onDraw(Canvas& canvas) const override;
 
 		virtual void postXmlConstruction(Manager& m, const XML::Tag& config);
 

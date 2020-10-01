@@ -27,16 +27,16 @@ namespace Guider
 	class EmptyComponent : public Component
 	{
 	public:
-		void onDraw(Backend& renderer) const override;
+		void onDraw(Canvas& canvas) const override {}
 
 		EmptyComponent() = default;
-		EmptyComponent(Manager& m, const XML::Tag& config);
+		EmptyComponent(Manager& m, const XML::Tag& config) {}
 	};
 
 	class RectangleShapeComponent : public Component
 	{
 	private:
-		Resources::RectangleShape* shape;
+		std::shared_ptr<Resources::RectangleShape> shape;
 		Color color;
 	public:
 		void setColor(const Color& c);
@@ -45,7 +45,7 @@ namespace Guider
 			return color;
 		}
 
-		virtual void onDraw(Backend& renderer) const override;
+		virtual void onDraw(Canvas& canvas) const override;
 
 		virtual void handleEvent(const Event& event) override;
 
@@ -75,44 +75,37 @@ namespace Guider
 	
 	class TextComponent : public CommonComponent
 	{
-	public:
-		enum class TextAlignment
-		{
-			Start,
-			Center,
-			End
-		};
 	private:
-		std::shared_ptr<Backend::TextResource> textRes;
+		std::shared_ptr<Resources::TextResource> textRes;
 		std::string text,font;
 		float textSize;
 		Color color;
-		TextAlignment horizontalTextAlign, verticalTextAlign;
+		Gravity horizontalTextAlign, verticalTextAlign;
 	public:
 		void setTextSize(float textSize);
 		void setText(const std::string& text);
 		void setTextColor(const Color& color);
 		void setFont(const std::string& name);
 
-		void setTextAlignment(TextAlignment horizontal, TextAlignment vertical);
-		inline TextAlignment getHorizontalTextAlignment() const
+		void setTextAlignment(Gravity horizontal, Gravity vertical);
+		inline Gravity getHorizontalTextAlignment() const
 		{
 			return horizontalTextAlign;
 		}
-		inline TextAlignment getVerticalTextAlignment() const
+		inline Gravity getVerticalTextAlignment() const
 		{
 			return verticalTextAlign;
 		}
 
-		virtual void onDraw(Backend& renderer) const override;
+		virtual void onDraw(Canvas& canvas) const override;
 		
 		virtual void handleEvent(const Event& event) override;
 
 		virtual std::pair<float, float> getContentSize(bool getWidth, bool getHeight) override;
 
-		TextComponent() : textRes(nullptr), textSize(10),color(0xff), horizontalTextAlign(TextAlignment::Start), verticalTextAlign(TextAlignment::Center) {}
+		TextComponent() : textRes(nullptr), textSize(10),color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center) {}
 
-		TextComponent(Manager& manager, const XML::Tag& config): CommonComponent(manager, config), textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(TextAlignment::Start), verticalTextAlign(TextAlignment::Center)
+		TextComponent(Manager& manager, const XML::Tag& config): CommonComponent(manager, config), textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
 		{
 			Manager::handleDefaultArguments(*this, config);
 			XML::Value tmp = config.getAttribute("color");
@@ -137,26 +130,26 @@ namespace Guider
 					setTextSize(v);
 			}
 
-			TextAlignment hor = TextAlignment::Start, ver = TextAlignment::Center;
+			Gravity hor = Gravity::Center, ver = Gravity::Center;
 			tmp = config.getAttribute("textAlignmentHorizontal");
 			if (tmp.exists())
 			{
 				if (tmp.val == "left" || tmp.val == "start")
-					hor = TextAlignment::Start;
+					hor = Gravity::Left;
 				else if (tmp.val == "center" || tmp.val == "middle")
-					hor = TextAlignment::Center;
+					hor = Gravity::Center;
 				else if (tmp.val == "right" || tmp.val == "end")
-					hor = TextAlignment::End;
+					hor = Gravity::Right;
 			}
 			tmp = config.getAttribute("textAlignmentVertical");
 			if (tmp.exists())
 			{
 				if (tmp.val == "top" || tmp.val == "start")
-					ver = TextAlignment::Start;
+					ver = Gravity::Top;
 				else if (tmp.val == "center" || tmp.val == "middle")
-					ver = TextAlignment::Center;
-				else if (tmp.val == "right" || tmp.val == "end")
-					ver = TextAlignment::End;
+					ver = Gravity::Center;
+				else if (tmp.val == "bottom" || tmp.val == "end")
+					ver = Gravity::Bottom;
 			}
 		}
 	};
@@ -190,19 +183,19 @@ namespace Guider
 	{
 	private:
 		//TODO: switch to drawables with manager
-		std::shared_ptr<Backend::RectangleShape> backgroundDefault, backgroundSelected, backgroundClicked;
+		std::shared_ptr<Resources::Drawable> backgroundDefault, backgroundSelected, backgroundClicked;
 	protected:
 		Component& getThisComponent() override;
 	public:
 		void drawMask(Backend& b) const override;
 
-		std::shared_ptr<Backend::RectangleShape> getBackgroundDrawable(ButtonState state) const;
-		inline std::shared_ptr<Backend::RectangleShape> getCurrentBackgroundDrawable() const
+		std::shared_ptr<Resources::Drawable> getBackgroundDrawable(ButtonState state) const;
+		inline std::shared_ptr<Resources::Drawable> getCurrentBackgroundDrawable() const
 		{
 			return getBackgroundDrawable(getButtonState());
 		}
 
-		void onDraw(Backend& backend) const override;
+		void onDraw(Canvas& canvas) const override;
 
 		void handleEvent(const Event& event) override;
 

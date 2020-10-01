@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
 		});
 	}
 
-	engine.container.addChild(root);
+	engine.addChild(root);
 
 	Sprite gui;
 	gui.setTexture(renderer.target.getTexture());
@@ -157,17 +157,17 @@ int main(int argc, char* argv[])
 			}
 			case Event::MouseMoved:
 			{
-				engine.container.handleEvent(Guider::Event::createMouseEvent(Guider::Event::MouseEvent::Subtype::Moved,static_cast<float>(event.mouseMove.x),static_cast<float>(event.mouseMove.y),0));
+				engine.handleEvent(Guider::Event::createMouseEvent(Guider::Event::MouseEvent::Subtype::Moved,static_cast<float>(event.mouseMove.x),static_cast<float>(event.mouseMove.y),0));
 				break;
 			}
 			case Event::MouseButtonPressed:
 			{
-				engine.container.handleEvent(Guider::Event::createMouseEvent(Guider::Event::MouseEvent::Subtype::ButtonDown, static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y), event.mouseButton.button));
+				engine.handleEvent(Guider::Event::createMouseEvent(Guider::Event::MouseEvent::Subtype::ButtonDown, static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y), event.mouseButton.button));
 				break;
 			}
 			case Event::MouseButtonReleased:
 			{
-				engine.container.handleEvent(Guider::Event::createMouseEvent(Guider::Event::MouseEvent::Subtype::ButtonUp, static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y), event.mouseButton.button));
+				engine.handleEvent(Guider::Event::createMouseEvent(Guider::Event::MouseEvent::Subtype::ButtonUp, static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y), event.mouseButton.button));
 				break;
 			}
 			case Event::KeyPressed:

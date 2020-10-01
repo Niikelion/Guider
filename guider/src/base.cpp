@@ -95,27 +95,6 @@ namespace Guider
 		drawable.draw(*this, bounds);
 	}
 
-	void Backend::limitView(const Rect& rect)
-	{
-		float left = rect.left > bounds.left ? rect.left : bounds.left;
-		float right = rect.left + rect.width < bounds.left + bounds.width ? rect.left + rect.width : bounds.left + bounds.width;
-		bounds.left = left;
-		float width = right - left;
-		bounds.width = width > 0 ? width : 0;
-
-		float top = rect.top > bounds.top ? rect.top : bounds.top;
-		float bottom = rect.top + rect.height < bounds.top + bounds.height ? rect.top + rect.height : bounds.top + bounds.height;
-		bounds.top = top;
-		float height = bottom - top;
-		bounds.height = height > 0 ? height : 0;
-		setViewport(bounds);
-	}
-	void Backend::setView(const Rect& rect)
-	{
-		bounds = rect;
-		setViewport(bounds);
-	}
-
 	void Backend::pushDrawOffset(const Vec2& offset)
 	{
 		Vec2 pos = offset;
@@ -395,19 +374,24 @@ namespace Guider
 		}
 		return b;
 	}
-	void Component::draw(Backend& renderer) const
+	void Component::draw(Canvas& canvas) const
 	{
 		redraw = false;
-		renderer.pushDrawOffset(Vec2(bounds.left,bounds.top));
-		onDraw(renderer);
-		renderer.popDrawOffset();
+		getBackend()->pushDrawOffset(Vec2(bounds.left,bounds.top));
+		onDraw(canvas);
+		getBackend()->popDrawOffset();
 	}
 
 
 	void Container::handleEvent(const Event& event)
 	{
 		Component::handleEvent(event);
-		propagateEvent(event);
+		Iterator it = firstElement();
+		while (!it.end())
+		{
+			it.current().handleEvent(adjustEventForComponent(event,it.current()));
+			it.loadNext();
+		}
 	}
 
 	Event Container::adjustEventForComponent(const Event& event, Component& component)
@@ -505,6 +489,10 @@ namespace Guider
 		toUpdate.clear();
 		children.clear();
 	}
+	Container::Iterator AbsoluteContainer::firstElement()
+	{
+		return createIterator<IteratorType>(children.begin(),children.end());
+	}
 	void AbsoluteContainer::poke()
 	{
 		Component::poke();
@@ -575,14 +563,8 @@ namespace Guider
 	{
 		toUpdate.insert(&c);
 	}
-	void AbsoluteContainer::propagateEvent(const Event& event)
-	{
-		for (auto& i : children)
-		{
-			handleEventForComponent(event, *i.component);
-		}
-	}
-	void AbsoluteContainer::onDraw(Backend& renderer) const
+
+	void AbsoluteContainer::onDraw(Canvas& canvas) const
 	{
 		if (toUpdate.size() > 0)
 		{
@@ -600,7 +582,7 @@ namespace Guider
 				{
 					if (localBounds.intersects(rect))
 					{
-						i.component->draw(renderer);
+						i.component->draw(canvas);
 						break;
 					}
 				}
@@ -613,35 +595,113 @@ namespace Guider
 		this->x = x;
 		this->y = y;
 	}
+	void Engine::addChild(const Component::Type& child)
+	{
+		Rect bounds = getBounds();
+		elements.emplace_back(child);
+		child->setParent(*this);
+		child->poke();
+		std::pair<Component::DimensionDesc, Component::DimensionDesc> measurements = child->measure(
+			Component::DimensionDesc(bounds.width, Component::DimensionDesc::Mode::Max),
+			Component::DimensionDesc(bounds.height, Component::DimensionDesc::Mode::Max)
+		);
+		bounds.left = 0;
+		bounds.top = 0;
+		bounds.width = measurements.first.value;
+		bounds.height = measurements.second.value;
+		setBounds(*child, bounds);
+	}
+	void Engine::removeChild(const Component::Type& child)
+	{
+		for (auto it = elements.begin(); it != elements.end(); ++it)
+		{
+			if (*it == child)
+			{
+				elements.erase(it);
+				return;
+			}
+		}
+	}
+	void Engine::clearChildren()
+	{
+		elements.clear();
+	}
+	Container::Iterator Engine::firstElement()
+	{
+		return createIterator<IteratorType>(elements.begin(),elements.end());
+	}
 	void Engine::resize(const Vec2& size)
 	{
 		backend.setSize(size);
 		Rect bounds(0, 0, size.x, size.y);
-		setBounds(container, bounds);
+		setBounds(*this, bounds);
+		for (auto element : elements)
+		{
+			Rect oldRect = element->getBounds();
+			element->poke();
+			std::pair<DimensionDesc, DimensionDesc> measurements = element->measure(
+				DimensionDesc(bounds.width, DimensionDesc::Max),
+				DimensionDesc(bounds.height, DimensionDesc::Max));
+
+			measurements.first.value = std::min(measurements.first.value, bounds.width);
+			measurements.second.value = std::min(measurements.second.value, bounds.height);
+
+			if (measurements.first.value != oldRect.width || measurements.second.value != oldRect.height)
+			{
+				setBounds(*element, Rect(0, 0, measurements.first.value, measurements.second.value));
+			}
+
+		}
 	}
 	void Engine::update()
 	{
-		container.poke();
+		Rect bounds = getBounds();
+		for (auto element : elements)
+		{
+			if (!element->isClean())
+			{
+				Rect oldRect = element->getBounds();
+				element->poke();
+				std::pair<DimensionDesc, DimensionDesc> measurements = element->measure(
+					DimensionDesc(bounds.width, DimensionDesc::Max),
+					DimensionDesc(bounds.height, DimensionDesc::Max));
+
+				measurements.first.value = std::min(measurements.first.value,bounds.width);
+				measurements.second.value = std::min(measurements.second.value, bounds.height);
+
+				if (measurements.first.value != oldRect.width || measurements.second.value != oldRect.height)
+				{
+					setBounds(*element, Rect(0, 0, measurements.first.value, measurements.second.value));
+				}
+			}
+		}
 	}
-	void Engine::onDraw(Backend& renderer) const
+	void Engine::onDraw(Canvas& canvas) const
 	{
-		container.onDraw(renderer);
+		//TODO: redraw only visually invalidated elements
+		for (auto element : elements)
+		{
+			element->draw(canvas);
+		}
 	}
 	void Engine::draw() const
 	{
-		Vec2 size = backend.getSize();
-		Rect bounds(0, 0, size.x, size.y);
-		backend.setView(bounds);
+		if (canvas)
+		{
+			Canvas* c = canvas.get();
+			Vec2 size = backend.getSize();
+			Rect bounds(0, 0, size.x, size.y);
+			backend.setBounds(bounds);
 
-		backend.setupMask();
-		backend.clearMask();
-		
-		container.drawMask(backend);
+			backend.setupMask();
+			backend.clearMask();
 
-		backend.useMask();
-		
-		container.onDraw(backend);
+			Container::drawMask(backend);
 
-		backend.disableMask();
+			backend.useMask();
+			Component::draw(*c);
+
+			backend.disableMask();
+		}
 	}
 }

@@ -98,14 +98,6 @@ namespace Guider
 		}
 	}
 
-	void EmptyComponent::onDraw(Backend& renderer) const
-	{
-	}
-
-	EmptyComponent::EmptyComponent(Manager& m, const XML::Tag& config)
-	{
-	}
-
 	void RectangleShapeComponent::setColor(const Color& c)
 	{
 		color = c;
@@ -115,22 +107,17 @@ namespace Guider
 		}
 	}
 
-	void RectangleShapeComponent::onDraw(Backend& renderer) const
+	void RectangleShapeComponent::onDraw(Canvas& canvas) const
 	{
 		Rect bounds = getBounds();
 		shape->setSize(Vec2(bounds.width,bounds.height));
-		shape->draw(Vec2(0,0));
+		shape->draw(canvas,Rect(0,0,bounds.width,bounds.height));
 	}
 	void RectangleShapeComponent::handleEvent(const Event& event)
 	{
 		if (event.type == Event::BackendConnected)
 		{
-			if (shape != nullptr)
-			{
-				getBackend()->deleteResource(shape->getId());
-			}
-			auto r = event.backendConnected.backend.createRectangle(Vec2(),color);
-			shape = r.get();
+			shape = event.backendConnected.backend.createRectangle(Vec2(), color);
 		}
 		Component::handleEvent(event);
 	}
@@ -172,22 +159,24 @@ namespace Guider
 		}
 		invalidate();
 	}
-	void TextComponent::setTextAlignment(TextAlignment horizontal, TextAlignment vertical)
+	void TextComponent::setTextAlignment(Gravity horizontal, Gravity vertical)
 	{
 		horizontalTextAlign = horizontal;
 		verticalTextAlign = vertical;
 		invalidateVisuals();
 	}
-	void TextComponent::onDraw(Backend& renderer) const
+	void TextComponent::onDraw(Canvas& canvas) const
 	{
-		float xoff = 0, yoff = 0;
+		//float xoff = 0, yoff = 0;
 
 		Rect bounds = getBounds();
 		Rect contentRect = getPading().calcContentArea(bounds.at(Vec2(0,0)));
+		textRes->horizontalAlignment = getHorizontalTextAlignment();
+		textRes->verticalAlignment = getVerticalTextAlignment();
 
-		float width = textRes->getLineWidth();
-		float height = textRes->getLineHeight();
-
+		//float width = textRes->getLineWidth();
+		//float height = textRes->getLineHeight();
+		/*
 		switch (getHorizontalTextAlignment())
 		{
 		case TextAlignment::Start:
@@ -225,17 +214,13 @@ namespace Guider
 			break;
 		}
 		}
-
-		textRes->draw(Vec2(xoff,yoff));
+		*/
+		textRes->draw(canvas,contentRect);
 	}
 	void TextComponent::handleEvent(const Event& event)
 	{
 		if (event.type == Event::BackendConnected)
 		{
-			if (textRes != nullptr)
-			{
-				getBackend()->deleteResource(textRes->getId());
-			}
 			textRes = event.backendConnected.backend.createText(text,*event.backendConnected.backend.getFontByName(font), textSize, color);
 			textRes->setFont(*event.backendConnected.backend.getFontByName(font));
 			textRes->setTextSize(textSize);
@@ -321,7 +306,7 @@ namespace Guider
 		Component::drawMask(b);
 		std::cout << "drawButtonMask\n";
 	}
-	std::shared_ptr<Backend::RectangleShape> BasicButtonComponent::getBackgroundDrawable(ButtonState state) const
+	std::shared_ptr<Resources::Drawable> BasicButtonComponent::getBackgroundDrawable(ButtonState state) const
 	{
 		if (state == ButtonState::Clicked)
 		{
@@ -334,13 +319,12 @@ namespace Guider
 
 		return backgroundDefault;
 	}
-	void BasicButtonComponent::onDraw(Backend& backend) const
+	void BasicButtonComponent::onDraw(Canvas& canvas) const
 	{
 		Rect bounds = getBounds();
-		std::shared_ptr<Backend::RectangleShape> shape = getCurrentBackgroundDrawable();
-		shape->setSize(Vec2(bounds.width,bounds.height));
-		shape->draw(Vec2(0,0));
-		TextComponent::onDraw(backend);
+		std::shared_ptr<Resources::Drawable> shape = getCurrentBackgroundDrawable();
+		shape->draw(canvas, bounds.at(Vec2(0,0)));
+		TextComponent::onDraw(canvas);
 	}
 	void BasicButtonComponent::handleEvent(const Event& event)
 	{

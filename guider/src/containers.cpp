@@ -199,13 +199,13 @@ namespace Guider
 		}
 	}
 
-	void ListContainer::onDraw(Backend& backend) const
+	void ListContainer::onDraw(Canvas& canvas) const
 	{
 		for (const auto& i : children)
 		{
 			if (backgroundColor.a > 0 || toRedraw.count(i.component.get()))
 			{
-				i.component->draw(backend);
+				i.component->draw(canvas);
 			}
 		}
 		toRedraw.clear();
@@ -296,15 +296,6 @@ namespace Guider
 	void ListContainer::onChildNeedsRedraw(Component& c)
 	{
 		toRedraw.insert(&c);
-	}
-
-	void ListContainer::propagateEvent(const Event& event)
-	{
-		//TODO: optimize
-		for (auto& i : children)
-		{
-			handleEventForComponent(event, *i.component);
-		}
 	}
 
 	std::pair<Component::DimensionDesc, Component::DimensionDesc> ListContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
@@ -1006,15 +997,14 @@ namespace Guider
 	{
 		needsRedraw.insert(&c);
 	}
-	void ConstraintsContainer::propagateEvent(const Event& event)
+
+	void ConstraintsContainer::handleEvent(const Event& event)
 	{
 		if (event.type == Event::Type::BackendConnected)
 			invalidLayout = true;
-		for (auto& i : children)
-		{
-			handleEventForComponent(event, *i);
-		}
+		Container::handleEvent(event);
 	}
+
 	std::pair<Component::DimensionDesc, Component::DimensionDesc> ConstraintsContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
 	{
 		Rect bounds = boundaries[this];
@@ -1162,7 +1152,7 @@ namespace Guider
 	{
 		return std::unique_ptr<ChainConstraintBuilder>();
 	}
-	void ConstraintsContainer::onDraw(Backend& renderer) const
+	void ConstraintsContainer::onDraw(Canvas& canvas) const
 	{
 		if (needsRedraw.size() > 0)
 		{
@@ -1174,7 +1164,7 @@ namespace Guider
 			if (backgroundColor.a > 0)
 			{
 				base.emplace_back(bounds);
-				renderer.drawRectangle(bounds,backgroundColor);
+				canvas.drawRectangle(bounds,backgroundColor);
 
 			}
 			else
@@ -1194,7 +1184,7 @@ namespace Guider
 				{
 					if (localBounds.intersects(rect))
 					{
-						i->draw(renderer);
+						i->draw(canvas);
 						break;
 					}
 				}
