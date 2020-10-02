@@ -4,174 +4,135 @@
 
 namespace Guider
 {
-	void SfmlBackend::SfmlRectangle::setSize(const Vec2& size)
+	void SfmlCanvas::drawRectangle(const Rect& rect, const Color& color)
 	{
-		shape.setSize(sf::Vector2f(size.x, size.y));
+		rectangle.setSize(sf::Vector2f(rect.width, rect.height));
+		rectangle.setPosition(rect.left, rect.top);
+		rectangle.setFillColor(sf::Color(color.r, color.g, color.b, color.a));
+		target.draw(rectangle);
 	}
 
-	void SfmlBackend::SfmlRectangle::setColor(const Color& color)
+	namespace SFMLResources
 	{
-		shape.setFillColor(sf::Color(color.r, color.g, color.b, color.a));
-	}
-
-	void SfmlBackend::SfmlRectangle::draw(const Vec2& offset)
-	{
-		sf::Vector2f origin = backend.getCurrentDrawingoffset();
-		shape.setPosition(offset.x + origin.x, offset.y + origin.y);
-		backend.target.draw(shape);
-	}
-
-	std::pair<unsigned, float> SfmlBackend::SfmlFont::unpackTextSize(float textSize)
-	{
-		float c = std::ceil(textSize);
-		return std::pair<unsigned, float>(c,textSize/c);
-	}
-
-	float SfmlBackend::SfmlFont::getLineHeight(float textSize) const
-	{
-		std::pair<unsigned, float> p = unpackTextSize(textSize);
-		return font.getLineSpacing(p.first)*p.second;
-	}
-
-	float SfmlBackend::SfmlFont::getLineWidth(float textSize, const std::string& text) const
-	{
-		std::pair<unsigned, float> p = unpackTextSize(textSize);
-		sf::Text t;
-		t.setCharacterSize(p.first);
-		t.setString(text);
-		t.setFont(font);
-		return t.getLocalBounds().width * p.second;
-	}
-
-	void SfmlBackend::SfmlText::setText(const std::string& text)
-	{
-		this->text.setString(text);
-	}
-
-	void SfmlBackend::SfmlText::setTextSize(float size)
-	{
-		this->size = size;
-		std::pair<unsigned, float> p = SfmlFont::unpackTextSize(size);
-		text.setCharacterSize(p.first);
-		text.setScale(p.second, p.second);
-	}
-
-	void SfmlBackend::SfmlText::setFont(const FontResource& font)
-	{
-		this->font = &font;
-		text.setFont(static_cast<const SfmlFont&>(font).getFont());
-	}
-
-	void SfmlBackend::SfmlText::setColor(const Color& color)
-	{
-		text.setFillColor(sf::Color(color.r,color.g,color.b));
-	}
-
-	float SfmlBackend::SfmlText::getLineHeight() const
-	{
-		if (font != nullptr)
-			return font->getLineHeight(size);
-		return 0.0f;
-	}
-
-	float SfmlBackend::SfmlText::getLineWidth() const
-	{
-		return text.getLocalBounds().width;
-	}
-
-	void SfmlBackend::SfmlText::draw(const Vec2& offset)
-	{
-		sf::Vector2f origin = backend.getCurrentDrawingoffset();
-		text.setPosition(offset.x + origin.x, offset.y + origin.y);
-		backend.target.draw(text);
-	}
-
-	void SfmlBackend::setViewport(const Rect& rect)
-	{
-		Vec2 size = getSize();
-		sf::FloatRect bounds(rect.left / size.x, rect.top / size.y, rect.width / size.x, rect.height / size.y);
-		sf::View v = target.getView();
-
-		v.setViewport(bounds);
-		v.setSize(rect.width, rect.height);
-		v.setCenter(rect.width / 2, rect.height / 2);
-		target.setView(v);
-	}
-	void SfmlBackend::addResource(const std::shared_ptr<Resource>& resource)
-	{
-		resources.emplace(resource->getId(), resource);
-	}
-	sf::Vector2f SfmlBackend::getCurrentDrawingoffset() const noexcept
-	{
-		return origin;
-	}
-	std::shared_ptr<SfmlBackend::RectangleShape> SfmlBackend::createRectangle(const Vec2& size, const Color& color)
-	{
-		std::shared_ptr<SfmlRectangle> ret = std::make_shared<SfmlRectangle>(*this,lid);
-		++lid;
-		ret->setSize(size);
-		ret->setColor(color);
-		addResource(ret);
-		return ret;
-	}
-
-	std::shared_ptr<SfmlBackend::TextResource> SfmlBackend::createText(const std::string& text, const FontResource& font, float size, const Color& color)
-	{
-		std::shared_ptr<SfmlText> ret = std::make_shared<SfmlText>(*this,lid);
-		++lid;
-		ret->setFont(font);
-		ret->setTextSize(size);
-		ret->setColor(color);
-		addResource(ret);
-		return ret;
-	}
-
-	std::shared_ptr<SfmlBackend::FontResource> SfmlBackend::loadFontFromFile(const std::string& file, const std::string& name)
-	{
-		sf::Font font;
-		font.loadFromFile(file);
-		std::shared_ptr<SfmlFont> ret = std::make_shared<SfmlFont>(font,name,lid);
-		++lid;
-		addResource(ret);
-		return ret;
-	}
-
-	std::shared_ptr<Backend::FontResource> SfmlBackend::getFontByName(const std::string& name)
-	{
-		auto it = fonts.find(name);
-		if (it != fonts.end())
+		void ImageResource::draw(Canvas& canvas, const Rect& bounds)
 		{
-			return it->second;
+			sprite.setScale(bounds.width/width,bounds.height/height);
+			canvas.as<SfmlCanvas>().getTarget().draw(sprite);
 		}
-		return std::shared_ptr<FontResource>();
-	}
-
-	void SfmlBackend::deleteResource(Resource& resource)
-	{
-		deleteResource(resource.getId());
-	}
-
-	void SfmlBackend::deleteResource(uint64_t id)
-	{
-		auto it = resources.find(id);
-		if (it != resources.end())
+		ImageResource::ImageResource(const std::string& path)
 		{
-			resources.erase(it);
-			SfmlFont* font = dynamic_cast<SfmlFont*>(it->second.get());
-			if (font != nullptr)
+			texture.loadFromFile(path);
+			sf::Vector2u size = texture.getSize();
+			width = size.x;
+			height = size.y;
+			sprite.setTexture(texture, true);
+		}
+		Guider::Resources::ImageResource& ImageCanvas::getImage()
+		{
+			return imageResourceWrapper;
+		}
+		void ConstImageResource::draw(Canvas& canvas, const Rect& rect)
+		{
+			sf::Vector2u size = texture.getSize();
+			sprite.setTexture(texture,true);
+			sprite.setScale(rect.width / size.x, rect.height / size.y);
+		}
+		void RectangleShape::draw(Canvas& canvas, const Rect& bounds)
+		{
+			bool resetSize = false;
+
+			if (rectangle.getSize() == sf::Vector2f(0, 0))
 			{
-				fonts.erase(fonts.find(font->getName()));
+				resetSize = true;
+				rectangle.setSize(sf::Vector2f(bounds.width,bounds.height));
 			}
+			canvas.as<SfmlCanvas>().getTarget().draw(rectangle);
+			if (resetSize)
+			{
+				rectangle.setSize(sf::Vector2f(0,0));
+			}
+		}
+		void RectangleShape::setSize(const Vec2& size)
+		{
+			rectangle.setSize(sf::Vector2f(size.x,size.y));
+		}
+		void RectangleShape::setColor(const Color& color)
+		{
+			rectangle.setFillColor(sf::Color(color.r,color.g,color.b,color.a));
+		}
+		float FontResource::getLineHeight(float textSize) const
+		{
+			std::pair<unsigned, float> p = unpackTextSize(textSize);
+			return font.getLineSpacing(p.first) * p.second;
+		}
+		float FontResource::getLineWidth(float textSize, const std::string& text) const
+		{
+			std::pair<unsigned, float> p = unpackTextSize(textSize);
+			sf::Text t;
+			t.setCharacterSize(p.first);
+			t.setString(text);
+			t.setFont(font);
+			return t.getLocalBounds().width * p.second;
+		}
+		void TextResource::draw(Canvas& canvas, const Rect& bounds)
+		{
+			canvas.as<SfmlCanvas>().getTarget().draw(text);
+		}
+		void TextResource::setText(const std::string& text)
+		{
+			this->text.setString(text);
+		}
+		void TextResource::setTextSize(float size)
+		{
+			textSize = size;
+			auto fontSize = SFMLResources::FontResource::unpackTextSize(size);
+			text.setCharacterSize(fontSize.first);
+			text.setScale(fontSize.second, fontSize.second);
+		}
+		void TextResource::setFont(const Guider::Resources::FontResource& font)
+		{
+			const SFMLResources::FontResource* f = dynamic_cast<const SFMLResources::FontResource*>(&font);
+			if (f != nullptr)
+			{
+				text.setFont(f->getFont());
+				fontResource = f;
+			}
+		}
+		void TextResource::setColor(const Color& color)
+		{
+			text.setFillColor(sf::Color(color.r,color.g,color.b,color.a));
+		}
+		float TextResource::getLineHeight() const
+		{
+			if (fontResource != nullptr)
+			{
+				return fontResource->getLineHeight(textSize);
+			}
+			return 0;
+		}
+		float TextResource::getLineWidth() const
+		{
+			if (fontResource != nullptr)
+			{
+				return fontResource->getLineWidth(textSize,text.getString());
+			}
+			return 0;
 		}
 	}
 
 	void SfmlBackend::setDrawOrigin(float x, float y)
 	{
 		origin = sf::Vector2f(x, y);
+		view.setCenter(origin);
+		view.setViewport(sf::FloatRect(0, 0, 1, 1));
+		sf::Vector2u size = canvas->getTarget().getSize();
+		view.setSize(sf::Vector2f(size.x,size.y));
+		canvas->getTarget().setView(view);
 	}
+
 	void SfmlBackend::clearMask()
 	{
-		target.pushGLStates();
+		canvas->getTarget().pushGLStates();
 
 		glEnable(GL_STENCIL_TEST);
 		glClearStencil(0);
@@ -190,7 +151,7 @@ namespace Guider
 	}
 	void SfmlBackend::disableMask()
 	{
-		target.popGLStates();
+		canvas->getTarget().popGLStates();
 	}
 	void SfmlBackend::pushMaskLayer()
 	{
@@ -206,22 +167,53 @@ namespace Guider
 	{
 		glColorMask(false, false, false, false);
 		maskRect.setSize(Vec2(rect.width, rect.height));
-		maskRect.draw(Vec2(rect.left, rect.top));
+		maskRect.draw(*canvas,Rect(0,0,rect.left, rect.top));
 		glColorMask(true, true, true, true);
 	}
 
 	Vec2 SfmlBackend::getSize() const noexcept
 	{
-		sf::Vector2u size = target.getSize();
+		sf::Vector2u size = canvas->getTarget().getSize();
 		return Vec2((float)size.x, (float)size.y);
 	}
 	void SfmlBackend::setSize(const Vec2& size)
 	{
-		target.create((unsigned)size.x, (unsigned)size.y, sf::ContextSettings(0, 8));
+		//set canvas size
 	}
-	void SfmlBackend::loadFont(const std::string& name, const sf::Font& font)
+
+	void SfmlBackend::setBounds(const Rect& rect)
 	{
-		fonts.emplace(name, std::make_shared<SfmlFont>(font,name,lid));
-		++lid;
+		glScissor(rect.left,rect.top,rect.width,rect.height);
+	}
+
+	std::shared_ptr<Resources::RectangleShape> SfmlBackend::createRectangle(const Vec2& size, const Color& color)
+	{
+		return std::make_shared<SFMLResources::RectangleShape>();
+	}
+	std::shared_ptr<Resources::TextResource> SfmlBackend::createText(const std::string& text, const Resources::FontResource& font, float size, const Color& color)
+	{
+		return std::make_shared<Resources::TextResource>();
+	}
+	std::shared_ptr<Resources::FontResource> SfmlBackend::getFontByName(const std::string& name)
+	{
+		return std::shared_ptr<Resources::FontResource>();
+	}
+	std::shared_ptr<Resources::FontResource> SfmlBackend::loadFontFromFile(const std::string& filename, const std::string& name)
+	{
+		return std::make_shared<Resources::FontResource>();
+	}
+	std::shared_ptr<Resources::ImageResource> SfmlBackend::loadImageFromFile(const std::string& filename)
+	{
+		return std::make_shared<SFMLResources::ImageResource>(filename);
+	}
+	std::shared_ptr<Resources::ImageCanvas> SfmlBackend::createImage(const Vec2& size)
+	{
+		return std::make_shared<SFMLResources::ImageCanvas>();
+	}
+	void SfmlBackend::deleteResource(Resources::Resource& resource) {}
+
+	std::shared_ptr<Canvas> SfmlBackend::getCanvas()
+	{
+		return std::static_pointer_cast<Canvas>(canvas);
 	}
 }

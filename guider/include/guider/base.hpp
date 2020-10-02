@@ -140,6 +140,11 @@ namespace Guider
 	public:
 		virtual void drawRectangle(const Rect& rect, const Color& color) = 0;
 		void draw(Resources::Drawable& drawable, const Rect& rect);
+
+		template<typename T>T& as()
+		{
+			return static_cast<T&>(*this);
+		}
 	};
 
 	namespace Resources
@@ -167,7 +172,9 @@ namespace Guider
 			{
 				return height;
 			}
-		private:
+			ImageResource() : width(0), height(0) {}
+			ImageResource(size_t w, size_t h) : width(w), height(h) {}
+		protected:
 			size_t width, height;
 		};
 

@@ -6,33 +6,88 @@
 
 namespace Guider
 {
-	class SfmlBackend : public Backend
+	class SfmlCanvas : public Canvas
 	{
-	private:
-		class SfmlRectangle: public RectangleShapeComponent
+	public:
+		inline sf::RenderTarget& getTarget()
 		{
-		private:
-			SfmlBackend& backend;
-			sf::RectangleShape shape;
+			return target;
+		}
+
+		virtual void drawRectangle(const Rect& rect, const Color& color) override;
+
+		SfmlCanvas(sf::RenderTarget& t) : target(t) {}
+	private:
+		sf::RenderTarget& target;
+		sf::RectangleShape rectangle;
+	};
+
+
+	namespace SFMLResources
+	{
+		class ImageResource : public Guider::Resources::ImageResource
+		{
 		public:
-			void setSize(const Vec2& size) override;
-			void setColor(const Color& color) override;
+			virtual void draw(Canvas& canvas, const Rect& bounds) override;
 
-			void draw(const Vec2& offset) override;
-
-			SfmlRectangle(SfmlBackend& b,uint64_t id) : RectangleShapeComponent(id), backend(b) {}
+			ImageResource() = default;
+			ImageResource(const std::string& path);
+		private:
+			sf::Sprite sprite;
+			sf::Texture texture;
 		};
 
-		class SfmlFont : public FontResource
+		class ConstImageResource : public Guider::Resources::ImageResource
 		{
+		public:
+			virtual void draw(Canvas& canvas, const Rect& rect) override;
+
+			ConstImageResource(const sf::Texture& tex) : texture(tex) {}
 		private:
-			sf::Font font;
-			std::string name;
+			sf::Sprite sprite;
+			const sf::Texture& texture;
+		};
+
+		class ImageCanvas : public Guider::Resources::ImageCanvas, public SfmlCanvas
+		{
+		public:
+			virtual Guider::Resources::ImageResource& getImage() override;
+
+			ImageCanvas() : SfmlCanvas(texture), imageResourceWrapper(texture.getTexture()) {}
+			ImageCanvas(uint32_t width,uint32_t height) : SfmlCanvas(texture), imageResourceWrapper(texture.getTexture())
+			{
+				texture.create(width, height, sf::ContextSettings(0, 8));
+			}
+		private:
+			ConstImageResource imageResourceWrapper;
+			sf::RenderTexture texture;
+		};
+
+		class RectangleShape : public Guider::Resources::RectangleShape
+		{
+		public:
+			virtual void draw(Canvas& canvas, const Rect& bounds) override;
+
+			virtual void setSize(const Vec2& size) override;
+
+			virtual void setColor(const Color& color) override;
+
+			RectangleShape() = default;
+			RectangleShape(float width,float height)
+			{
+				rectangle.setSize(sf::Vector2f(width, height));
+			}
+		private:
+			sf::RectangleShape rectangle;
+		};
+
+		class FontResource : public Guider::Resources::FontResource
+		{
 		public:
 			static std::pair<unsigned, float> unpackTextSize(float textSize);
 
-			float getLineHeight(float textSize) const override;
-			float getLineWidth(float textSize, const std::string& text) const override;
+			virtual float getLineHeight(float textSize) const override;
+			virtual float getLineWidth(float textSize, const std::string& text) const override;
 
 			inline const sf::Font& getFont() const
 			{
@@ -44,52 +99,35 @@ namespace Guider
 				return name;
 			}
 
-			SfmlFont(const sf::Font& f, const std::string n, uint64_t id) : FontResource(id), font(f), name(n) {}
+			FontResource(const sf::Font& f, const std::string n, uint64_t id) : font(f), name(n) {}
+		private:
+			sf::Font font;
+			std::string name;
 		};
 
-		class SfmlText : public TextResource
+		class TextResource : public Guider::Resources::TextResource
 		{
-		private:
-			float size;
-			sf::Text text;
-			const FontResource* font;
-			SfmlBackend& backend;
 		public:
+			virtual void draw(Canvas& canvas, const Rect& bounds) override;
 			virtual void setText(const std::string& text) override;
 			virtual void setTextSize(float size) override;
-			virtual void setFont(const FontResource& font) override;
+			virtual void setFont(const Guider::Resources::FontResource& font) override;
 			virtual void setColor(const Color& color) override;
 			virtual float getLineHeight() const override;
 			virtual float getLineWidth() const override;
 
-			void draw(const Vec2& offset) override;
-
-			SfmlText(SfmlBackend& b, uint64_t id) : TextResource(id), size(0), font(nullptr), backend(b) {}
+			TextResource() : fontResource(nullptr), textSize(0) {}
+		private:
+			sf::Text text;
+			const SFMLResources::FontResource* fontResource;
+			float textSize;
 		};
+	}
 
-		sf::Vector2f origin;
-		SfmlRectangle maskRect;
-		unsigned char maskLevel;
-		std::unordered_map<std::string, std::shared_ptr<SfmlFont>> fonts;
-		size_t lid;
-		std::unordered_map<size_t, std::shared_ptr<Resource>> resources;
-	protected:
-		virtual void setViewport(const Rect& rect) override;
 
-		void addResource(const std::shared_ptr<Resource>& resource);
+	class SfmlBackend : public Backend
+	{
 	public:
-		sf::Vector2f getCurrentDrawingoffset() const noexcept;
-
-		sf::RenderTexture target;
-		virtual std::shared_ptr<RectangleShapeComponent> createRectangle(const Vec2& size, const Color& color) override;
-		virtual std::shared_ptr<TextResource> createText(const std::string& text, const FontResource& font, float size, const Color& color) override;
-
-		std::shared_ptr<FontResource> loadFontFromFile(const std::string& file,const std::string& name);
-		std::shared_ptr<FontResource> getFontByName(const std::string& name);
-
-		virtual void deleteResource(Resource& resource) override;
-		virtual void deleteResource(uint64_t id) override;
-
 		virtual void setDrawOrigin(float x, float y) override;
 
 		virtual void clearMask() override;
@@ -100,11 +138,29 @@ namespace Guider
 		virtual void popMaskLayer() override;
 		virtual void addToMask(const Rect& rect) override;
 
+		virtual std::shared_ptr<Canvas> getCanvas() override;
+		virtual void setBounds(const Rect& rect) override;
+
 		virtual Vec2 getSize() const noexcept override;
 		virtual void setSize(const Vec2& size) override;
 
-		void loadFont(const std::string& name, const sf::Font& font);
+		virtual std::shared_ptr<Resources::RectangleShape> createRectangle(const Vec2& size, const Color& color) override;
+		virtual std::shared_ptr<Resources::TextResource> createText(const std::string& text, const Resources::FontResource& font, float size, const Color& color) override;
+		virtual std::shared_ptr<Resources::FontResource> getFontByName(const std::string& name) override;
+		virtual std::shared_ptr<Resources::FontResource> loadFontFromFile(const std::string& filename, const std::string& name) override;
+		virtual std::shared_ptr<Resources::ImageResource> loadImageFromFile(const std::string& filename) override;
+		virtual std::shared_ptr<Resources::ImageCanvas> createImage(const Vec2& size) override;
+		virtual void deleteResource(Resources::Resource& resource) override;
 
-		SfmlBackend(): Backend(), origin(0, 0), maskRect(*this,0), maskLevel(1), lid(0) {}
+		SfmlBackend(sf::RenderTarget& t) : Backend(), canvas(std::make_shared<SfmlCanvas>(t)), origin(0, 0), maskLevel(1) {}
+	private:
+		sf::View view;
+
+		std::shared_ptr<SfmlCanvas> canvas;
+
+		sf::Vector2f origin;
+		SFMLResources::RectangleShape maskRect;
+		unsigned char maskLevel;
+		std::unordered_map<std::string, std::shared_ptr<SFMLResources::FontResource>> fonts;
 	};
 }
