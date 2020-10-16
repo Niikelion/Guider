@@ -56,14 +56,13 @@ int main(int argc, char* argv[])
 
 	RenderWindow window(VideoMode(width, height), "Git-gui", Style::Default, ContextSettings(0, 8, 2));
 
-	Guider::Manager resourceManager;
+	sf::RenderTexture guiTexture;
+	guiTexture.create(width, height, sf::ContextSettings(0, 8, 8));
+	Gui::SfmlBackend renderer(guiTexture);
 
-	Gui::SfmlBackend renderer;
+	Guider::Manager resourceManager(renderer);
 
-	Font font;
-	font.loadFromFile("resources/Arimo-Regular.ttf");
-
-	renderer.loadFont("",font);
+	renderer.loadFontFromFile("resources/Arimo-Regular.ttf","");
 
 	Gui::Engine engine(renderer);
 	engine.resize(Gui::Vec2((float)width, (float)height));
@@ -127,10 +126,8 @@ int main(int argc, char* argv[])
 	}
 
 	engine.addChild(root);
-
 	Sprite gui;
-	gui.setTexture(renderer.target.getTexture());
-	//gui.setOrigin(width / 2.0f, height / 2.0f);
+	gui.setTexture(guiTexture.getTexture());
 
 	while (window.isOpen())
 	{
@@ -148,11 +145,13 @@ int main(int argc, char* argv[])
 			{
 				Vector2f size(event.size.width, event.size.height);
 			
+				guiTexture.create(size.x, size.y,sf::ContextSettings(0,8,8));
+
 				sf::FloatRect visibleArea(0, 0, size.x, size.y);
 				window.setView(sf::View(visibleArea));
 				engine.resize(Gui::Vec2((float)size.x, (float)size.y));
 			
-				gui.setTexture(renderer.target.getTexture(), true);
+				gui.setTexture(guiTexture.getTexture(), true);
 				break;
 			}
 			case Event::MouseMoved:
@@ -195,11 +194,11 @@ int main(int argc, char* argv[])
 
 		window.clear(Color(200, 200, 200));
 
-		renderer.target.setActive();
+		guiTexture.setActive();
 		engine.update();
 		engine.draw();
 
-		renderer.target.display();
+		guiTexture.display();
 
 		window.setActive();
 		window.draw(gui);

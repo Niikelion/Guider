@@ -53,6 +53,8 @@ namespace Guider
 		public:
 			virtual Guider::Resources::ImageResource& getImage() override;
 
+			virtual void drawRectangle(const Rect& rect, const Color& color) override;
+
 			ImageCanvas() : SfmlCanvas(texture), imageResourceWrapper(texture.getTexture()) {}
 			ImageCanvas(uint32_t width,uint32_t height) : SfmlCanvas(texture), imageResourceWrapper(texture.getTexture())
 			{
@@ -61,6 +63,8 @@ namespace Guider
 		private:
 			ConstImageResource imageResourceWrapper;
 			sf::RenderTexture texture;
+
+			// Odziedziczono za poœrednictwem elementu ImageCanvas
 		};
 
 		class RectangleShape : public Guider::Resources::RectangleShape
@@ -99,7 +103,7 @@ namespace Guider
 				return name;
 			}
 
-			FontResource(const sf::Font& f, const std::string n, uint64_t id) : font(f), name(n) {}
+			FontResource(const sf::Font& f, const std::string n) : font(f), name(n) {}
 		private:
 			sf::Font font;
 			std::string name;

@@ -182,7 +182,6 @@ namespace Guider
 	class BasicButtonComponent : public TextComponent, public ButtonBase
 	{
 	private:
-		//TODO: switch to drawables with manager
 		std::shared_ptr<Resources::Drawable> backgroundDefault, backgroundSelected, backgroundClicked;
 	protected:
 		Component& getThisComponent() override;

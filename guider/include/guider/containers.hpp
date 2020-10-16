@@ -28,6 +28,32 @@ namespace Guider
 		Color backgroundColor;
 
 		bool updateElementRect(Element& element, bool needsMeasure, float localOffset, const DimensionDesc& w, const DimensionDesc& h, const Rect& bounds);
+	
+		using iterator = std::list<Element>::iterator;
+
+		class IteratorType : public IteratorTemplate<IteratorType>
+		{
+		public:
+			virtual bool end() const override
+			{
+				return endIt == currentIt;
+			}
+			virtual void loadNext() override
+			{
+				if (!end())
+					++currentIt;
+			}
+			virtual Component& current() override
+			{
+				return *currentIt->component;
+			}
+
+			IteratorType(const iterator& begin, const iterator& end) : currentIt(begin), endIt(end) {}
+			IteratorType(const IteratorType&) = default;
+		private:
+			iterator currentIt;
+			const iterator endIt;
+		};
 	public:
 		void setOrientation(bool horizontal);
 
@@ -47,9 +73,11 @@ namespace Guider
 		virtual void onChildStain(Component& c) override;
 		virtual void onChildNeedsRedraw(Component& c) override;
 
+		virtual Iterator firstElement() override;
+
 		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
 
-		ListContainer() : horizontal(false), size(0), offset(0) {}
+		ListContainer() : horizontal(false), size(0), offset(0), backgroundColor(0,0,0,0) {}
 
 		ListContainer(Manager& manager, const XML::Tag& config) : ListContainer()
 		{
@@ -307,6 +335,7 @@ namespace Guider
 
 		void applyConstraints();
 
+		using IteratorType = CommonIteratorTemplate<std::vector < std::shared_ptr<Component> >::iterator>;
 	public:
 		void setBackgroundColor(const Color& color);
 
@@ -325,6 +354,8 @@ namespace Guider
 		virtual void clearChildren() override;
 		virtual void addChild(const Component::Type& child);
 
+		virtual Iterator firstElement() override;
+
 		std::unique_ptr<RegularConstraintBuilder> addConstraint(Constraint::Orientation orientation, const Component::Type& target, bool constOffset);
 		std::unique_ptr<ChainConstraintBuilder> addChainConstraint(Constraint::Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset);
 
@@ -334,6 +365,6 @@ namespace Guider
 
 		ConstraintsContainer() : messyClusters(true), invalidLayout(true), canWrapW(false), canWrapH(false), backgroundColor(0) {}
 		ConstraintsContainer(Manager& manager, const XML::Tag& config) : ConstraintsContainer() {}
-	};
+};
 
 }

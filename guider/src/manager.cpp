@@ -15,6 +15,55 @@ namespace Guider
 		return Component::Type();
 	}
 
+	std::shared_ptr<Resources::Drawable> Manager::getDrawableById(uint64_t id)
+	{
+		auto it = drawablesById.find(id);
+		if (it != drawablesById.end())
+		{
+			return it->second;
+		}
+		return std::shared_ptr<Resources::Drawable>();
+	}
+
+	std::shared_ptr<Resources::Drawable> Manager::getDrawableByName(const std::string& name)
+	{
+		auto it = drawableNameToIdMapping.find(name);
+		if (it != drawableNameToIdMapping.end())
+		{
+			return getDrawableById(it->second);
+		}
+		return std::shared_ptr<Resources::Drawable>();
+	}
+
+	std::shared_ptr<Resources::Drawable> Manager::getDrawableByText(const std::string& text)
+	{
+		std::string t = text;
+		t.erase(0, t.find_first_not_of("\t\n\v\f\r "));
+		t.erase(t.find_last_not_of("\t\n\v\f\r "));
+		
+		bool failed = false;
+		
+		if (!t.empty() && t[0] == '#') //color string
+		{
+			failed = false;
+			Color c = strToColor(t, failed);
+			if (!failed)
+			{
+				return backend.createRectangle(Vec2(0,0),c);
+			}
+		}
+		return std::shared_ptr<Resources::Drawable>();
+	}
+
+	void Manager::registerDrawable(const std::shared_ptr<Resources::Drawable>& drawable, uint64_t id, const std::string& name)
+	{
+		drawablesById.emplace(id,drawable);
+		if (!name.empty())
+		{
+			drawableNameToIdMapping.emplace(name,id);
+		}
+	}
+
 	void Manager::handleDefaultArguments(Component& c, const XML::Tag& config)
 	{
 		Component::SizingMode w = Component::SizingMode::OwnSize , h = Component::SizingMode::OwnSize;

@@ -170,7 +170,7 @@ namespace Guider
 	}
 	void ListContainer::drawMask(Backend& backend) const
 	{
-		if (backgroundColor.a > 0)
+		if (backgroundColor.a > 0 && needsRedraw())
 		{
 			Component::drawMask(backend);
 		}
@@ -285,7 +285,7 @@ namespace Guider
 		}
 		toOffset.clear();
 		for (auto& i : children)
-			toRedraw.insert(i.component.get());
+			i.component->invalidateVisuals();
 	}
 
 	void ListContainer::onChildStain(Component& c)
@@ -296,6 +296,11 @@ namespace Guider
 	void ListContainer::onChildNeedsRedraw(Component& c)
 	{
 		toRedraw.insert(&c);
+	}
+
+	ListContainer::Iterator ListContainer::firstElement()
+	{
+		return createIterator<IteratorType>(children.begin(),children.end());
 	}
 
 	std::pair<Component::DimensionDesc, Component::DimensionDesc> ListContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
@@ -946,13 +951,13 @@ namespace Guider
 	}
 	void ConstraintsContainer::drawMask(Backend& renderer) const
 	{
-		if (backgroundColor.a > 0)
+		if (backgroundColor.a > 0 && Component::needsRedraw())
 		{
 			Component::drawMask(renderer);
 		}
 		else
 		{
-			for (auto element : needsRedraw)
+			for (auto element : this->needsRedraw)
 			{
 				element->drawMask(renderer);
 			}
@@ -980,7 +985,7 @@ namespace Guider
 			invalidLayout = false;
 			applyConstraints();
 			for (auto& i : children)
-				needsRedraw.insert(i.get());
+				i->invalidateVisuals();
 			invalidateVisuals();
 		}
 	}
@@ -1649,5 +1654,9 @@ namespace Guider
 				++i;
 			}
 		}
+	}
+	ConstraintsContainer::Iterator ConstraintsContainer::firstElement()
+	{
+		return createIterator<IteratorType>(children.begin(),children.end());
 	}
 }

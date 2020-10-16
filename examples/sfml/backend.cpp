@@ -1,3 +1,4 @@
+#include "..\..\guider\include\guider\base.hpp"
 #include <backend.hpp>
 #include <SFML/OpenGL.hpp>
 #include <cmath>
@@ -31,6 +32,10 @@ namespace Guider
 		{
 			return imageResourceWrapper;
 		}
+		void ImageCanvas::drawRectangle(const Rect& rect, const Color& color)
+		{
+			SfmlCanvas::drawRectangle(rect, color);
+		}
 		void ConstImageResource::draw(Canvas& canvas, const Rect& rect)
 		{
 			sf::Vector2u size = texture.getSize();
@@ -40,7 +45,7 @@ namespace Guider
 		void RectangleShape::draw(Canvas& canvas, const Rect& bounds)
 		{
 			bool resetSize = false;
-
+			rectangle.setPosition(bounds.left, bounds.top);
 			if (rectangle.getSize() == sf::Vector2f(0, 0))
 			{
 				resetSize = true;
@@ -60,6 +65,11 @@ namespace Guider
 		{
 			rectangle.setFillColor(sf::Color(color.r,color.g,color.b,color.a));
 		}
+		std::pair<unsigned, float> FontResource::unpackTextSize(float textSize)
+		{
+			unsigned s = std::ceil(textSize);
+			return std::pair<unsigned, float>(s,textSize/s);
+		}
 		float FontResource::getLineHeight(float textSize) const
 		{
 			std::pair<unsigned, float> p = unpackTextSize(textSize);
@@ -76,6 +86,8 @@ namespace Guider
 		}
 		void TextResource::draw(Canvas& canvas, const Rect& bounds)
 		{
+			Rect adjustedRect = getAdjustedRect(bounds);
+			text.setPosition(adjustedRect.left, adjustedRect.top);
 			canvas.as<SfmlCanvas>().getTarget().draw(text);
 		}
 		void TextResource::setText(const std::string& text)
@@ -122,10 +134,11 @@ namespace Guider
 
 	void SfmlBackend::setDrawOrigin(float x, float y)
 	{
-		origin = sf::Vector2f(x, y);
-		view.setCenter(origin);
-		view.setViewport(sf::FloatRect(0, 0, 1, 1));
 		sf::Vector2u size = canvas->getTarget().getSize();
+		origin = sf::Vector2f(x, y);
+		view.setCenter(-origin+sf::Vector2f(size.x,size.y)*0.5f);
+		view.setViewport(sf::FloatRect(0, 0, 1, 1));
+		
 		view.setSize(sf::Vector2f(size.x,size.y));
 		canvas->getTarget().setView(view);
 	}
@@ -166,8 +179,8 @@ namespace Guider
 	void SfmlBackend::addToMask(const Rect& rect)
 	{
 		glColorMask(false, false, false, false);
-		maskRect.setSize(Vec2(rect.width, rect.height));
-		maskRect.draw(*canvas,Rect(0,0,rect.left, rect.top));
+		maskRect.setSize(Vec2(0,0));
+		maskRect.draw(*canvas,Rect(rect.left, rect.top, rect.width, rect.height));
 		glColorMask(true, true, true, true);
 	}
 
@@ -183,24 +196,44 @@ namespace Guider
 
 	void SfmlBackend::setBounds(const Rect& rect)
 	{
-		glScissor(rect.left,rect.top,rect.width,rect.height);
+		glScissor(origin.x+rect.left,origin.y+rect.top,rect.width,rect.height);
 	}
 
 	std::shared_ptr<Resources::RectangleShape> SfmlBackend::createRectangle(const Vec2& size, const Color& color)
 	{
-		return std::make_shared<SFMLResources::RectangleShape>();
+		std::shared_ptr<Resources::RectangleShape> ret = std::make_shared<SFMLResources::RectangleShape>(size.x,size.y);
+		ret->setColor(color);
+		return ret;
 	}
 	std::shared_ptr<Resources::TextResource> SfmlBackend::createText(const std::string& text, const Resources::FontResource& font, float size, const Color& color)
 	{
-		return std::make_shared<Resources::TextResource>();
+		std::shared_ptr<Resources::TextResource> res = std::make_shared<SFMLResources::TextResource>();
+		res->setText(text);
+		res->setFont(font);
+		res->setTextSize(size);
+		res->setColor(color);
+
+		return res;
 	}
 	std::shared_ptr<Resources::FontResource> SfmlBackend::getFontByName(const std::string& name)
 	{
+		auto it = fonts.find(name);
+		if (it != fonts.end())
+		{
+			return it->second;
+		}
 		return std::shared_ptr<Resources::FontResource>();
 	}
 	std::shared_ptr<Resources::FontResource> SfmlBackend::loadFontFromFile(const std::string& filename, const std::string& name)
 	{
-		return std::make_shared<Resources::FontResource>();
+		sf::Font f;
+		if (f.loadFromFile(filename))
+		{
+			std::shared_ptr<SFMLResources::FontResource> font = std::make_shared<SFMLResources::FontResource>(f,name);
+			fonts[name] = font;
+			return font;
+		}
+		return std::shared_ptr<Resources::FontResource>();
 	}
 	std::shared_ptr<Resources::ImageResource> SfmlBackend::loadImageFromFile(const std::string& filename)
 	{

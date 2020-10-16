@@ -210,6 +210,8 @@ namespace Guider
 			virtual float getLineHeight() const = 0;
 			virtual float getLineWidth() const = 0;
 
+			Rect getAdjustedRect(const Rect& r);
+
 			TextResource() : verticalAlignment(Gravity::Center), horizontalAlignment(Gravity::Center) {}
 			TextResource(Gravity horizontal, Gravity vertical) : verticalAlignment(vertical), horizontalAlignment(horizontal) {}
 		};
@@ -429,36 +431,14 @@ namespace Guider
 
 	class Component
 	{
-	private:
-		Backend* backend;
-		Component* parent;
-		bool clean;
-		mutable bool redraw;
-		Rect bounds;
-		bool hasMouseOver;
-	protected:
-		inline void setBounds(Component& c, const Rect& r) const
-		{
-			Rect lastBounds = c.bounds;
-			c.bounds = r;
-			c.onResize(lastBounds);
-		}
-		inline void setClean()
-		{
-			clean = true;
-		}
 	public:
-		inline void _resetMouseOver()
-		{
-			hasMouseOver = false;
-		}
-		inline void _setMouseOver()
-		{
-			hasMouseOver = true;
-		}
-		inline bool _getMouseOver() const
+		inline bool isMouseOver() const
 		{
 			return hasMouseOver;
+		}
+		inline bool hasMouseButtonFocus() const
+		{
+			return hasMouseFocus;
 		}
 		enum class SizingMode
 		{
@@ -467,10 +447,7 @@ namespace Guider
 			MatchParent,
 			WrapContent
 		};
-	private:
-		SizingMode sizingModeW, sizingModeH;
-		float width, height;
-	public:
+
 		inline void setSizingMode(SizingMode w, SizingMode h)
 		{
 			if (sizingModeW != w)
@@ -502,6 +479,10 @@ namespace Guider
 		inline bool isClean() const noexcept
 		{
 			return clean;
+		}
+		inline bool needsRedraw() const
+		{
+			return redraw;
 		}
 		inline void setWidth(float w)
 		{
@@ -569,7 +550,7 @@ namespace Guider
 		virtual void handleEvent(const Event& event);
 
 		void invalidate();
-		void invalidateVisuals();
+		virtual void invalidateVisuals();
 		virtual std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& width, const DimensionDesc& height);
 
 		Component* getParent();
@@ -582,9 +563,48 @@ namespace Guider
 		virtual void onDraw(Canvas& canvas) const = 0;
 		void draw(Canvas& canvas) const;
 
-		Component() :backend(nullptr), parent(nullptr), redraw(true), clean(false), hasMouseOver(false), sizingModeH(SizingMode::OwnSize), sizingModeW(SizingMode::OwnSize), width(0), height(0) {}
+		Component() :backend(nullptr), parent(nullptr), redraw(true), clean(false), hasMouseOver(false), hasMouseFocus(false), sizingModeH(SizingMode::OwnSize), sizingModeW(SizingMode::OwnSize), width(0), height(0) {}
 
 		virtual ~Component() = default;
+
+	protected:
+		inline void setBounds(Component& c, const Rect& r) const
+		{
+			Rect lastBounds = c.bounds;
+			c.bounds = r;
+			c.onResize(lastBounds);
+		}
+		inline void setClean()
+		{
+			clean = true;
+		}
+	private:
+		Backend* backend;
+		Component* parent;
+		bool clean;
+		mutable bool redraw;
+		Rect bounds;
+		bool hasMouseOver;
+		bool hasMouseFocus;
+
+		inline void setMouseOver()
+		{
+			hasMouseOver = true;
+		}
+		inline void resetMouseOver()
+		{
+			hasMouseOver = false;
+		}
+		inline void setMouseFocus()
+		{
+			hasMouseFocus = true;
+		}
+		inline void resetMouseFocus()
+		{
+			hasMouseFocus = false;
+		}
+		SizingMode sizingModeW, sizingModeH;
+		float width, height;
 	};
 
 	class Container : public Component
@@ -678,6 +698,8 @@ namespace Guider
 			return Iterator((IteratorBase*)new T(std::forward<Args>(args)...));
 		}
 
+		virtual void invalidateVisuals() override;
+
 		virtual void addChild(const Component::Type& child) = 0;
 		virtual void removeChild(const Component::Type& child) = 0;
 		virtual void clearChildren() = 0;
@@ -747,15 +769,19 @@ namespace Guider
 
 		mutable std::unordered_set<Component*> toUpdate;
 	};
-	//TODO: switch base to Container and remove AbsoluteContainer dependency
+
 	class Engine : public Container
 	{
 	public:
+		virtual void drawMask(Backend& renderer) const override;
+
 		virtual void addChild(const Component::Type& child) override;
 		virtual void removeChild(const Component::Type& child) override;
 		virtual void clearChildren() override;
 
 		virtual Iterator firstElement() override;
+
+		virtual void onChildNeedsRedraw(Component& c) override;
 
 		void resize(const Vec2& size);
 		void update();
@@ -776,6 +802,7 @@ namespace Guider
 	private:
 		using IteratorType = CommonIteratorTemplate<std::vector<Component::Type>::iterator>;
 		Backend& backend;
+		mutable std::unordered_set<Component*> toRedraw;
 		std::shared_ptr<Canvas> canvas;
 		std::vector<Component::Type> elements;
 	};

@@ -119,6 +119,56 @@ namespace Guider
 				sub.drawable->draw(canvas, bounds);
 			}
 		}
+
+		Rect TextResource::getAdjustedRect(const Rect& r)
+		{
+			float width = getLineWidth(), height = getLineHeight();
+
+			Vec2 pos;
+			switch (horizontalAlignment)
+			{
+			case Guider::Gravity::Left:
+			{
+				pos.x = 0;
+				break;
+			}
+			case Guider::Gravity::Middle:
+			{
+				pos.x = (r.width - width) / 2;
+				break;
+			}
+			case Guider::Gravity::Right:
+			{
+				pos.x = r.width - width;
+				break;
+			}
+			default:
+				break;
+			}
+
+			switch (verticalAlignment)
+			{
+			case Guider::Gravity::Top:
+			{
+				pos.y = 0;
+				break;
+			}
+			case Guider::Gravity::Middle:
+			{
+				pos.y = (r.height - height) / 2;
+				break;
+			}
+			case Guider::Gravity::Bottom:
+			{
+				pos.y = r.height - height;
+				break;
+			}
+			default:
+				break;
+			}
+
+			return Rect(r.left + pos.x, r.top + pos.y, width, height);
+		}
 	}
 
 	Event Event::createMouseEvent(MouseEvent::Subtype subtype,float  x, float y, uint8_t button)
@@ -249,9 +299,25 @@ namespace Guider
 		{
 			if (getBounds().at(Vec2(0,0)).contains(Vec2(event.mouseEvent.x, event.mouseEvent.y)))
 			{
-				_setMouseOver();
+				setMouseOver();
+			}
+			else
+			{
+				resetMouseOver();
+			}
+			if (event.type == Event::Type::MouseButtonDown)
+			{
+				setMouseFocus();
+			}
+			else if (event.type == Event::Type::MouseButtonUp)
+			{
+				resetMouseFocus();
 			}
 			break;
+		}
+		case Event::Type::MouseLeft:
+		{
+			resetMouseOver();
 		}
 		default:
 			break;
@@ -378,10 +444,22 @@ namespace Guider
 	{
 		redraw = false;
 		getBackend()->pushDrawOffset(Vec2(bounds.left,bounds.top));
+		getBackend()->setBounds(bounds.at(Vec2(0,0)));
 		onDraw(canvas);
 		getBackend()->popDrawOffset();
 	}
 
+
+	void Container::invalidateVisuals()
+	{
+		Component::invalidateVisuals();
+		auto it = firstElement();
+		while (!it.end())
+		{
+			it.current().invalidateVisuals();
+			it.loadNext();
+		}
+	}
 
 	void Container::handleEvent(const Event& event)
 	{
@@ -389,7 +467,7 @@ namespace Guider
 		Iterator it = firstElement();
 		while (!it.end())
 		{
-			it.current().handleEvent(adjustEventForComponent(event,it.current()));
+			handleEventForComponent(event,it.current());
 			it.loadNext();
 		}
 	}
@@ -421,9 +499,11 @@ namespace Guider
 		case Event::Type::MouseButtonUp:
 		case Event::Type::MouseMoved:
 		{
+			if (component.hasMouseButtonFocus() && copy.type == Event::Type::MouseButtonUp)
+				break;
 			if (!component.getBounds().contains(Vec2(copy.mouseEvent.x, copy.mouseEvent.y)))
 			{
-				if (component._getMouseOver())
+				if (component.isMouseOver())
 				{
 					copy.type = Event::Type::MouseLeft;
 				}
@@ -435,7 +515,7 @@ namespace Guider
 		}
 		case Event::Type::MouseLeft:
 		{
-			shouldHandle = component._getMouseOver();
+			shouldHandle = component.isMouseOver();
 			break;
 		}
 		}
@@ -595,6 +675,16 @@ namespace Guider
 		this->x = x;
 		this->y = y;
 	}
+	void Engine::drawMask(Backend& renderer) const
+	{
+		if (!toRedraw.empty())
+		{
+			for (auto element : elements)
+			{
+					element->drawMask(renderer);
+			}
+		}
+	}
 	void Engine::addChild(const Component::Type& child)
 	{
 		Rect bounds = getBounds();
@@ -610,6 +700,7 @@ namespace Guider
 		bounds.width = measurements.first.value;
 		bounds.height = measurements.second.value;
 		setBounds(*child, bounds);
+		toRedraw.insert(child.get());
 	}
 	void Engine::removeChild(const Component::Type& child)
 	{
@@ -629,6 +720,10 @@ namespace Guider
 	Container::Iterator Engine::firstElement()
 	{
 		return createIterator<IteratorType>(elements.begin(),elements.end());
+	}
+	void Engine::onChildNeedsRedraw(Component& c)
+	{
+		toRedraw.insert(&c);
 	}
 	void Engine::resize(const Vec2& size)
 	{
@@ -678,11 +773,12 @@ namespace Guider
 	}
 	void Engine::onDraw(Canvas& canvas) const
 	{
-		//TODO: redraw only visually invalidated elements
 		for (auto element : elements)
 		{
-			element->draw(canvas);
+			if (toRedraw.count(element.get()))
+				element->draw(canvas);
 		}
+		toRedraw.clear();
 	}
 	void Engine::draw() const
 	{
@@ -696,7 +792,7 @@ namespace Guider
 			backend.setupMask();
 			backend.clearMask();
 
-			Container::drawMask(backend);
+			drawMask(backend);
 
 			backend.useMask();
 			Component::draw(*c);
