@@ -2,16 +2,18 @@ find_package(parselib REQUIRED)
 
 set(sources
 	src/base.cpp
+	src/manager.cpp
+	src/styles.cpp
 	src/components.cpp
 	src/containers.cpp
-	src/manager.cpp
 )
 
 set(headers
 	include/guider/base.hpp
+	include/guider/manager.hpp
 	include/guider/components.hpp
 	include/guider/containers.hpp
-	include/guider/manager.hpp
+	include/guider/styles.hpp
 )
 
 add_library(guider STATIC ${sources} ${headers})
