@@ -39,17 +39,24 @@ namespace Guider
 	{
 		std::string t = text;
 		t.erase(0, t.find_first_not_of("\t\n\v\f\r "));
-		t.erase(t.find_last_not_of("\t\n\v\f\r "));
+		size_t p = t.find_last_not_of("\t\n\v\f\r ");
+		if (p != std::string::npos && p < t.size() - 1)
+			t.erase(p+1);
 		
-		bool failed = false;
-		
-		if (!t.empty() && t[0] == '#') //color string
+		if (!t.empty())
 		{
-			failed = false;
-			Color c = strToColor(t, failed);
-			if (!failed)
+			if (t[0] == '@') //resource handler
 			{
-				return backend.createRectangle(Vec2(0,0),c);
+				return getDrawableByName(t.substr(1));
+			}
+			else
+			{
+				bool failed = false;
+				Color c = Styles::strToColor(t, failed);
+				if (!failed)
+				{
+					return backend.createRectangle(Vec2(0, 0), c);
+				}
 			}
 		}
 		return std::shared_ptr<Resources::Drawable>();
@@ -64,153 +71,119 @@ namespace Guider
 		}
 	}
 
-	void Manager::handleDefaultArguments(Component& c, const XML::Tag& config)
+	Style Manager::generateStyle(const XML::Tag& config, const Style& parent)
 	{
-		Component::SizingMode w = Component::SizingMode::OwnSize , h = Component::SizingMode::OwnSize;
-		float ww = 0, hh = 0;
+		Style s;
 
-		XML::Value tmp = config.getAttribute("width");
-
-		if (tmp.exists())
+		//clone default style
 		{
-			if (tmp.val == "match_parent")
-				w = Component::SizingMode::MatchParent;
-			else if (tmp.val == "wrap_content")
-				w = Component::SizingMode::WrapContent;
-			else if (tmp.val == "own_size")
-				w = Component::SizingMode::OwnSize;
-			else if (tmp.val == "given_size")
-				w = Component::SizingMode::GivenSize;
-			else
+			auto it = defaultStyles.find(config.name);
+			if (it != defaultStyles.end())
 			{
-				//TODO: add str to float conversion
-				ww = Manager::strToFloat(tmp.val);
-				w = Component::SizingMode::OwnSize;
-			}
-		}
-		tmp = config.getAttribute("height");
-		if (tmp.exists())
-		{
-			if (tmp.val == "match_parent")
-				h = Component::SizingMode::MatchParent;
-			else if (tmp.val == "wrap_content")
-				h = Component::SizingMode::WrapContent;
-			else if (tmp.val == "own_size")
-				h = Component::SizingMode::OwnSize;
-			else if (tmp.val == "given_size")
-				h = Component::SizingMode::GivenSize;
-			else
-			{
-				//TODO: add str to float conversion
-				hh = Manager::strToFloat(tmp.val);
-				h = Component::SizingMode::OwnSize;
-			}
-		}
-		c.setSize(ww,hh);
-		c.setSizingMode(w, h);
-	}
-	bool Manager::isDigitInBase(char c, unsigned base)
-	{
-		return base <= 10 ? (c >= '0' && c < '0' + static_cast<int>(base)) : ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'A'+static_cast<int>(base)-10) || (c >= 'a' && c < 'a'+static_cast<int>(base)-10));
-	}
-	unsigned Manager::digitFromChar(char c)
-	{
-		return (c >= '0' && c <= '9') ? (c - '0') : ((c >= 'a' && c <= 'z') ? (c - 'a' + 10) : ((c >= 'A' && c <= 'Z') ? (c - 'A' + 10) : 0));
-	}
-	uint64_t Manager::strToInt(const std::string& str, bool& failed, unsigned base)
-	{
-		unsigned offset = 0;
-		uint64_t value = 0;
-		failed = true;
-		while (str.size() > offset && str[offset] == ' ' && str[offset] == '\t')
-			offset++;
-
-		if (offset == str.size())
-			return 0;
-
-		for (; offset < str.size(); ++offset)
-		{
-			if (!isDigitInBase(str[offset], base))
-			{
-				break;
-			}
-
-			value *= base;
-			value += digitFromChar(str[offset]);
-		}
-
-		for (; offset < str.size(); ++offset)
-		{
-			if (str[offset] != ' ' && str[offset] != '\t')
-			{
-				failed = true;
-				return 0;
+				s = it->second;
 			}
 		}
 
-		failed = false;
-		return value;
-	}
-	float Manager::strToFloat(const std::string& str, bool& failed)
-	{
-		failed = true;
-		char* end = nullptr;
-		const char* c = str.c_str();
-		float ret = std::strtof(c, &end);
+		s.inherit(parent); //add values not set by default styles
+		
+		//override by explicitly specified styles
 
-		if (end == c)
-			return 0;
-
-		failed = false;
-		return ret;
-	}
-	bool Manager::strToBool(const std::string& str, bool& failed)
-	{
-		failed = false;
-		if (str == "true" || str == "TRUE")
+		for (const auto& i : config.attributes)
 		{
-			return true;
-		}
-		else if (str == "false" || str == "FALSE")
-		{
-			return false;
-		}
-		failed = true;
-		return false;
-	}
-	Color Manager::strToColor(const std::string& str, bool& failed)
-	{
-		uint32_t value = static_cast<uint32_t>(strToInt(str, failed, 16));
-
-		if (failed)
-		{
-			//TODO: do color name lookup
+			auto it = propertyDefinitions.find(i.first);
+			if (it != propertyDefinitions.end())
+			{
+				s.setValue(i.first,std::make_shared<Style::Value>(it->second.value(i.second.val)));
+			}
 		}
 
-		return Color(value);
+		return s;
+	}
+
+	void Manager::handleDefaultArguments(Component& c, const XML::Tag& config, const Style& style)
+	{
+		std::pair<float, Component::SizingMode> w, h;
+
+		auto widthP = style.getValue("width");
+		if (widthP)
+			w = style.getValue("width")->as<decltype(w)>();
+		auto heightP = style.getValue("height");
+		if (heightP)
+			h = style.getValue("height")->as<decltype(h)>();
+
+		c.setSize(w.first,h.first);
+		c.setSizingMode(w.second, h.second);
 	}
 	
-	std::vector<std::string> Manager::splitString(const std::string& str)
-	{
-		std::stringstream ss(str);
-		std::istream_iterator<std::string> begin(ss);
-		std::istream_iterator<std::string> end;
-
-		return std::vector<std::string>(begin,end);
-	}
-	void Manager::registerTypeCreator(const std::function<Component::Type (Manager&, const XML::Tag&, ComponentBindings&)>& f, const std::string& name)
+	void Manager::registerTypeCreator(const std::function<Component::Type (Manager&, const XML::Tag&, ComponentBindings&,const Style&)>& f, const std::string& name)
 	{
 		creators.emplace(name, f);
 	}
 
-	Component::Type Manager::instantiate(const XML::Tag& xml,ComponentBindings& bindings)
+	void Manager::registerStringProperty(const std::string& name)
+	{
+		registerProperty<std::string>(name, [](const std::string& s) { return s; });
+	}
+
+	void Manager::registerDrawableProperty(const std::string& name)
+	{
+		registerProperty<std::shared_ptr<Resources::Drawable>>(name,std::bind(std::mem_fn(&Manager::getDrawableByText),this,std::placeholders::_1));
+	}
+
+	void Manager::registerColorProperty(const std::string& name)
+	{
+		registerProperty<Color>(name,(Color(*)(const std::string&))Styles::strToColor);
+	}
+
+	void Manager::setDefaultStyle(const std::string& component, const Style& style)
+	{
+		defaultStyles[component] = style;
+	}
+
+	Component::Type Manager::instantiate(const XML::Tag& xml,ComponentBindings& bindings, const Style& parentStyle)
 	{
 		auto it = creators.find(xml.name);
 		if (it == creators.end())
 		{
-			//TODO: throw(type not supported)
+			throw std::logic_error("Component not supported");
 			return Component::Type();
 		}
-		return Component::Type(it->second(*this, xml,bindings));
+
+		Style style = generateStyle(xml,parentStyle);
+
+		return Component::Type(it->second(*this, xml,bindings,style));
+	}
+	
+	std::pair<float, Component::SizingMode> strToMeasure(const std::string& str)
+	{
+		Component::SizingMode mode = Component::SizingMode::GivenSize;
+		float value = 0;
+		if (str.size())
+		{
+			if (str == "match_parent")
+				mode = Component::SizingMode::MatchParent;
+			else if (str == "wrap_content")
+				mode = Component::SizingMode::WrapContent;
+			else if (str == "own_size")
+				mode = Component::SizingMode::OwnSize;
+			else if (str == "given_size")
+				mode = Component::SizingMode::GivenSize;
+			else
+			{
+				//TODO: add str to float conversion
+				value = Styles::strToFloat(str);
+				mode = Component::SizingMode::OwnSize;
+			}
+		}
+		return { value, mode };
+	}
+	
+	void Manager::initDefaultProperties()
+	{
+		registerStringProperty("id");
+		registerDrawableProperty("background");
+		registerColorProperty("color");
+		registerProperty<std::pair<float, Component::SizingMode>>("width", strToMeasure);
+		registerProperty<std::pair<float, Component::SizingMode>>("height", strToMeasure);
 	}
 }

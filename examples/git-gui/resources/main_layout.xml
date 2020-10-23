@@ -1,7 +1,7 @@
 <containers.ConstraintsContainer
 	width="match_parent"
 	height="match_parent"
-	tmp_backgroundColor="1c1e20ff"
+	tmp_backgroundColor="#1c1e20"
 >
 	<containers.ConstraintsContainer
 		name="toolbar"
@@ -9,7 +9,7 @@
 	
 		width = "match_parent"
 		height = "32"
-		backgroundColor = "202020ff"
+		backgroundColor = "#202020"
 		
 		horizontalConstraint="regular"
 		horizontalSizing="const_offset"
@@ -55,7 +55,11 @@
 				
 				text="Repo"
 				textSize="12"
-				color="a8a8a8ff"
+				color="#a8a8a8"
+				
+				background="#252525"
+				hoveredBackground="#303030"
+				selectedBackground="#3f3f3f"
 			/>
 			<common.Button
 				id="branch_button"
@@ -67,7 +71,11 @@
 				
 				text="branch"
 				textSize="12"
-				color="a8a8a8ff"
+				color="#a8a8a8"
+				
+				background="#252525"
+				hoveredBackground="#303030"
+				selectedBackground="#3f3f3f"
 			/>
 		</containers.ListContainer>
 		<containers.ListContainer
@@ -100,7 +108,11 @@
 				
 				text="Menu"
 				textSize="12"
-				color="a8a8a8ff"
+				color="#a8a8a8"
+				
+				background="#252525"
+				hoveredBackground="#303030"
+				selectedBackground="#3f3f3f"
 			/>
 		</containers.ListContainer>
 	</containers.ConstraintsContainer>
@@ -109,7 +121,7 @@
 	
 		width = "240"
 		height = "given_size"
-		fillColor = "282a2eff"
+		fillColor = "#282a2e"
 		
 		horizontalConstraint="regular"
 		horizontalSizing="const_size"

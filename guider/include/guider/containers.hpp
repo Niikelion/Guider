@@ -79,9 +79,9 @@ namespace Guider
 
 		ListContainer() : horizontal(false), size(0), offset(0), backgroundColor(0,0,0,0) {}
 
-		ListContainer(Manager& manager, const XML::Tag& config) : ListContainer()
+		ListContainer(Manager& manager, const XML::Tag& config, const Style& style) : ListContainer()
 		{
-			Manager::handleDefaultArguments(*this, config);
+			Manager::handleDefaultArguments(*this, config, style);
 
 			XML::Value tmp = config.getAttribute("orientation");
 			if (tmp.exists())
@@ -361,10 +361,9 @@ namespace Guider
 
 		virtual void onDraw(Canvas& canvas) const override;
 
-		virtual void postXmlConstruction(Manager& m, const XML::Tag& config);
+		virtual void postXmlConstruction(Manager& m, const XML::Tag& config, const Style& style);
 
 		ConstraintsContainer() : messyClusters(true), invalidLayout(true), canWrapW(false), canWrapH(false), backgroundColor(0) {}
-		ConstraintsContainer(Manager& manager, const XML::Tag& config) : ConstraintsContainer() {}
 };
 
 }

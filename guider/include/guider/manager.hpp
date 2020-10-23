@@ -6,6 +6,8 @@
 
 #include <parselib/XML/xml.hpp>
 
+#include <Guider/styles.hpp>
+
 namespace Guider
 {
 	namespace XML
@@ -31,59 +33,57 @@ namespace Guider
 
 		void registerDrawable(const std::shared_ptr<Resources::Drawable>& drawable, uint64_t id, const std::string& name = "");
 
-		static void handleDefaultArguments(Component& c, const XML::Tag& config);
-		static bool isDigitInBase(char c, unsigned base);
-		static unsigned digitFromChar(char c);
+		Style generateStyle(const XML::Tag& config, const Style& parent = Style());
 
-		static uint64_t strToInt(const std::string& str, bool& failed, unsigned base = 10);
-		static inline uint64_t strToInt(const std::string& str, unsigned base = 10)
-		{
-			bool a;
-			return strToInt(str, a, base);
-		}
-		static float strToFloat(const std::string& str, bool& failed);
-		static inline float strToFloat(const std::string& str)
-		{
-			bool failed = false;
-			return strToFloat(str, failed);
-		}
-		static bool strToBool(const std::string& str, bool& failed);
-		static inline bool strToBool(const std::string& str)
-		{
-			bool failed = false;
-			return strToBool(str, failed);
-		}
-		static Color strToColor(const std::string& str,bool& failed);
-		static inline Color strToColor(const std::string& str)
-		{
-			bool failed = false;
-			return strToColor(str, failed);
-		}
-		static std::vector<std::string> splitString(const std::string& str);
+		static void handleDefaultArguments(Component& c, const XML::Tag& config, const Style& style);
 
-		void registerTypeCreator(const std::function<Component::Type (Manager&, const XML::Tag&,ComponentBindings&)>& f, const std::string& name);
+		void registerTypeCreator(const std::function<Component::Type (Manager&, const XML::Tag&,ComponentBindings&,const Style&)>& f, const std::string& name);
 
-		template<typename T>void registerType(const std::string& name)
+		template<typename T> void registerType(const std::string& name)
 		{
 			registerTypeCreator(creator<T>,name);
 		}
 
-		Component::Type instantiate(const XML::Tag& xml,ComponentBindings& bindings);
-		inline Component::Type instantiate(const XML::Tag& xml)
+		template<typename T> void registerProperty(const std::string& name)
 		{
-			return instantiate(xml, *this);
+			if (!propertyDefinitions.count(name))
+				propertyDefinitions.emplace(name,Style::ValueDefinition::create<T>());
 		}
 
+		void registerStringProperty(const std::string& name);
+		void registerDrawableProperty(const std::string& name);
+		void registerColorProperty(const std::string& name);
 
-		Manager(Backend& b) : backend(b) {}
+		template<typename T> void registerProperty(const std::string& name, const std::function<T(const std::string&)>& f)
+		{
+			propertyDefinitions.emplace(name, Style::ValueDefinition([f](const std::string& str) 
+				{
+					Style::Value r = Style::Value(typeid(T), sizeof(T));
+					r.prepare<T>(f(str));
+					return r;
+				}));
+		}
+
+		void setDefaultStyle(const std::string& component, const Style& style);
+
+		Component::Type instantiate(const XML::Tag& xml,ComponentBindings& bindings, const Style& parentStyle = Style());
+		inline Component::Type instantiate(const XML::Tag& xml, const Style& parentStyle = Style())
+		{
+			return instantiate(xml, *this, parentStyle);
+		}
+
+		Manager(Backend& b) : backend(b)
+		{
+			initDefaultProperties();
+		}
 	private:
 		Backend& backend;
+		//TODO: extract data from XML and store it in styles in elements tree
+		std::unordered_map<std::string, std::function<Component::Type(Manager&, const XML::Tag&, ComponentBindings&,const Style&)>> creators;
 
-		std::unordered_map<std::string, std::function<Component::Type(Manager&, const XML::Tag&, ComponentBindings&)>> creators;
-
-		template<typename T> static Component::Type creator(Manager& m, const XML::Tag& config, ComponentBindings& bindings)
+		template<typename T> static Component::Type creator(Manager& m, const XML::Tag& config, ComponentBindings& bindings, const Style& style)
 		{
-			Component::Type ret = std::make_shared<T>(m, config);
+			Component::Type ret = std::make_shared<T>(m, config, style);
 			XML::Value tmp = config.getAttribute("id");
 			if (tmp.exists())
 			{
@@ -95,5 +95,10 @@ namespace Guider
 
 		std::unordered_map<uint64_t, std::shared_ptr<Resources::Drawable>> drawablesById;
 		std::unordered_map<std::string, uint64_t> drawableNameToIdMapping;
+
+		std::unordered_map<std::string, Style::ValueDefinition> propertyDefinitions;
+		std::unordered_map<std::string, Style> defaultStyles;
+
+		void initDefaultProperties();
 	};
 }

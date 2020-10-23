@@ -1197,10 +1197,10 @@ namespace Guider
 			needsRedraw.clear();
 		}
 	}
-	void ConstraintsContainer::postXmlConstruction(Manager& manager, const XML::Tag& config)
+	void ConstraintsContainer::postXmlConstruction(Manager& manager, const XML::Tag& config, const Style& style)
 	{
 		std::unordered_map<std::string, Component::Type> nameMapping;
-		Manager::handleDefaultArguments(*this, config);
+		Manager::handleDefaultArguments(*this, config, style);
 
 		std::vector<Component::Type> childMapping;
 
@@ -1208,7 +1208,7 @@ namespace Guider
 		if (tmp.exists())
 		{
 			bool failed = false;
-			Color color = Manager::strToColor(tmp.val,failed);
+			Color color = Styles::strToColor(tmp.val,failed);
 			if (!failed)
 				setBackgroundColor(color);
 		}
@@ -1267,7 +1267,7 @@ namespace Guider
 
 							if (tmp.val.find(" ") != tmp.val.npos)
 							{
-								std::vector<std::string> options = Manager::splitString(tmp.val);
+								std::vector<std::string> options = Styles::splitString(tmp.val);
 								if (options.size() > 0)
 								{
 									if (options[0] == "parent")
@@ -1292,7 +1292,7 @@ namespace Guider
 										if (options.size() > 2)
 										{
 											bool failed = false;
-											float v = Manager::strToFloat(options[2], failed);
+											float v = Styles::strToFloat(options[2], failed);
 											if (!failed)
 												offset = v;
 										}
@@ -1327,7 +1327,7 @@ namespace Guider
 								if (tmp.exists())
 								{
 									bool failed = false;
-									float v = Manager::strToFloat(tmp.val, failed);
+									float v = Styles::strToFloat(tmp.val, failed);
 									if (!failed)
 										offset = v;
 								}
@@ -1345,7 +1345,7 @@ namespace Guider
 
 							if (tmp.val.find(" ") != tmp.val.npos)
 							{
-								std::vector<std::string> options = Manager::splitString(tmp.val);
+								std::vector<std::string> options = Styles::splitString(tmp.val);
 								if (options.size() > 0)
 								{
 									if (options[0] == "parent")
@@ -1370,7 +1370,7 @@ namespace Guider
 										if (options.size() > 2)
 										{
 											bool failed = false;
-											float v = Manager::strToFloat(options[2], failed);
+											float v = Styles::strToFloat(options[2], failed);
 											if (!failed)
 												offset = v;
 										}
@@ -1405,7 +1405,7 @@ namespace Guider
 								if (tmp.exists())
 								{
 									bool failed = false;
-									float v = Manager::strToFloat(tmp.val, failed);
+									float v = Styles::strToFloat(tmp.val, failed);
 									if (!failed)
 										offset = v;
 								}
@@ -1418,7 +1418,7 @@ namespace Guider
 						if (tmp.exists())
 						{
 							bool failed = false;
-							float flow = Manager::strToFloat(tmp.val, failed);
+							float flow = Styles::strToFloat(tmp.val, failed);
 							if (!failed)
 								builder->setFlow(flow);
 						}
@@ -1427,7 +1427,7 @@ namespace Guider
 						if (tmp.exists())
 						{
 							bool failed = false;
-							float size = Manager::strToFloat(tmp.val, failed);
+							float size = Styles::strToFloat(tmp.val, failed);
 							if (!failed)
 								builder->setSize(size);
 						}
@@ -1474,7 +1474,7 @@ namespace Guider
 
 							if (tmp.val.find(" ") != tmp.val.npos)
 							{
-								std::vector<std::string> options = Manager::splitString(tmp.val);
+								std::vector<std::string> options = Styles::splitString(tmp.val);
 								if (options.size() > 0)
 								{
 									if (options[0] == "parent")
@@ -1499,7 +1499,7 @@ namespace Guider
 										if (options.size() > 2)
 										{
 											bool failed = false;
-											float v = Manager::strToFloat(options[2], failed);
+											float v = Styles::strToFloat(options[2], failed);
 											if (!failed)
 												offset = v;
 										}
@@ -1534,7 +1534,7 @@ namespace Guider
 								if (tmp.exists())
 								{
 									bool failed = false;
-									float v = Manager::strToFloat(tmp.val, failed);
+									float v = Styles::strToFloat(tmp.val, failed);
 									if (!failed)
 										offset = v;
 								}
@@ -1552,7 +1552,7 @@ namespace Guider
 
 							if (tmp.val.find(" ") != tmp.val.npos)
 							{
-								std::vector<std::string> options = Manager::splitString(tmp.val);
+								std::vector<std::string> options = Styles::splitString(tmp.val);
 								if (options.size() > 0)
 								{
 									if (options[0] == "parent")
@@ -1577,7 +1577,7 @@ namespace Guider
 										if (options.size() > 2)
 										{
 											bool failed = false;
-											float v = Manager::strToFloat(options[2], failed);
+											float v = Styles::strToFloat(options[2], failed);
 											if (!failed)
 												offset = v;
 										}
@@ -1612,7 +1612,7 @@ namespace Guider
 								if (tmp.exists())
 								{
 									bool failed = false;
-									float v = Manager::strToFloat(tmp.val, failed);
+									float v = Styles::strToFloat(tmp.val, failed);
 									if (!failed)
 										offset = v;
 								}
@@ -1625,7 +1625,7 @@ namespace Guider
 						if (tmp.exists())
 						{
 							bool failed = false;
-							float flow = Manager::strToFloat(tmp.val, failed);
+							float flow = Styles::strToFloat(tmp.val, failed);
 							if (!failed)
 								builder->setFlow(flow);
 						}
@@ -1634,7 +1634,7 @@ namespace Guider
 						if (tmp.exists())
 						{
 							bool failed = false;
-							float size = Manager::strToFloat(tmp.val, failed);
+							float size = Styles::strToFloat(tmp.val, failed);
 							if (!failed)
 								builder->setSize(size);
 						}

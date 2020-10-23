@@ -21,7 +21,7 @@ namespace Guider
 		virtual std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& width, const DimensionDesc& height) override;
 
 		CommonComponent() = default;
-		CommonComponent(Manager& m, const XML::Tag& tag);
+		CommonComponent(Manager& m, const XML::Tag& tag, const Style& style);
 	};
 
 	class EmptyComponent : public Component
@@ -30,7 +30,7 @@ namespace Guider
 		void onDraw(Canvas& canvas) const override {}
 
 		EmptyComponent() = default;
-		EmptyComponent(Manager& m, const XML::Tag& config) {}
+		EmptyComponent(Manager& m, const XML::Tag& config, const Style& style) {}
 	};
 
 	class RectangleShapeComponent : public Component
@@ -60,14 +60,14 @@ namespace Guider
 			setSizingMode(SizingMode::OwnSize, SizingMode::OwnSize);
 		}
 
-		RectangleShapeComponent(Manager& m, const XML::Tag& config) : RectangleShapeComponent()
+		RectangleShapeComponent(Manager& m, const XML::Tag& config, const Style& style) : RectangleShapeComponent()
 		{
-			Manager::handleDefaultArguments(*this, config);
+			Manager::handleDefaultArguments(*this, config, style);
 			{
 				XML::Value fillColor = config.getAttribute("fillColor");
 				if (fillColor.exists())
 				{
-					color = Manager::strToColor(fillColor.val);
+					color = Styles::strToColor(fillColor.val);
 				}
 			}
 		}
@@ -105,14 +105,14 @@ namespace Guider
 
 		TextComponent() : textRes(nullptr), textSize(10),color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center) {}
 
-		TextComponent(Manager& manager, const XML::Tag& config): CommonComponent(manager, config), textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
+		TextComponent(Manager& manager, const XML::Tag& config, const Style& style): CommonComponent(manager, config, style), textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
 		{
-			Manager::handleDefaultArguments(*this, config);
+			Manager::handleDefaultArguments(*this, config, style);
 			XML::Value tmp = config.getAttribute("color");
 			if (tmp.exists())
 			{
 				bool failed = false;
-				Color c = Manager::strToColor(tmp.val, failed);
+				Color c = Styles::strToColor(tmp.val, failed);
 				if (!failed)
 					setTextColor(c);
 			}
@@ -125,7 +125,7 @@ namespace Guider
 			if (tmp.exists())
 			{
 				bool failed = false;
-				float v = Manager::strToFloat(tmp.val, failed);
+				float v = Styles::strToFloat(tmp.val, failed);
 				if (!failed)
 					setTextSize(v);
 			}
@@ -186,6 +186,8 @@ namespace Guider
 	protected:
 		Component& getThisComponent() override;
 	public:
+		static void defineProperties(Manager& m);
+
 		void drawMask(Backend& b) const override;
 
 		std::shared_ptr<Resources::Drawable> getBackgroundDrawable(ButtonState state) const;
@@ -198,6 +200,19 @@ namespace Guider
 
 		void handleEvent(const Event& event) override;
 
-		using TextComponent::TextComponent;
+		BasicButtonComponent() = default;
+		
+		BasicButtonComponent(Manager& manager, const XML::Tag& config, const Style& style) : TextComponent(manager, config, style)
+		{
+			auto backgroundP = style.getValue("background");
+			if (backgroundP)
+				backgroundDefault = backgroundP->as<std::shared_ptr<Resources::Drawable>>();
+			auto selectedBackgroundP = style.getValue("selectedBackground");
+			if (selectedBackgroundP)
+				backgroundClicked = selectedBackgroundP->as<std::shared_ptr<Resources::Drawable>>();
+			auto hoveredBackgroundP = style.getValue("hoveredBackground");
+			if (hoveredBackgroundP)
+				backgroundSelected = hoveredBackgroundP->as<std::shared_ptr<Resources::Drawable>>();
+		}
 	};
 }

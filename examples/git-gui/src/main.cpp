@@ -61,16 +61,17 @@ int main(int argc, char* argv[])
 	Gui::SfmlBackend renderer(guiTexture);
 
 	Guider::Manager resourceManager(renderer);
+	Guider::BasicButtonComponent::defineProperties(resourceManager);
 
 	renderer.loadFontFromFile("resources/Arimo-Regular.ttf","");
 
 	Gui::Engine engine(renderer);
 	engine.resize(Gui::Vec2((float)width, (float)height));
 
-	resourceManager.registerTypeCreator([](Guider::Manager& m, const Guider::XML::Tag& config,Guider::ComponentBindings& bindings)
+	resourceManager.registerTypeCreator([](Guider::Manager& m, const Guider::XML::Tag& config,Guider::ComponentBindings& bindings, const Guider::Style& style)
 	{
-		std::shared_ptr<Guider::ConstraintsContainer> ret = std::make_shared<Guider::ConstraintsContainer>(m,config);
-		ret->postXmlConstruction(m, config);
+		std::shared_ptr<Guider::ConstraintsContainer> ret = std::make_shared<Guider::ConstraintsContainer>();
+		ret->postXmlConstruction(m, config, style);
 		Guider::XML::Value tmp = config.getAttribute("id");
 		if (tmp.exists())
 		{
@@ -78,7 +79,6 @@ int main(int argc, char* argv[])
 		}
 		return ret;
 	}, "containers.ConstraintsContainer");
-	resourceManager.registerType<Guider::ConstraintsContainer>("containers.ConstraintsContainer");
 	resourceManager.registerType<Guider::ListContainer>("containers.ListContainer");
 	resourceManager.registerType<Guider::RectangleShapeComponent>("shapes.Rectangle");
 	resourceManager.registerType<Guider::EmptyComponent>("common.Guide");
@@ -143,13 +143,13 @@ int main(int argc, char* argv[])
 			}
 			case Event::Resized:
 			{
-				Vector2f size(event.size.width, event.size.height);
+				Vector2f size(static_cast<float>(event.size.width), static_cast<float>(event.size.height));
 			
-				guiTexture.create(size.x, size.y,sf::ContextSettings(0,8,8));
+				guiTexture.create(event.size.width, event.size.height,sf::ContextSettings(0,8,8));
 
 				sf::FloatRect visibleArea(0, 0, size.x, size.y);
 				window.setView(sf::View(visibleArea));
-				engine.resize(Gui::Vec2((float)size.x, (float)size.y));
+				engine.resize(Gui::Vec2(size.x, size.y));
 			
 				gui.setTexture(guiTexture.getTexture(), true);
 				break;

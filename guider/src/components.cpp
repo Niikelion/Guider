@@ -42,18 +42,18 @@ namespace Guider
 		return measurements;
 	}
 
-	CommonComponent::CommonComponent(Manager& m, const XML::Tag& tag)
+	CommonComponent::CommonComponent(Manager& m, const XML::Tag& tag, const Style& style)
 	{
 		XML::Value tmp = tag.getAttribute("padding");
 		if (tmp.exists())
 		{
-			std::vector<std::string> args = Manager::splitString(tmp.val);
+			std::vector<std::string> args = Styles::splitString(tmp.val);
 			switch (args.size())
 			{
 			case 1:
 			{
 				bool failed = false;
-				float v = Manager::strToFloat(args[0], failed);
+				float v = Styles::strToFloat(args[0], failed);
 				if (!failed)
 					setPadding(Padding(v, v, v, v));
 				break;
@@ -61,10 +61,10 @@ namespace Guider
 			case 2:
 			{
 				bool failed = false;
-				float w = Manager::strToFloat(args[0], failed);
+				float w = Styles::strToFloat(args[0], failed);
 				if (!failed)
 				{
-					float h = Manager::strToFloat(args[1], failed);
+					float h = Styles::strToFloat(args[1], failed);
 					if (!failed)
 					{
 						setPadding(Padding(w, w, h, h));
@@ -75,16 +75,16 @@ namespace Guider
 			case 4:
 			{
 				bool failed = false;
-				float left = Manager::strToFloat(args[0],failed);
+				float left = Styles::strToFloat(args[0],failed);
 				if (!failed)
 				{
-					float right = Manager::strToFloat(args[1],failed);
+					float right = Styles::strToFloat(args[1],failed);
 					if (!failed)
 					{
-						float top = Manager::strToFloat(args[2],failed);
+						float top = Styles::strToFloat(args[2],failed);
 						if (!failed)
 						{
-							float bottom = Manager::strToFloat(args[3],failed);
+							float bottom = Styles::strToFloat(args[3],failed);
 							if (!failed)
 							{
 								setPadding(Padding(left,right,top,bottom));
@@ -270,6 +270,11 @@ namespace Guider
 	{
 		return *this;
 	}
+	void BasicButtonComponent::defineProperties(Manager& m)
+	{
+		m.registerDrawableProperty("selectedBackground");
+		m.registerDrawableProperty("hoveredBackground");
+	}
 	void BasicButtonComponent::drawMask(Backend& b) const
 	{
 		Component::drawMask(b);
@@ -306,9 +311,8 @@ namespace Guider
 		{
 		case Event::Type::BackendConnected:
 		{
-			backgroundDefault = getBackend()->createRectangle(Vec2(0, 0), Color(0x252525ff)); //0x252525ff
-			backgroundClicked = getBackend()->createRectangle(Vec2(0, 0), Color(0x3f3f3fff)); //0x3f3f3fff
-			backgroundSelected = getBackend()->createRectangle(Vec2(0,0), Color(0x303030ff)); //0x2f2f2fff
+			if (!backgroundDefault)
+				backgroundDefault = getBackend()->createRectangle(Vec2(0, 0), Color(255,2555,255));
 			break;
 		}
 		}
