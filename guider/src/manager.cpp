@@ -37,11 +37,7 @@ namespace Guider
 
 	std::shared_ptr<Resources::Drawable> Manager::getDrawableByText(const std::string& text)
 	{
-		std::string t = text;
-		t.erase(0, t.find_first_not_of("\t\n\v\f\r "));
-		size_t p = t.find_last_not_of("\t\n\v\f\r ");
-		if (p != std::string::npos && p < t.size() - 1)
-			t.erase(p+1);
+		std::string t = Styles::trim(text);
 		
 		if (!t.empty())
 		{
@@ -90,10 +86,20 @@ namespace Guider
 
 		for (const auto& i : config.attributes)
 		{
-			auto it = propertyDefinitions.find(i.first);
-			if (it != propertyDefinitions.end())
+			std::string v = Styles::trim(i.second.val);
+			if (!v.empty() && v[0] == '?')
 			{
-				s.setValue(i.first,std::make_shared<Style::Value>(it->second.value(i.second.val)));
+				v.erase(0, 1);
+				s.setAlias(v, i.first);
+			}
+			else
+			{
+				auto it = propertyDefinitions.find(i.first);
+				if (it != propertyDefinitions.end())
+				{
+
+					s.setValue(i.first, std::make_shared<Style::Value>(it->second.value(v)));
+				}
 			}
 		}
 

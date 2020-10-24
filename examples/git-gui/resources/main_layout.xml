@@ -2,6 +2,11 @@
 	width="match_parent"
 	height="match_parent"
 	tmp_backgroundColor="#1c1e20"
+	
+	
+	colorSecondary="#303030"
+	colorSecondaryLight="#252525"
+	colorSecondaryDark="#3f3f3f"
 >
 	<containers.ConstraintsContainer
 		name="toolbar"
@@ -57,9 +62,9 @@
 				textSize="12"
 				color="#a8a8a8"
 				
-				background="#252525"
-				hoveredBackground="#303030"
-				selectedBackground="#3f3f3f"
+				background="?attr:colorSecondaryDark"
+				hoveredBackground="?attr:colorSecondary"
+				selectedBackground="?attr:colorSecondaryLight"
 			/>
 			<common.Button
 				id="branch_button"
@@ -73,9 +78,9 @@
 				textSize="12"
 				color="#a8a8a8"
 				
-				background="#252525"
-				hoveredBackground="#303030"
-				selectedBackground="#3f3f3f"
+				background="?attr:colorSecondaryDark"
+				hoveredBackground="?attr:colorSecondary"
+				selectedBackground="?attr:colorSecondaryLight"
 			/>
 		</containers.ListContainer>
 		<containers.ListContainer
@@ -110,9 +115,9 @@
 				textSize="12"
 				color="#a8a8a8"
 				
-				background="#252525"
-				hoveredBackground="#303030"
-				selectedBackground="#3f3f3f"
+				background="?attr:colorSecondaryDark"
+				hoveredBackground="?attr:colorSecondary"
+				selectedBackground="?attr:colorSecondaryLight"
 			/>
 		</containers.ListContainer>
 	</containers.ConstraintsContainer>

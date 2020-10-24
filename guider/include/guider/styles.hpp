@@ -15,6 +15,8 @@ namespace Guider
 		static bool isDigitInBase(char c, unsigned base);
 		static unsigned digitFromChar(char c);
 
+		std::string trim(const std::string& s);
+
 		std::vector<std::string> splitString(const std::string& str);
 
 		uint64_t strToInt(const std::string& str, bool& failed, unsigned base = 10);
@@ -165,10 +167,14 @@ namespace Guider
 		};
 
 		void inherit(const Style& parentStyle);
+		void inheritValues(const Style& parentStyle);
+		void inheritAliases(const Style& parentStyle);
 
 		std::shared_ptr<Value> getValue(const std::string& name) const;
 		void setValue(const std::string& name,const std::shared_ptr<Value>& value);
+		void setAlias(const std::string& name, const std::string& alias);
 	private:
 		std::unordered_map<std::string, std::shared_ptr<Value>> values;
+		std::unordered_map<std::string, std::string> aliases;
 	};
 }

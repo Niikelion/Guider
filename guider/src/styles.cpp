@@ -13,6 +13,15 @@ namespace Guider
 		{
 			return (c >= '0' && c <= '9') ? (c - '0') : ((c >= 'a' && c <= 'z') ? (c - 'a' + 10) : ((c >= 'A' && c <= 'Z') ? (c - 'A' + 10) : 0));
 		}
+		std::string trim(const std::string& s)
+		{
+			std::string t = s;
+			t.erase(0, t.find_first_not_of("\t\n\v\f\r "));
+			size_t p = t.find_last_not_of("\t\n\v\f\r ");
+			if (p != std::string::npos && p < t.size() - 1)
+				t.erase(p + 1);
+			return t;
+		}
 		uint64_t strToInt(const std::string& str, bool& failed, unsigned base)
 		{
 			unsigned offset = 0;
@@ -130,12 +139,27 @@ namespace Guider
 
 	void Style::inherit(const Style& parentStyle)
 	{
+		inheritValues(parentStyle);
+		inheritAliases(parentStyle);
+	}
+	void Style::inheritValues(const Style& parentStyle)
+	{
 		for (const auto& value : parentStyle.values)
 			if (!values.count(value.first))
 				values.emplace(value);
 	}
+	void Style::inheritAliases(const Style& parentStyle)
+	{
+		for (const auto& alias : parentStyle.aliases)
+			if (!aliases.count(alias.first))
+				aliases.emplace(alias);
+	}
 	std::shared_ptr<Style::Value> Style::getValue(const std::string& name) const
 	{
+		auto alias = aliases.find(name);
+		if (alias != aliases.end())
+			return getValue(alias->second);
+
 		auto it = values.find(name);
 		if (it != values.end())
 			return it->second;
@@ -144,5 +168,9 @@ namespace Guider
 	void Style::setValue(const std::string& name, const std::shared_ptr<Value>& value)
 	{
 		values[name] = value;
+	}
+	void Style::setAlias(const std::string& name, const std::string& alias)
+	{
+		aliases.emplace(alias,name);
 	}
 }
