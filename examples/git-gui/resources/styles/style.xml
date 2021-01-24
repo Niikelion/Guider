@@ -1,0 +1,7 @@
+<styles>
+	<style name="Theme">
+		<color name="colorSecondary">#303030</color>
+		<color name="colorSecondaryLight">#252525</color>
+		<color name="colorSecondaryDark">#3f3f3f</color>
+	</style>
+</styles>
