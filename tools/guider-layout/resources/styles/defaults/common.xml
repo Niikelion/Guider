@@ -1,0 +1,14 @@
+<Styles>
+	<common.Text>
+		<font name="font" value="?font"/>
+		<color name="color" value="?textColor"/>
+		<number name="textSize" value="?textSize"/>
+		<text name="text" value=""/>
+	</common.Text>
+	
+	<common.Button parent="common.Text">
+		<drawable name="background" value="?accentColor"/>
+		<drawable name="hoveredBackground" value="?accentColorLight"/>
+		<drawable name="selectedBackground" value="?accentColorDark"/>
+	</common.Button>
+</Styles>

@@ -137,40 +137,120 @@ namespace Guider
 		}
 	}
 
-	void Style::inherit(const Style& parentStyle)
-	{
-		inheritValues(parentStyle);
-		inheritAliases(parentStyle);
-	}
-	void Style::inheritValues(const Style& parentStyle)
-	{
-		for (const auto& value : parentStyle.values)
-			if (!values.count(value.first))
-				values.emplace(value);
-	}
-	void Style::inheritAliases(const Style& parentStyle)
-	{
-		for (const auto& alias : parentStyle.aliases)
-			if (!aliases.count(alias.first))
-				aliases.emplace(alias);
-	}
-	std::shared_ptr<Style::Value> Style::getValue(const std::string& name) const
-	{
-		auto alias = aliases.find(name);
-		if (alias != aliases.end())
-			return getValue(alias->second);
 
-		auto it = values.find(name);
-		if (it != values.end())
-			return it->second;
+	bool Style::VariableReference::detached() const noexcept
+	{
+		return static_cast<bool>(cache);
+	}
+
+	void Style::VariableReference::attach(const std::shared_ptr<Value>& value)
+	{
+		cache = value;
+	}
+
+	std::string Style::VariableReference::getName() const
+	{
+		return name;
+	}
+
+	std::shared_ptr<Style::Value> Style::VariableReference::getValue() const
+	{
+		return cache;
+	}
+
+	void Style::inheritAll(const Style& parentStyle)
+	{
+		inheritVariables(parentStyle);
+		inheritAttributes(parentStyle);
+	}
+	void Style::inheritVariables(const Style& parentStyle)
+	{
+		for (const auto& i : parentStyle.variables)
+		{
+			auto v = variables.find(i.first);
+			if (v == variables.end())
+				setVariable(i.first,i.second);
+		}
+	}
+
+	void Style::inheritAttributes(const Style& parentStyle)
+	{
+		for (const auto& i : parentStyle.attributes)
+		{
+			auto a = attributes.find(i.first);
+			if (a == attributes.end())
+				setAttribute(i.first,i.second);
+		}
+	}
+	
+	std::shared_ptr<Style::Value> Style::getAttribute(const std::string& name) const
+	{
+		return dereference(getRawAttribute(name));
+	}
+	std::shared_ptr<Style::Value> Style::getVariable(const std::string& name) const
+	{
+		return dereference(getRawVariable(name));
+	}
+	std::shared_ptr<Style::Value> Style::getRawAttribute(const std::string& name) const
+	{
+		auto attr = attributes.find(name);
+		if (attr != attributes.end())
+			return attr->second;
 		return std::shared_ptr<Value>();
 	}
-	void Style::setValue(const std::string& name, const std::shared_ptr<Value>& value)
+	std::shared_ptr<Style::Value> Style::getRawVariable(const std::string& name) const
 	{
-		values[name] = value;
+		auto var = variables.find(name);
+		if (var != variables.end())
+			return var->second;
+		return std::shared_ptr<Value>();
 	}
-	void Style::setAlias(const std::string& name, const std::string& alias)
+	std::shared_ptr<Style::Value> Style::dereference(const std::shared_ptr<Value>& value) const
 	{
-		aliases.emplace(alias,name);
+		std::shared_ptr<Value> current = value;
+		while (value && value->checkType<VariableReference>())
+		{
+			VariableReference& v = current->as<VariableReference>();
+			if (v.detached() || true) //TODO: add proper handling later
+			{
+				auto var = variables.find(v.getName());
+				if (var != variables.end())
+					v.attach(var->second);
+			}
+			current = v.detached() ? std::shared_ptr<Value>() : v.getValue();
+		}
+		return current;
+	}
+	void Style::setVariable(const std::string& name, const std::shared_ptr<Value>& value)
+	{
+		variables[name] = value;
+	}
+	void Style::setAttribute(const std::string& name, const std::shared_ptr<Value>& value)
+	{
+		attributes[name] = value;
+	}
+	void Style::setAttribute(const std::string& name, const std::string& variable)
+	{
+		auto it = attributes.find(name);
+		auto var = variables.find(variable);
+		if (var == variables.end())
+		{
+			attributes[name] = Value::ofType<VariableReference>(variable);
+		}
+		else
+		{
+			attributes[name] = Value::ofType<VariableReference>(variable,var->second);
+		}
+	}
+	void Style::addDependency(const std::string& attribute, const std::string& variable)
+	{
+		auto deps = variableDeps.emplace(variable,std::unordered_set<std::string>());
+		deps.first->second.emplace(variable);
+	}
+	void Style::removeDependency(const std::string& attribute, const std::string& variable)
+	{
+		auto deps = variableDeps.find(variable);
+		if (deps != variableDeps.end())
+			deps->second.erase(attribute);
 	}
 }

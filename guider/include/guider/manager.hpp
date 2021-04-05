@@ -31,7 +31,12 @@ namespace Guider
 		std::shared_ptr<Resources::Drawable> getDrawableByName(const std::string& name);
 		std::shared_ptr<Resources::Drawable> getDrawableByText(const std::string& text);
 
+		std::shared_ptr<Resources::FontResource> getFontByName(const std::string& name);
+
 		void registerDrawable(const std::shared_ptr<Resources::Drawable>& drawable, uint64_t id, const std::string& name = "");
+		void loadDrawable(const std::string& filename, uint64_t id, const std::string& name = "");
+		void loadDrawable(const std::string& filename, const std::string& name);
+		void loadFont(const std::string& filename, const std::string& name);
 
 		Style generateStyle(const XML::Tag& config, const Style& parent = Style());
 
@@ -98,6 +103,8 @@ namespace Guider
 
 		std::unordered_map<std::string, Style::ValueDefinition> propertyDefinitions;
 		std::unordered_map<std::string, Style> defaultStyles;
+
+		std::unordered_map<std::string, std::shared_ptr<Resources::FontResource>> fontsByNames;
 
 		void initDefaultProperties();
 	};

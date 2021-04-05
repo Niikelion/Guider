@@ -58,6 +58,14 @@ namespace Guider
 		return std::shared_ptr<Resources::Drawable>();
 	}
 
+	std::shared_ptr<Resources::FontResource> Manager::getFontByName(const std::string& name)
+	{
+		auto it = fontsByNames.find(name);
+		if (it != fontsByNames.end())
+			return it->second;
+		return std::shared_ptr<Resources::FontResource>();
+	}
+
 	void Manager::registerDrawable(const std::shared_ptr<Resources::Drawable>& drawable, uint64_t id, const std::string& name)
 	{
 		drawablesById.emplace(id,drawable);
@@ -65,6 +73,29 @@ namespace Guider
 		{
 			drawableNameToIdMapping.emplace(name,id);
 		}
+	}
+
+	void Manager::loadDrawable(const std::string& filename, uint64_t id, const std::string& name)
+	{
+		//TODO: deduce drawable type from file extension
+		std::shared_ptr<Resources::Drawable> image = backend.loadImageFromFile(filename);
+		registerDrawable(image, id, name);
+	}
+
+	void Manager::loadDrawable(const std::string& filename, const std::string& name)
+	{
+		uint64_t id = std::hash<std::string>()(name);
+		if (drawablesById.count(id))
+		{
+			//TODO:resolve collision
+			throw std::logic_error("Hash collision");
+		}
+		loadDrawable(filename, id, name);
+	}
+
+	void Manager::loadFont(const std::string& filename, const std::string& name)
+	{
+		fontsByNames.emplace(name,backend.loadFontFromFile(filename, name));
 	}
 
 	Style Manager::generateStyle(const XML::Tag& config, const Style& parent)
@@ -76,11 +107,11 @@ namespace Guider
 			auto it = defaultStyles.find(config.name);
 			if (it != defaultStyles.end())
 			{
-				s = it->second;
+				s.inheritAttributes(it->second);
 			}
 		}
 
-		s.inherit(parent); //add values not set by default styles
+		s.inheritVariables(parent); //add values not set by default styles
 		
 		//override by explicitly specified styles
 
@@ -90,7 +121,7 @@ namespace Guider
 			if (!v.empty() && v[0] == '?')
 			{
 				v.erase(0, 1);
-				s.setAlias(v, i.first);
+				s.setAttribute(v, i.first);
 			}
 			else
 			{
@@ -98,7 +129,7 @@ namespace Guider
 				if (it != propertyDefinitions.end())
 				{
 
-					s.setValue(i.first, std::make_shared<Style::Value>(it->second.value(v)));
+					s.setAttribute(i.first, std::make_shared<Style::Value>(it->second.value(v)));
 				}
 			}
 		}
@@ -110,12 +141,12 @@ namespace Guider
 	{
 		std::pair<float, Component::SizingMode> w, h;
 
-		auto widthP = style.getValue("width");
+		auto widthP = style.getAttribute("width");
 		if (widthP)
-			w = style.getValue("width")->as<decltype(w)>();
-		auto heightP = style.getValue("height");
+			w = widthP->as<decltype(w)>();
+		auto heightP = style.getAttribute("height");
 		if (heightP)
-			h = style.getValue("height")->as<decltype(h)>();
+			h = heightP->as<decltype(h)>();
 
 		c.setSize(w.first,h.first);
 		c.setSizingMode(w.second, h.second);

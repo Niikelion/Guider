@@ -52,15 +52,28 @@ namespace Guider
 		template<class Tag>using type_t = typename Tag::type;
 	}
 
+	class Theme
+	{
+	public:
+
+	};
+
 	class Style
 	{
 	public:
 		class Value
 		{
 		public:
+			template<typename T, typename ...Args> static std::shared_ptr<Value> ofType(Args&&... args)
+			{
+				std::shared_ptr<Value> ret = std::make_shared<Value>(typeid(T),sizeof(T));
+				ret->prepare<T>(std::forward<Args>(args)...);
+				return ret;
+			}
+
 			template<typename T> bool checkType()
 			{
-				return typeid(T) == type;
+				return type == typeid(T);
 			}
 
 			inline std::type_index getType()
@@ -79,7 +92,7 @@ namespace Guider
 				return *static_cast<T*>(pointer);
 			}
 
-			template<typename T,typename ...Args> void prepare(Args... args)
+			template<typename T,typename ...Args> void prepare(Args&&... args)
 			{
 				if (pointer == nullptr && type == typeid(T))
 				{
@@ -166,15 +179,47 @@ namespace Guider
 			}
 		};
 
-		void inherit(const Style& parentStyle);
-		void inheritValues(const Style& parentStyle);
-		void inheritAliases(const Style& parentStyle);
+		class VariableReference
+		{
+		public:
+			bool detached() const noexcept;
+			void attach(const std::shared_ptr<Value>& value);
 
-		std::shared_ptr<Value> getValue(const std::string& name) const;
-		void setValue(const std::string& name,const std::shared_ptr<Value>& value);
-		void setAlias(const std::string& name, const std::string& alias);
+			std::string getName() const;
+			std::shared_ptr<Value> getValue() const;
+
+			VariableReference() : name() {}
+			VariableReference(const std::string& n) : name(n) {}
+			VariableReference(const std::string& n, const std::shared_ptr<Value>& c) : name(n), cache(c) {};
+			VariableReference(const VariableReference&) = default;
+			VariableReference(VariableReference&&) noexcept = default;
+		private:
+			std::string name;
+			std::shared_ptr<Value> cache;
+		};
+
+		void inheritAll(const Style& parentStyle);
+		void inheritVariables(const Style& parentStyle);
+		void inheritAttributes(const Style& parentStyle);
+
+		std::shared_ptr<Value> getAttribute(const std::string& name) const;
+		std::shared_ptr<Value> getVariable(const std::string& name) const;
+
+		std::shared_ptr<Value> getRawAttribute(const std::string& name) const;
+		std::shared_ptr<Value> getRawVariable(const std::string& name) const;
+
+		std::shared_ptr<Value> dereference(const std::shared_ptr<Value>& value) const;
+
+		void setVariable(const std::string& name, const std::shared_ptr<Value>& value);
+		void setAttribute(const std::string& name, const std::shared_ptr<Value>& value);
+		void setAttribute(const std::string& name, const std::string& variable);
 	private:
-		std::unordered_map<std::string, std::shared_ptr<Value>> values;
-		std::unordered_map<std::string, std::string> aliases;
+		std::unordered_map<std::string, std::shared_ptr<Value>> variables;
+		std::unordered_map<std::string, std::shared_ptr<Value>> attributes;
+
+		std::unordered_map<std::string, std::unordered_set<std::string>> variableDeps;
+
+		void addDependency(const std::string& attribute,const std::string& variable);
+		void removeDependency(const std::string& attribute, const std::string& variable);
 	};
 }

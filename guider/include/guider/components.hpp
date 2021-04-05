@@ -130,6 +130,16 @@ namespace Guider
 					setTextSize(v);
 			}
 
+			tmp = config.getAttribute("font");
+			if (tmp.exists())
+			{
+				auto font = manager.getFontByName(tmp.val);
+				if (font)
+				{
+					setFont(tmp.val);
+				}
+			}
+
 			Gravity hor = Gravity::Center, ver = Gravity::Center;
 			tmp = config.getAttribute("textAlignmentHorizontal");
 			if (tmp.exists())
@@ -204,13 +214,13 @@ namespace Guider
 		
 		BasicButtonComponent(Manager& manager, const XML::Tag& config, const Style& style) : TextComponent(manager, config, style)
 		{
-			auto backgroundP = style.getValue("background");
+			auto backgroundP = style.getAttribute("background");
 			if (backgroundP)
 				backgroundDefault = backgroundP->as<std::shared_ptr<Resources::Drawable>>();
-			auto selectedBackgroundP = style.getValue("selectedBackground");
+			auto selectedBackgroundP = style.getAttribute("selectedBackground");
 			if (selectedBackgroundP)
 				backgroundClicked = selectedBackgroundP->as<std::shared_ptr<Resources::Drawable>>();
-			auto hoveredBackgroundP = style.getValue("hoveredBackground");
+			auto hoveredBackgroundP = style.getAttribute("hoveredBackground");
 			if (hoveredBackgroundP)
 				backgroundSelected = hoveredBackgroundP->as<std::shared_ptr<Resources::Drawable>>();
 		}

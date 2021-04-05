@@ -1,0 +1,15 @@
+<Styles>
+	<core.app>
+		<attr name="textSize" value="10"/>
+		<attr name="textColor" value="#00"/>
+		<attr name="font" value="@fonts:arimo"/>
+		
+		<attr name="primaryColor" value="#bdbdbd"/>
+		<attr name="primaryColorLight" value="#efefef"/>
+		<attr name="primaryColorDark" value="#efefef"/>
+		
+		<attr name="accentColor" value="#039be5"/>
+		<attr name="accentColorLight" value="#63ccff"/>
+		<attr name="accentColorDark" value="#006db3"/>
+	</core.app>
+</Styles>

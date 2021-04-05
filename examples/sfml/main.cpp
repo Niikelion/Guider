@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 	unsigned width = 800;
 	unsigned height = 450;
 
-	RenderWindow window(VideoMode(width, height), "Noder", Style::Default, ContextSettings(0, 8, 2));
+	RenderWindow window(VideoMode(width, height), "Sfml test", Style::Default, ContextSettings(0, 8, 2));
 	/*
 	Font font;
 	font.loadFromFile("resources/Arimo-Regular.ttf");
@@ -35,13 +35,14 @@ int main(int argc, char* argv[])
 	text.setFont(font);
 	*/
 
-	Gui::SfmlBackend renderer;
+	sf::RenderTexture guiTexture;
+	Gui::SfmlBackend renderer(guiTexture);
 	Gui::Engine engine(renderer);
 	engine.resize(Gui::Vec2((float)width, (float)height));
 
 	std::shared_ptr<Gui::ConstraintsContainer> container = make_shared<Gui::ConstraintsContainer>();
 
-	engine.container.addChild(container, 0, 0);
+	engine.addChild(container);
 
 	Gui::Component::Type rects[] = {
 		make_shared<Gui::RectangleShapeComponent>(SizingMode::MatchParent,Gui::Color(255,0,0)),
@@ -138,7 +139,7 @@ int main(int argc, char* argv[])
 	Cursor cursor;
 
 	Sprite gui;
-	gui.setTexture(renderer.target.getTexture());
+	gui.setTexture(guiTexture.getTexture());
 	gui.setOrigin(width / 2.0f, height / 2.0f);
 
 	while (window.isOpen())
@@ -162,9 +163,9 @@ int main(int argc, char* argv[])
 
 				Vector2u size(event.size.width, event.size.height);
 				window.setView(view);
-
+				guiTexture.create(event.size.width, event.size.height);
 				engine.resize(Gui::Vec2((float)size.x, (float)size.y));
-				gui.setTexture(renderer.target.getTexture(), true);
+				gui.setTexture(guiTexture.getTexture(), true);
 				gui.setOrigin(event.size.width / 2.0f, event.size.height / 2.0f);
 				engine.update();
 				break;
@@ -193,11 +194,11 @@ int main(int argc, char* argv[])
 		window.clear(Color(200, 200, 200));
 
 
-		renderer.target.setActive();
+		guiTexture.setActive();
 		engine.update();
 		engine.draw();
 
-		renderer.target.display();
+		guiTexture.display();
 
 		window.setActive();
 		window.draw(gui);
