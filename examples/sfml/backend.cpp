@@ -218,6 +218,8 @@ namespace Guider
 	std::shared_ptr<Resources::FontResource> SfmlBackend::getFontByName(const std::string& name)
 	{
 		auto it = fonts.find(name);
+		if (it == fonts.end())
+			it = fonts.find("");
 		if (it != fonts.end())
 		{
 			return it->second;

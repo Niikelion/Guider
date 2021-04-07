@@ -191,23 +191,18 @@ namespace Guider
 	}
 	std::pair<float, float> TextComponent::getContentSize(bool getWidth, bool getHeight)
 	{
-		Backend* backend = getBackend();
-
 		float w = 0, h = 0;
 
-		if (backend != nullptr)
+		if (getWidth)
 		{
-			if (getWidth)
-			{
-				w = (textRes != nullptr) ? textRes->getLineWidth() : 0;
-			}
-			if (getHeight)
-			{
-				h = (textRes != nullptr) ? textRes->getLineHeight() : 0;
-			}
+			w = (textRes) ? textRes->getLineWidth() : 0;
+		}
+		if (getHeight)
+		{
+			h = (textRes) ? textRes->getLineHeight() : 0;
 		}
 
-		return std::pair<float, float>(w,h);
+		return std::pair<float, float>(w, h);
 	}
 	void ButtonBase::handleClick(const Event& event)
 	{

@@ -108,6 +108,7 @@ namespace Guider
 		TextComponent(Manager& manager, const XML::Tag& config, const Style& style): CommonComponent(manager, config, style), textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
 		{
 			Manager::handleDefaultArguments(*this, config, style);
+			setBackend(manager.getBackend());
 			XML::Value tmp = config.getAttribute("color");
 			if (tmp.exists())
 			{

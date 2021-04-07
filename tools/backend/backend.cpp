@@ -191,7 +191,7 @@ namespace Guider
 	}
 	void SfmlBackend::setSize(const Vec2& size)
 	{
-		//set canvas size
+		//sfml does not have api for resizing sf::RenderTarget
 	}
 
 	void SfmlBackend::setBounds(const Rect& rect)

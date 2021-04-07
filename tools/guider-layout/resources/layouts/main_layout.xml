@@ -5,6 +5,7 @@
 	<containers.ConstraintsContainer
 		style="toolbar"
 		id="toolbar"
+		name="toolbar"
 	
 		width = "match_parent"
 		height = "32"
@@ -56,6 +57,10 @@
 				text="Repo"
 				textSize="12"
 				color="#a8a8a8"
+				
+				background="#eeeeee"
+				selectedBackground="#d0d0d0"
+				hoveredBackground="#dedede"
 			/>
 			<common.Button
 				style="toolbar.button"

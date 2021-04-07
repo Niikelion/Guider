@@ -110,8 +110,8 @@ namespace Guider
 				s.inheritAttributes(it->second);
 			}
 		}
-
-		s.inheritVariables(parent); //add values not set by default styles
+		//add values not set by default styles
+		s.inheritVariables(parent); 
 		
 		//override by explicitly specified styles
 

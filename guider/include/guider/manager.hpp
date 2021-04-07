@@ -77,6 +77,11 @@ namespace Guider
 			return instantiate(xml, *this, parentStyle);
 		}
 
+		inline Backend& getBackend()
+		{
+			return backend;
+		}
+
 		Manager(Backend& b) : backend(b)
 		{
 			initDefaultProperties();
