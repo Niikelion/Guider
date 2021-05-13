@@ -19,3 +19,4 @@ set(headers
 add_library(guider STATIC ${sources} ${headers})
 target_include_directories(guider PUBLIC include)
 target_link_libraries(guider PUBLIC parselib::xml)
+set_target_properties(guider PROPERTIES VS_JUST_MY_CODE_DEBUGGING ON)

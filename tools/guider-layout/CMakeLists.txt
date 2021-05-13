@@ -13,6 +13,7 @@ target_link_libraries(guider-layout PRIVATE tools-backend)
 target_include_directories(guider-layout PRIVATE include ${CMAKE_CURRENT_BINARY_DIR}/include)
 set_target_properties(guider-layout PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}//$(Configuration))
 set_target_properties(guider-layout PROPERTIES CXX_STANDARD 17)
+set_target_properties(guider-layout PROPERTIES VS_JUST_MY_CODE_DEBUGGING ON)
 
 if(DEV_BUILD)
 	target_compile_definitions(guider-layout PRIVATE RESOURCE_FOLDER="${CMAKE_CURRENT_SOURCE_DIR}/resources/")

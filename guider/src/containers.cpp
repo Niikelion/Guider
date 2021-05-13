@@ -1364,9 +1364,10 @@ namespace Guider
 						}
 						case Constraint::Type::Chain:
 						{
-							std::remove_if(constraint->chain.targets.begin(), constraint->chain.targets.end(), [p](const std::pair<Component*, float>& a) {
+							auto toRemove = std::remove_if(constraint->chain.targets.begin(), constraint->chain.targets.end(), [p](const std::pair<Component*, float>& a) {
 								return a.first == p;
 								});
+							constraint->chain.targets.erase(toRemove,constraint->chain.targets.end());
 							if (constraint->chain.targets.empty())
 							{
 								//delete empty chain constraint
