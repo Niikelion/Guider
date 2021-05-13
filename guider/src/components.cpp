@@ -8,6 +8,61 @@ namespace Guider
 		return paddings.calcContentArea(getBounds());
 	}
 
+	void CommonComponent::registerProperties(Manager& m, const std::string& name)
+	{
+		m.registerPropertyForComponent<Padding>(name, "padding", [](const std::string& value) {
+			std::vector<std::string> args = Styles::splitString(value);
+			switch (args.size())
+			{
+			case 1:
+			{
+				bool failed = false;
+				float v = Styles::strToFloat(args[0], failed);
+				if (!failed)
+					return Padding(v, v, v, v);
+				break;
+			}
+			case 2:
+			{
+				bool failed = false;
+				float w = Styles::strToFloat(args[0], failed);
+				if (!failed)
+				{
+					float h = Styles::strToFloat(args[1], failed);
+					if (!failed)
+					{
+						return Padding(w, w, h, h);
+					}
+				}
+				break;
+			}
+			case 4:
+			{
+				bool failed = false;
+				float left = Styles::strToFloat(args[0], failed);
+				if (!failed)
+				{
+					float right = Styles::strToFloat(args[1], failed);
+					if (!failed)
+					{
+						float top = Styles::strToFloat(args[2], failed);
+						if (!failed)
+						{
+							float bottom = Styles::strToFloat(args[3], failed);
+							if (!failed)
+							{
+								return Padding(left, right, top, bottom);
+							}
+						}
+					}
+				}
+				break;
+				}
+			}
+			throw std::invalid_argument("invalid padding value");
+		});
+	}
+
 	void CommonComponent::setPadding(const Padding& pad)
 	{
 		paddings = pad;
@@ -42,58 +97,13 @@ namespace Guider
 		return measurements;
 	}
 
-	CommonComponent::CommonComponent(Manager& m, const XML::Tag& tag, const Style& style)
+	CommonComponent::CommonComponent(Manager& m, const XML::Tag& tag, const StylingPack& pack)
 	{
-		XML::Value tmp = tag.getAttribute("padding");
-		if (tmp.exists())
 		{
-			std::vector<std::string> args = Styles::splitString(tmp.val);
-			switch (args.size())
+			auto padding = pack.style.getAttribute("padding");
+			if (padding)
 			{
-			case 1:
-			{
-				bool failed = false;
-				float v = Styles::strToFloat(args[0], failed);
-				if (!failed)
-					setPadding(Padding(v, v, v, v));
-				break;
-			}
-			case 2:
-			{
-				bool failed = false;
-				float w = Styles::strToFloat(args[0], failed);
-				if (!failed)
-				{
-					float h = Styles::strToFloat(args[1], failed);
-					if (!failed)
-					{
-						setPadding(Padding(w, w, h, h));
-					}
-				}
-				break;
-			}
-			case 4:
-			{
-				bool failed = false;
-				float left = Styles::strToFloat(args[0],failed);
-				if (!failed)
-				{
-					float right = Styles::strToFloat(args[1],failed);
-					if (!failed)
-					{
-						float top = Styles::strToFloat(args[2],failed);
-						if (!failed)
-						{
-							float bottom = Styles::strToFloat(args[3],failed);
-							if (!failed)
-							{
-								setPadding(Padding(left,right,top,bottom));
-							}
-						}
-					}
-				}
-				break;
-			}
+				setPadding(padding->as<Padding>());
 			}
 		}
 	}
@@ -107,7 +117,7 @@ namespace Guider
 		}
 	}
 
-	void RectangleShapeComponent::onDraw(Canvas& canvas) const
+	void RectangleShapeComponent::onDraw(Canvas& canvas)
 	{
 		Rect bounds = getBounds();
 		shape->setSize(Vec2(bounds.width,bounds.height));
@@ -120,6 +130,12 @@ namespace Guider
 		{
 			shape = getBackend()->createRectangle(Vec2(), color);
 		}
+	}
+	void TextComponent::registerProperties(Manager& m, const std::string& name)
+	{
+		CommonComponent::registerProperties(m, name);
+		m.registerColorProperty(name, "color");
+		m.registerStringProperty(name, "text");
 	}
 	void TextComponent::setTextSize(float textSize)
 	{
@@ -166,7 +182,7 @@ namespace Guider
 		
 		invalidateVisuals();
 	}
-	void TextComponent::onDraw(Canvas& canvas) const
+	void TextComponent::onDraw(Canvas& canvas)
 	{
 		//float xoff = 0, yoff = 0;
 
@@ -265,14 +281,11 @@ namespace Guider
 	{
 		return *this;
 	}
-	void BasicButtonComponent::defineProperties(Manager& m)
+	void BasicButtonComponent::registerProperties(Manager& m, const std::string& name)
 	{
-		m.registerDrawableProperty("selectedBackground");
-		m.registerDrawableProperty("hoveredBackground");
-	}
-	void BasicButtonComponent::drawMask(Backend& b) const
-	{
-		Component::drawMask(b);
+		TextComponent::registerProperties(m, name);
+		m.registerDrawableProperty(name, "selectedBackground");
+		m.registerDrawableProperty(name, "hoveredBackground");
 	}
 	std::shared_ptr<Resources::Drawable> BasicButtonComponent::getBackgroundDrawable(ButtonState state) const
 	{
@@ -287,7 +300,7 @@ namespace Guider
 
 		return backgroundDefault;
 	}
-	void BasicButtonComponent::onDraw(Canvas& canvas) const
+	void BasicButtonComponent::onDraw(Canvas& canvas)
 	{
 		Rect bounds = getBounds();
 		std::shared_ptr<Resources::Drawable> shape = getCurrentBackgroundDrawable();
@@ -307,7 +320,7 @@ namespace Guider
 		case Event::Type::BackendConnected:
 		{
 			if (!backgroundDefault)
-				backgroundDefault = getBackend()->createRectangle(Vec2(0, 0), Color(255,2555,255));
+				backgroundDefault = getBackend()->createRectangle(Vec2(0, 0), Color(255,255,255));
 			break;
 		}
 		}

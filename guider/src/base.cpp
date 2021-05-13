@@ -1,14 +1,49 @@
 #include <guider/base.hpp>
+#include <climits>
 
 namespace Guider
 {
+	constexpr float feps = std::numeric_limits<float>::epsilon();
+
 	bool Rect::operator==(const Rect& t) const noexcept
 	{
-		return left == t.left && width == t.width && top == t.top && height == t.height;
+		return
+			feps >= std::abs(left - t.left) &&
+			feps >= std::abs(width - t.width) &&
+			feps >= std::abs(top - t.top) &&
+			feps >= std::abs(height - t.height);
 	}
 	bool Rect::operator!=(const Rect& t) const noexcept
 	{
-		return left != t.left || width != t.width || top != t.top || height != t.height;
+		return
+			feps < std::abs(left - t.left) ||
+			feps < std::abs(width - t.width) ||
+			feps < std::abs(top - t.top) ||
+			feps < std::abs(height - t.height);
+	}
+	Rect& Rect::operator+=(const Vec2& offset)noexcept
+	{
+		left += offset.x;
+		top += offset.y;
+		return *this;
+	}
+	Rect& Rect::operator-=(const Vec2& offset) noexcept
+	{
+		left -= offset.x;
+		top -= offset.y;
+		return *this;
+	}
+	Rect Rect::operator+(const Vec2& offset) const noexcept
+	{
+		Rect tmp = *this;
+		tmp += offset;
+		return tmp;
+	}
+	Rect Rect::operator-(const Vec2& offset) const noexcept
+	{
+		Rect tmp = *this;
+		tmp -= offset;
+		return tmp;
 	}
 	bool Rect::intersects(const Rect& rect) const noexcept
 	{
@@ -102,6 +137,12 @@ namespace Guider
 			pos += offsets.back();
 		offsets.emplace_back(pos);
 		setDrawOrigin(pos.x, pos.y);
+	}
+	Vec2 Backend::getDrawOffset() const
+	{
+		if (!offsets.empty())
+			return offsets.back();
+		return Vec2(0.f, 0.f);
 	}
 	void Backend::popDrawOffset()
 	{
@@ -206,7 +247,7 @@ namespace Guider
 			break;
 		case Guider::Event::BackendConnected:
 		{
-			backendConnected.~backendConnected();
+			backendConnected.~BackendConnectedEvent();
 			break;
 		}
 		case Guider::Event::MouseMoved:
@@ -214,7 +255,7 @@ namespace Guider
 		case Guider::Event::MouseButtonUp:
 		case Guider::Event::MouseLeft:
 		{
-			mouseEvent.~mouseEvent();
+			mouseEvent.~MouseEvent();
 			break;
 		}
 		default:
@@ -253,11 +294,6 @@ namespace Guider
 	{
 		this->value = value;
 		this->mode = mode;
-	}
-
-	void Component::drawMask(Backend& renderer) const
-	{
-		renderer.addToMask(getGlobalBounds());
 	}
 
 	void Component::poke()
@@ -345,9 +381,9 @@ namespace Guider
 
 	void Component::invalidateVisuals()
 	{
-		if (!redraw)
+		if (!toRedraw)
 		{
-			redraw = true;
+			toRedraw = true;
 
 			Component* p = getParent();
 			Component* c = this;
@@ -440,13 +476,40 @@ namespace Guider
 		}
 		return b;
 	}
-	void Component::draw(Canvas& canvas) const
+	void Component::onMaskDraw(Canvas& canvas) const
 	{
-		redraw = false;
-		getBackend()->pushDrawOffset(Vec2(bounds.left,bounds.top));
-		getBackend()->setBounds(bounds.at(Vec2(0,0)));
+		getBackend()->addToMask(bounds.at(Vec2(0.f, 0.f)));
+	}
+	void Component::onRedraw(Canvas& canvas)
+	{
+		onDraw(canvas);
+	}
+	void Component::drawMask(Canvas& canvas) const
+	{
+		getBackend()->pushDrawOffset(Vec2(bounds.left, bounds.top));
+		onMaskDraw(canvas);
+		getBackend()->popDrawOffset();
+	}
+	void Component::draw(Canvas& canvas)
+	{
+		toRedraw = false;
+		getBackend()->pushDrawOffset(Vec2(bounds.left, bounds.top));
+		getBackend()->setBounds(bounds.at(Vec2(0, 0)));
 		onDraw(canvas);
 		getBackend()->popDrawOffset();
+	}
+
+	void Component::redraw(Canvas& canvas)
+	{
+		toRedraw = false;
+		getBackend()->pushDrawOffset(Vec2(bounds.left, bounds.top));
+		getBackend()->setBounds(bounds.at(Vec2(0, 0)));
+		onRedraw(canvas);
+		getBackend()->popDrawOffset();
+	}
+
+	Component::Component() :backend(nullptr), parent(nullptr), toRedraw(true), clean(false), hasMouseOver(false), hasMouseFocus(false), sizingModeH(SizingMode::OwnSize), sizingModeW(SizingMode::OwnSize), width(0), height(0)
+	{
 	}
 
 
@@ -523,168 +586,6 @@ namespace Guider
 			component.handleEvent(adjustEventForComponent(copy,component));
 	}
 
-	void AbsoluteContainer::drawMask(Backend& renderer) const
-	{
-		for (auto i : toUpdate)
-		{
-			i->drawMask(renderer);
-		}
-	}
-
-	void AbsoluteContainer::addChild(const Component::Type& child)
-	{
-		addChild(child, 0, 0);
-	}
-
-	void AbsoluteContainer::addChild(const Component::Type& child, float x, float y)
-	{
-		Rect bounds = getBounds();
-		children.emplace_back(child, x, y);
-		child->setParent(*this);
-		child->poke();
-		toUpdate.insert(child.get());
-		std::pair<Component::DimensionDesc, Component::DimensionDesc> measurements = child->measure(
-			Component::DimensionDesc(bounds.width, Component::DimensionDesc::Mode::Max),
-			Component::DimensionDesc(bounds.height, Component::DimensionDesc::Mode::Max)
-		);
-		bounds.left = x;
-		bounds.top = y;
-		bounds.width = measurements.first.value;
-		bounds.height = measurements.second.value;
-		setBounds(*child, bounds);
-	}
-	void AbsoluteContainer::removeChild(const Component::Type& child)
-	{
-		for (auto it = children.begin(); it != children.end(); ++it)
-		{
-			if (it->component.get() == child.get())
-			{
-				toUpdate.erase(it->component.get());
-				children.erase(it);
-			}
-		}
-	}
-	void AbsoluteContainer::clearChildren()
-	{
-		toUpdate.clear();
-		children.clear();
-	}
-	Container::Iterator AbsoluteContainer::firstElement()
-	{
-		return createIterator<IteratorType>(children.begin(),children.end());
-	}
-	void AbsoluteContainer::poke()
-	{
-		Component::poke();
-		for (auto& i : children)
-		{
-			//TODO: move to another method
-			i.component->poke();
-			Rect bounds = getBounds();
-			std::pair<DimensionDesc, DimensionDesc> measurements = i.component->measure(DimensionDesc(bounds.width, DimensionDesc::Max),
-				DimensionDesc(bounds.height, DimensionDesc::Max)
-			);
-
-			bounds.left = i.x;
-			bounds.top = i.y;
-			bounds.width = measurements.first.value;
-			bounds.height = measurements.second.value;
-			setBounds(*i.component.get(), bounds);
-			toUpdate.insert(i.component.get());
-
-			for (auto& j : children)
-			{
-				if (i.component != j.component && bounds.intersects(j.component->getBounds()))
-				{
-					toUpdate.insert(j.component.get());
-				}
-			}
-		}
-	}
-	void AbsoluteContainer::onResize(const Rect& last)
-	{
-		if (last != getBounds())
-		{
-			for (auto& i : children)
-				toUpdate.insert(i.component.get());
-		}
-	}
-	void AbsoluteContainer::onChildStain(Component& c)
-	{
-		for (auto& i : children)
-		{
-			if (i.component.get() == &c)
-			{
-				Rect bounds = getBounds();
-				std::pair<DimensionDesc, DimensionDesc> measurements = c.measure(DimensionDesc(bounds.width, DimensionDesc::Max),
-					DimensionDesc(bounds.height, DimensionDesc::Max)
-				);
-
-				bounds.left = i.x;
-				bounds.top = i.y;
-				bounds.width = measurements.first.value;
-				bounds.height = measurements.second.value;
-				setBounds(c, bounds);
-				toUpdate.insert(&c);
-
-				for (auto& j : children)
-				{
-					if (i.component != j.component && bounds.intersects(j.component->getBounds()))
-					{
-						toUpdate.insert(j.component.get());
-					}
-				}
-
-				break;
-			}
-		}
-	}
-	void AbsoluteContainer::onChildNeedsRedraw(Component& c)
-	{
-		toUpdate.insert(&c);
-	}
-
-	void AbsoluteContainer::onDraw(Canvas& canvas) const
-	{
-		if (toUpdate.size() > 0)
-		{
-			Rect bounds = getGlobalBounds();
-			std::vector<Rect> base;
-			base.reserve(toUpdate.size());
-			for (auto i : toUpdate)
-			{
-				base.emplace_back(i->getBounds());
-			}
-			for (const auto& i : children)
-			{
-				Rect localBounds = i.component->getBounds();
-				for (const auto& rect : base)
-				{
-					if (localBounds.intersects(rect))
-					{
-						i.component->draw(canvas);
-						break;
-					}
-				}
-			}
-		}
-	}
-	AbsoluteContainer::Element::Element(const Component::Type& c, float x, float y)
-	{
-		component = c;
-		this->x = x;
-		this->y = y;
-	}
-	void Engine::drawMask(Backend& renderer) const
-	{
-		if (!toRedraw.empty())
-		{
-			for (auto element : elements)
-			{
-					element->drawMask(renderer);
-			}
-		}
-	}
 	void Engine::addChild(const Component::Type& child)
 	{
 		Rect bounds = getBounds();
@@ -771,7 +672,17 @@ namespace Guider
 			}
 		}
 	}
-	void Engine::onDraw(Canvas& canvas) const
+	void Engine::onMaskDraw(Canvas& canvas) const
+	{
+		if (!toRedraw.empty())
+		{
+			for (auto element : elements)
+			{
+				element->drawMask(canvas);
+			}
+		}
+	}
+	void Engine::onDraw(Canvas& canvas)
 	{
 		for (auto element : elements)
 		{
@@ -780,7 +691,12 @@ namespace Guider
 		}
 		toRedraw.clear();
 	}
-	void Engine::draw() const
+	void Engine::onRedraw(Canvas& canvas)
+	{
+		for (auto element : elements)
+			element->redraw(canvas);
+	}
+	void Engine::draw()
 	{
 		if (canvas)
 		{
@@ -792,12 +708,21 @@ namespace Guider
 			backend.setupMask();
 			backend.clearMask();
 
-			drawMask(backend);
+			drawMask(*c);
 
 			backend.useMask();
 			Component::draw(*c);
 
 			backend.disableMask();
 		}
+	}
+	Engine::Engine(Backend& b) : backend(b)
+	{
+		canvas = b.getCanvas();
+		setBackend(b);
+	}
+	Engine::Engine(Backend& b, const std::shared_ptr<Canvas>& c) : backend(b), canvas(c)
+	{
+		setBackend(b);
 	}
 }

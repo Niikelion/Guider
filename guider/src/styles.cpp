@@ -1,10 +1,46 @@
 #include <guider/styles.hpp>
 #include <sstream>
+#include <iterator>
 
 namespace Guider
 {
 	namespace Styles
 	{
+
+		bool Variable::isReference() const
+		{
+			return reference;
+		}
+
+		std::string Variable::getValue() const
+		{
+			return value;
+		}
+
+		Variable::Variable(const std::string& value, bool reference) : reference(reference), value(value)
+		{
+		}
+
+		bool VariableReference::detached() const noexcept
+		{
+			return static_cast<bool>(cache);
+		}
+
+		void VariableReference::attach(const std::shared_ptr<Value>& value)
+		{
+			cache = value;
+		}
+
+		std::string VariableReference::getName() const
+		{
+			return name;
+		}
+
+		std::shared_ptr<Value> VariableReference::getValue() const
+		{
+			return cache;
+		}
+
 		bool isDigitInBase(char c, unsigned base)
 		{
 			return base <= 10 ? (c >= '0' && c < '0' + static_cast<int>(base)) : ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'A' + static_cast<int>(base) - 10) || (c >= 'a' && c < 'a' + static_cast<int>(base) - 10));
@@ -135,43 +171,16 @@ namespace Guider
 
 			return std::vector<std::string>(begin, end);
 		}
-	}
-
-
-	bool Style::VariableReference::detached() const noexcept
-	{
-		return static_cast<bool>(cache);
-	}
-
-	void Style::VariableReference::attach(const std::shared_ptr<Value>& value)
-	{
-		cache = value;
-	}
-
-	std::string Style::VariableReference::getName() const
-	{
-		return name;
-	}
-
-	std::shared_ptr<Style::Value> Style::VariableReference::getValue() const
-	{
-		return cache;
-	}
-
-	void Style::inheritAll(const Style& parentStyle)
-	{
-		inheritVariables(parentStyle);
-		inheritAttributes(parentStyle);
-	}
-	void Style::inheritVariables(const Style& parentStyle)
-	{
-		for (const auto& i : parentStyle.variables)
+		
+		std::string UnresolvedValue::getValue()
 		{
-			auto v = variables.find(i.first);
-			if (v == variables.end())
-				setVariable(i.first,i.second);
+			return value;
 		}
-	}
+
+		UnresolvedValue::UnresolvedValue(const std::string& value) : value(value)
+		{
+		}
+}
 
 	void Style::inheritAttributes(const Style& parentStyle)
 	{
@@ -183,74 +192,59 @@ namespace Guider
 		}
 	}
 	
-	std::shared_ptr<Style::Value> Style::getAttribute(const std::string& name) const
-	{
-		return dereference(getRawAttribute(name));
-	}
-	std::shared_ptr<Style::Value> Style::getVariable(const std::string& name) const
-	{
-		return dereference(getRawVariable(name));
-	}
-	std::shared_ptr<Style::Value> Style::getRawAttribute(const std::string& name) const
+	std::shared_ptr<Styles::Value> Style::getAttribute(const std::string& name) const
 	{
 		auto attr = attributes.find(name);
 		if (attr != attributes.end())
 			return attr->second;
-		return std::shared_ptr<Value>();
+		return std::shared_ptr<Styles::Value>();
 	}
-	std::shared_ptr<Style::Value> Style::getRawVariable(const std::string& name) const
-	{
-		auto var = variables.find(name);
-		if (var != variables.end())
-			return var->second;
-		return std::shared_ptr<Value>();
-	}
-	std::shared_ptr<Style::Value> Style::dereference(const std::shared_ptr<Value>& value) const
-	{
-		std::shared_ptr<Value> current = value;
-		while (value && value->checkType<VariableReference>())
-		{
-			VariableReference& v = current->as<VariableReference>();
-			if (v.detached() || true) //TODO: add proper handling later
-			{
-				auto var = variables.find(v.getName());
-				if (var != variables.end())
-					v.attach(var->second);
-			}
-			current = v.detached() ? std::shared_ptr<Value>() : v.getValue();
-		}
-		return current;
-	}
-	void Style::setVariable(const std::string& name, const std::shared_ptr<Value>& value)
-	{
-		variables[name] = value;
-	}
-	void Style::setAttribute(const std::string& name, const std::shared_ptr<Value>& value)
+	
+	
+	void Style::setAttribute(const std::string& name, const std::shared_ptr<Styles::Value>& value)
 	{
 		attributes[name] = value;
 	}
 	void Style::setAttribute(const std::string& name, const std::string& variable)
 	{
 		auto it = attributes.find(name);
-		auto var = variables.find(variable);
-		if (var == variables.end())
-		{
-			attributes[name] = Value::ofType<VariableReference>(variable);
-		}
-		else
-		{
-			attributes[name] = Value::ofType<VariableReference>(variable,var->second);
-		}
+		attributes[name] = Styles::Value::ofType<Styles::VariableReference>(variable);
 	}
-	void Style::addDependency(const std::string& attribute, const std::string& variable)
+
+	void Style::removeAttribute(const std::string& name)
 	{
-		auto deps = variableDeps.emplace(variable,std::unordered_set<std::string>());
-		deps.first->second.emplace(variable);
+		attributes.erase(name);
 	}
-	void Style::removeDependency(const std::string& attribute, const std::string& variable)
+
+	std::shared_ptr<Styles::Variable> Theme::getVariable(const std::string& name) const
 	{
-		auto deps = variableDeps.find(variable);
-		if (deps != variableDeps.end())
-			deps->second.erase(attribute);
+		auto it = variables.find(name);
+		if (it != variables.end())
+			return it->second;
+		return std::shared_ptr<Styles::Variable>();
+	}
+	std::shared_ptr<Styles::Variable> Theme::dereferenceVariable(const std::string& name) const
+	{
+		auto var = getVariable(name);
+		std::unordered_set<Styles::Variable*> visited;
+		while (var && var->isReference() && !visited.count(var.get()))
+		{
+			visited.insert(var.get());
+			var = getVariable(var->getValue());
+		}
+		return var;
+	}
+	void Theme::setVariable(const std::string& name, const std::shared_ptr<Styles::Variable>& value)
+	{
+		variables[name] = value;
+	}
+	void Theme::inheritVariables(const Theme& parentStyle)
+	{
+		for (const auto& i : parentStyle.variables)
+		{
+			auto v = variables.find(i.first);
+			if (v == variables.end())
+				setVariable(i.first, i.second);
+		}
 	}
 }

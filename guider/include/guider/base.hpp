@@ -13,11 +13,12 @@
 
 namespace Guider
 {
+	/// @brief Basic class representing 2d point/vector.
 	class Vec2
 	{
 	public:
 		float x, y;
-
+ 
 		Vec2& operator = (const Vec2&) = default;
 		Vec2& operator = (Vec2&&) noexcept = default;
 
@@ -27,11 +28,16 @@ namespace Guider
 		Vec2& operator -= (const Vec2& t) noexcept;
 		Vec2 operator - (const Vec2& t) const noexcept;
 
+		/// @brief Default constructor, initializes x and y to 0.
 		Vec2();
+		/// @brief Initializes x and y with provided values.
+		/// @param w x coordinate.
+		/// @param h y coordinate.
 		Vec2(float w, float h);
 		Vec2(const Vec2&) = default;
 		Vec2(Vec2&&) noexcept = default;
 	};
+	/// @brief Basic class representing rectangle.
 	class Rect
 	{
 	public:
@@ -43,17 +49,28 @@ namespace Guider
 		bool operator == (const Rect&) const noexcept;
 		bool operator != (const Rect&) const noexcept;
 
-		bool intersects(const Rect&) const noexcept;
-		bool contains(const Vec2&) const noexcept;
+		Rect& operator += (const Vec2& offset) noexcept;
+		Rect& operator -= (const Vec2& offset) noexcept;
 
+		Rect operator + (const Vec2& offset) const noexcept;
+		Rect operator - (const Vec2& offset) const noexcept;
+
+		/// @brief Checks if 2 rects intersects.
+		bool intersects(const Rect& rect) const noexcept;
+		/// @brief Checks if rect cointains  point.
+		bool contains(const Vec2& point) const noexcept;
+
+		/// @brief Returns copy of rect with top left corner at pos.
 		inline Rect at(const Vec2& pos) const noexcept
 		{
 			return Rect(pos.x,pos.y,width,height);
 		}
+		/// @brief Returns top left corner as point. 
 		inline Vec2 position() const noexcept
 		{
 			return Vec2(left,top);
 		}
+		/// @brief Returns size of the rect as vector.
 		inline Vec2 size() const noexcept
 		{
 			return Vec2(width,height);
@@ -64,6 +81,7 @@ namespace Guider
 		Rect(const Rect&) = default;
 		Rect(Rect&&) noexcept = default;
 	};
+	/// @brief Basic color class.
 	class Color
 	{
 	public:
@@ -76,6 +94,8 @@ namespace Guider
 			};
 		};
 
+		/// @brief Returns color as number in standard format.
+		/// Result is in 0xrrggbbaa format for easier printing and parsing.
 		inline uint32_t hex() const noexcept
 		{
 			return r << 24 | g << 16 | b << 8 | a;
@@ -89,6 +109,7 @@ namespace Guider
 			this->b = b;
 			this->a = a;
 		}
+		/// @brief Constructs color from hex reprezentation.
 		Color(uint32_t v)
 		{
 			a = v & 0xFF;
@@ -107,6 +128,7 @@ namespace Guider
 	public:
 		float left, right, top, bottom;
 
+		/// @brief Returns adjusted content rect inside provided rect.
 		Rect calcContentArea(const Rect& bounds) const;
 
 		Padding() : left(0), right(0), top(0), bottom(0) {}
@@ -135,12 +157,16 @@ namespace Guider
 		class Drawable;
 	}
 
+	/// @interface Canvas
+	/// @brief Base for drawing surface.
 	class Canvas
 	{
 	public:
 		virtual void drawRectangle(const Rect& rect, const Color& color) = 0;
 		void draw(Resources::Drawable& drawable, const Rect& rect);
 
+		/// @brief Cast from canvas interface to implementation.
+		/// @tparam T imlpementation type
 		template<typename T>T& as()
 		{
 			return static_cast<T&>(*this);
@@ -235,7 +261,9 @@ namespace Guider
 			CompositeDrawable(const CompositeDrawable&) = default;
 		};
 	}
-
+	
+	/// @interface Backend
+	/// @brief Base for rendering backend.
 	class Backend
 	{
 	public:
@@ -252,6 +280,7 @@ namespace Guider
 
 		void pushDrawOffset(const Vec2& offset);
 		virtual void setDrawOrigin(float x, float y) = 0;
+		Vec2 getDrawOffset() const;
 		void popDrawOffset();
 
 		virtual void clearMask() = 0;
@@ -271,93 +300,6 @@ namespace Guider
 	private:
 		std::vector<Vec2> offsets;
 	};
-
-	/*class Backend
-	{
-	public:
-		class Resource
-		{
-		private:
-			uint64_t id;
-		public:
-			inline uint64_t getId() const noexcept
-			{
-				return id;
-			}
-			Resource(uint64_t i) : id(i) {};
-			Resource(const Resource& r) : id(r.id) {}
-			virtual ~Resource() = default;
-		};
-
-		class Drawable: public Resource
-		{
-		public:
-			virtual void draw(Canvas& canvas,const Rect& bounds) = 0;
-
-			using Resource::Resource;
-		};
-
-		class RectangleShape : public Drawable
-		{
-		public:
-			virtual void setSize(const Vec2& size) = 0;
-			virtual void setColor(const Color& color) = 0;
-
-			using Drawable::Drawable;
-		};
-
-		class FontResource : public Resource
-		{
-		public:
-			virtual float getLineHeight(float textSize) const = 0;
-			virtual float getLineWidth(float textSize, const std::string& text) const = 0;
-
-			using Resource::Resource;
-		};
-
-		class TextResource : public Drawable
-		{
-		public:
-			virtual void setText(const std::string& text) = 0;
-			virtual void setTextSize(float size) = 0;
-			virtual void setFont(const FontResource& font) = 0;
-			virtual void setColor(const Color& color) = 0;
-			virtual float getLineHeight() const = 0;
-			virtual float getLineWidth() const = 0;
-
-			using Drawable::Drawable;
-		};
-	private:
-		Rect bounds;
-		std::vector<Vec2> offsets;
-	protected:
-		virtual void setViewport(const Rect& rect) = 0;
-	public:
-		virtual std::shared_ptr<RectangleShape> createRectangle(const Vec2& size, const Color& color) = 0;
-		virtual std::shared_ptr<TextResource> createText(const std::string& text, const FontResource& font, float size, const Color& color) = 0;
-		
-		virtual std::shared_ptr<FontResource> getFontByName(const std::string& name) = 0;
-
-		virtual void deleteResource(Resource& resource) = 0;
-		virtual void deleteResource(uint64_t id) = 0;
-
-		void pushDrawOffset(const Vec2& offset);
-		virtual void setDrawOrigin(float x, float y) = 0;
-		void popDrawOffset();
-
-		virtual void clearMask() = 0;
-		virtual void setupMask() = 0;
-		virtual void useMask() = 0;
-		virtual void disableMask() = 0;
-		virtual void pushMaskLayer() = 0;
-		virtual void popMaskLayer() = 0;
-		virtual void addToMask(const Rect& rect) = 0;
-
-		void limitView(const Rect& rect);
-		void setView(const Rect& rect);
-		virtual Vec2 getSize() const noexcept = 0;
-		virtual void setSize(const Vec2& size) = 0;
-	};*/
 
 	class Event
 	{
@@ -429,6 +371,8 @@ namespace Guider
 		Event(Type type);
 	};
 
+	/// @interface Component
+	/// @brief Gui component base.
 	class Component
 	{
 	public:
@@ -482,7 +426,7 @@ namespace Guider
 		}
 		inline bool needsRedraw() const
 		{
-			return redraw;
+			return toRedraw;
 		}
 		inline void setWidth(float w)
 		{
@@ -523,10 +467,7 @@ namespace Guider
 			handleEvent(Event::createBackendConnectedEvent(b));
 		}
 
-		virtual void drawMask(Backend& renderer) const;
-
 		virtual void poke();
-		virtual void onResize(const Rect& lastBounds);
 
 		class DimensionDesc
 		{
@@ -544,9 +485,6 @@ namespace Guider
 			DimensionDesc(const DimensionDesc&) = default;
 		};
 
-		virtual void onChildStain(Component& c);
-		virtual void onChildNeedsRedraw(Component& c);
-
 		virtual void handleEvent(const Event& event);
 
 		void invalidate();
@@ -560,10 +498,46 @@ namespace Guider
 		Rect getGlobalBounds() const;
 
 		using Type = std::shared_ptr<Component>;
-		virtual void onDraw(Canvas& canvas) const = 0;
-		void draw(Canvas& canvas) const;
+		
+		/// @name Callbacks
+		/// @{
 
-		Component() :backend(nullptr), parent(nullptr), redraw(true), clean(false), hasMouseOver(false), hasMouseFocus(false), sizingModeH(SizingMode::OwnSize), sizingModeW(SizingMode::OwnSize), width(0), height(0) {}
+		/// @brief 
+		/// @param lastBounds 
+		virtual void onResize(const Rect& lastBounds);
+		/// @brief 
+		/// @param c 
+		virtual void onChildStain(Component& c);
+		/// @brief 
+		/// @param c 
+		virtual void onChildNeedsRedraw(Component& c);
+		/// @brief Callback for drawing mask.
+		/// @note Should not modify any internal state(for potential redrawing in the same frame).
+		/// @warning Should not be called directly.
+		/// @param canvas Target surface.
+		virtual void onMaskDraw(Canvas& canvas) const;
+		/// @brief Main callback for drawing component.
+		/// Enables custom drawing for components.
+		/// Called every frame that component has invalided visuals.
+		/// @note Component is allowed to not redraw itself every frame, but rather only draw updated fragments.
+		/// @warning Should not be called directly.
+		/// @param canvas Target surface.
+		virtual void onDraw(Canvas& canvas) = 0;
+		/// @brief Secondary callback for drawing
+		/// Enables custom drawing for components.
+		/// Called every frame that component has invalidated visuals and should be entirely redrawn.
+		/// @note Unlike onDraw, component should redraw itself completely.
+		/// @warning Should not be called directly.
+		/// @param canvas Target surface.
+		virtual void onRedraw(Canvas& canvas);
+
+		/// @}
+
+		void drawMask(Canvas& canvas) const;
+		void draw(Canvas& canvas);
+		void redraw(Canvas& canvas);
+
+		Component();
 
 		virtual ~Component() = default;
 
@@ -582,7 +556,7 @@ namespace Guider
 		Backend* backend;
 		Component* parent;
 		bool clean;
-		mutable bool redraw;
+		mutable bool toRedraw;
 		Rect bounds;
 		bool hasMouseOver;
 		bool hasMouseFocus;
@@ -607,6 +581,8 @@ namespace Guider
 		float width, height;
 	};
 
+	/// @interface Container
+	/// @brief Gui container base.
 	class Container : public Component
 	{
 	public:
@@ -710,71 +686,11 @@ namespace Guider
 		static Event adjustEventForComponent(const Event& event, Component& component);
 		void handleEventForComponent(const Event& event, Component& component);
 	};
-	//TODO: move to containers.hpp file
-	class AbsoluteContainer : public Container
-	{
-	public:
-		virtual void drawMask(Backend& renderer) const override;
 
-		virtual void addChild(const Component::Type& child) override;
-		void addChild(const Component::Type& child, float x, float y);
-		virtual void removeChild(const Component::Type& child) override;
-		virtual void clearChildren() override;
-
-		virtual Iterator firstElement() override;
-
-		virtual void poke() override;
-
-		virtual void onResize(const Rect& last) override;
-		virtual void onChildStain(Component& c) override;
-		virtual void onChildNeedsRedraw(Component& c) override;
-
-		virtual void onDraw(Canvas& canvas) const override;
-	private:
-		struct Element
-		{
-			Component::Type component;
-			float x, y;
-
-			Element(const Component::Type& c, float x, float y);
-			Element(const Element&) = default;
-		};
-
-		using iterator = std::vector<Element>::iterator;
-
-		class IteratorType : public IteratorTemplate<IteratorType>
-		{
-		public:
-			virtual bool end() const override
-			{
-				return endIt == currentIt;
-			}
-			virtual void loadNext() override
-			{
-				if (!end())
-					++currentIt;
-			}
-			virtual Component& current() override
-			{
-				return *currentIt->component;
-			}
-
-			IteratorType(const iterator& begin, const iterator& end) : currentIt(begin), endIt(end) {}
-			IteratorType(const IteratorType&) = default;
-		private:
-			iterator currentIt;
-			const iterator endIt;
-		};
-		std::vector<Element> children;
-
-		mutable std::unordered_set<Component*> toUpdate;
-	};
 
 	class Engine : public Container
 	{
 	public:
-		virtual void drawMask(Backend& renderer) const override;
-
 		virtual void addChild(const Component::Type& child) override;
 		virtual void removeChild(const Component::Type& child) override;
 		virtual void clearChildren() override;
@@ -785,19 +701,15 @@ namespace Guider
 
 		void resize(const Vec2& size);
 		void update();
-		void onDraw(Canvas& canvas) const override;
-		void draw() const;
 
-		Engine(Backend& b) : backend(b)
-		{
-			canvas = b.getCanvas();
-			setBackend(b);
-		};
+		virtual void onMaskDraw(Canvas& canvas) const override;
+		virtual void onDraw(Canvas& canvas) override;
+		virtual void onRedraw(Canvas& canvas) override;
+		void draw();
 
-		Engine(Backend& b, const std::shared_ptr<Canvas>& c) : backend(b), canvas(c)
-		{
-			setBackend(b);
-		};
+		Engine(Backend& b);
+
+		Engine(Backend& b, const std::shared_ptr<Canvas>& c);
 
 	private:
 		using IteratorType = CommonIteratorTemplate<std::vector<Component::Type>::iterator>;

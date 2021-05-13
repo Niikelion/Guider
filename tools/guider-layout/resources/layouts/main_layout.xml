@@ -3,9 +3,11 @@
 	height="match_parent"
 >
 	<containers.ConstraintsContainer
-		style="toolbar"
+		theme="toolbar"
 		id="toolbar"
 		name="toolbar"
+	
+		backgroundColor="?primaryColor"
 	
 		width = "match_parent"
 		height = "32"
@@ -45,36 +47,24 @@
 			attachBottomTo="parent bottom"
 		>
 			<common.Button
-				style="toolbar.button"
+				theme="toolbar.Button"
 				
 				id="repo_button"
 			
 				width="wrap_content"
 				height="match_parent"
 				
-				padding="6 0"
-				
 				text="Repo"
-				textSize="12"
-				color="#a8a8a8"
-				
-				background="#eeeeee"
-				selectedBackground="#d0d0d0"
-				hoveredBackground="#dedede"
 			/>
 			<common.Button
-				style="toolbar.button"
+				theme="toolbar.Button"
 			
 				id="branch_button"
 			
 				width="wrap_content"
 				height="match_parent"
 				
-				padding="6 0"
-				
 				text="branch"
-				textSize="12"
-				color="#a8a8a8"
 			/>
 		</containers.ListContainer>
 		<containers.ListContainer
@@ -100,16 +90,12 @@
 			attachBottomTo="parent bottom"
 		>
 			<common.Button
-				style="toolbar.button"
+				theme="toolbar.Button"
 				
 				width="wrap_content"
 				height="match_parent"
 				
-				padding="6 0"
-				
 				text="Menu"
-				textSize="12"
-				color="#a8a8a8"
 			/>
 		</containers.ListContainer>
 	</containers.ConstraintsContainer>

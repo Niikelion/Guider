@@ -1,0 +1,14 @@
+<Styles>
+	<common.Text>
+		<attr name="font" value="?font"/>
+		<attr name="color" value="?textColor"/>
+		<attr name="textSize" value="?textSize"/>
+		<attr name="text" value=""/>
+	</common.Text>
+	
+	<common.Button parent="common.Text">
+		<attr name="background" value="?primaryColor"/>
+		<attr name="hoveredBackground" value="?primaryColorLight"/>
+		<attr name="selectedBackground" value="?primaryColorDark"/>
+	</common.Button>
+</Styles>

@@ -1,17 +1,102 @@
 #pragma once
 
-#include <guider/base.hpp>
 #include <guider/manager.hpp>
+#include <guider/base.hpp>
 #include <stdexcept>
 #include <list>
 
 namespace Guider
 {
+	//TODO: rewrite
+	class AbsoluteContainer : public Container
+	{
+	public:
+		virtual void addChild(const Component::Type& child) override;
+		void addChild(const Component::Type& child, float x, float y);
+		virtual void removeChild(const Component::Type& child) override;
+		virtual void clearChildren() override;
+
+		virtual Iterator firstElement() override;
+
+		virtual void poke() override;
+
+		virtual void onResize(const Rect& last) override;
+		virtual void onChildStain(Component& c) override;
+		virtual void onChildNeedsRedraw(Component& c) override;
+
+		virtual void onMaskDraw(Canvas& canvas) const override;
+		virtual void onDraw(Canvas& canvas) override;
+	private:
+		struct Element
+		{
+			Component::Type component;
+			float x, y;
+
+			Element(const Component::Type& c, float x, float y);
+			Element(const Element&) = default;
+		};
+
+		using iterator = std::vector<Element>::iterator;
+
+		class IteratorType : public IteratorTemplate<IteratorType>
+		{
+		public:
+			virtual bool end() const override
+			{
+				return endIt == currentIt;
+			}
+			virtual void loadNext() override
+			{
+				if (!end())
+					++currentIt;
+			}
+			virtual Component& current() override
+			{
+				return *currentIt->component;
+			}
+
+			IteratorType(const iterator& begin, const iterator& end) : currentIt(begin), endIt(end) {}
+			IteratorType(const IteratorType&) = default;
+		private:
+			iterator currentIt;
+			const iterator endIt;
+		};
+		std::vector<Element> children;
+
+		mutable std::unordered_set<Component*> toUpdate;
+	};
+
+	//TODO: rewrite
 	class ListContainer : public Container
 	{
+	public:
+		void setOrientation(bool horizontal);
+
+		void setBackgroundColor(const Color& color);
+		virtual void addChild(const Component::Type& child) override;
+		virtual void removeChild(const Component::Type& child) override;
+		void removeChild(unsigned n);
+		virtual void clearChildren() override;
+		size_t getChildrenCount() const;
+		Component::Type getChild(unsigned i);
+
+		virtual void onMaskDraw(Canvas& canvas) const override;
+		virtual void onDraw(Canvas& canvas) override;
+		virtual void onRedraw(Canvas& canvas) override;
+
+		virtual void poke() override;
+		virtual void onResize(const Rect& lastBounds) override;
+		virtual void onChildStain(Component& c) override;
+		virtual void onChildNeedsRedraw(Component& c) override;
+
+		virtual Iterator firstElement() override;
+
+		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
+
+		ListContainer();
+
+		ListContainer(Manager& manager, const XML::Tag& config, const StylingPack& style);
 	private:
-		bool horizontal;
-		float size, offset;
 		class Element
 		{
 		public:
@@ -21,14 +106,7 @@ namespace Guider
 			Element(const std::shared_ptr<Component>& c, float s, float o) : component(c), size(s), offset(o) {}
 			Element(Element&&) noexcept = default;
 		};
-		std::list<Element> children;
-		std::unordered_set<Component*> toUpdate, toOffset;
-		mutable std::unordered_set<Component*> toRedraw;
 
-		Color backgroundColor;
-
-		bool updateElementRect(Element& element, bool needsMeasure, float localOffset, const DimensionDesc& w, const DimensionDesc& h, const Rect& bounds);
-	
 		using iterator = std::list<Element>::iterator;
 
 		class IteratorType : public IteratorTemplate<IteratorType>
@@ -54,61 +132,23 @@ namespace Guider
 			iterator currentIt;
 			const iterator endIt;
 		};
-	public:
-		void setOrientation(bool horizontal);
 
-		void setBackgroundColor(const Color& color);
-		virtual void addChild(const Component::Type& child) override;
-		virtual void removeChild(const Component::Type& child) override;
-		void removeChild(unsigned n);
-		virtual void clearChildren() override;
-		size_t getChildrenCount() const;
-		Component::Type getChild(unsigned i);
+		bool horizontal;
+		float size, offset;
 
-		virtual void drawMask(Backend& backend) const override;
-		virtual void onDraw(Canvas& canvas) const override;
+		std::list<Element> children;
+		std::unordered_set<Component*> toUpdate, toOffset;
+		mutable std::unordered_set<Component*> toRedraw;
 
-		virtual void poke() override;
-		virtual void onResize(const Rect& lastBounds) override;
-		virtual void onChildStain(Component& c) override;
-		virtual void onChildNeedsRedraw(Component& c) override;
+		Color backgroundColor;
 
-		virtual Iterator firstElement() override;
+		mutable bool firstDraw;
 
-		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
-
-		ListContainer() : horizontal(false), size(0), offset(0), backgroundColor(0,0,0,0) {}
-
-		ListContainer(Manager& manager, const XML::Tag& config, const Style& style) : ListContainer()
-		{
-			Manager::handleDefaultArguments(*this, config, style);
-
-			XML::Value tmp = config.getAttribute("orientation");
-			if (tmp.exists())
-			{
-				if (tmp.val == "horizontal")
-					setOrientation(true);
-				else if (tmp.val == "vertical")
-					setOrientation(false);
-			}
-
-			for (const auto& child : config.children)
-			{
-				if (!child->isTextNode())
-				{
-					XML::Tag& tag = static_cast<XML::Tag&>(*child);
-					Component::Type t = manager.instantiate(tag);
-
-					addChild(t);
-				}
-			}
-		}
+		bool updateElementRect(Element& element, bool needsMeasure, float localOffset, const DimensionDesc& w, const DimensionDesc& h, const Rect& bounds);
 	};
 
 	class ConstraintsContainer : public Container, public std::enable_shared_from_this<ConstraintsContainer>
 	{
-	private:
-		class Cluster;
 	public:
 		class RegularConstraintData
 		{
@@ -123,11 +163,13 @@ namespace Guider
 		class ChainConstraintData
 		{
 		public:
+			Component* left, * right;
+			float leftOffset, rightOffset;
 			std::vector<std::pair<Component*, float>> targets;
 			float spacing;
 
-			ChainConstraintData() : spacing(0) {}
-			ChainConstraintData(ChainConstraintData&& t) noexcept : targets(std::move(t.targets)), spacing(t.spacing) {}
+			ChainConstraintData() : left(nullptr), right(nullptr), leftOffset(0), rightOffset(0), spacing(0) {}
+			ChainConstraintData(ChainConstraintData&& t) noexcept : left(t.left), right(t.right), leftOffset(t.leftOffset), rightOffset(t.rightOffset), targets(std::move(t.targets)), spacing(t.spacing) {}
 		};
 		class Constraint
 		{
@@ -241,11 +283,32 @@ namespace Guider
 			Constraint(Constraint&&) noexcept;
 			~Constraint();
 		};
+		
+		class Cluster
+		{
+		public:
+			std::unordered_set<Constraint*> constraints;
+			std::unordered_set<Component*> components;
+			std::unordered_map<Component*, size_t> dependencies;
+
+			Cluster() = default;
+			Cluster(Cluster&& t) noexcept : constraints(std::move(t.constraints)), components(std::move(t.components)), dependencies(std::move(t.dependencies)) {}
+		};
+		
+		class ClusterHash
+		{
+		public:
+			std::size_t operator()(const std::list<Guider::ConstraintsContainer::Cluster>::iterator& it) const
+			{
+				return std::hash<const Guider::ConstraintsContainer::Cluster*>{}(&(*it));
+			}
+		};
+
 		class RegularConstraintBuilder
 		{
 		private:
 			Constraint& constraint;
-			Cluster& cluster;
+			std::list<Cluster>::iterator cluster;
 		public:
 			void setSize(float size);
 			void setFlow(float flow);
@@ -277,7 +340,7 @@ namespace Guider
 				attachBetween(start, startToStart, offset, end, endToStart, offset);
 			}
 			//TODO: add notifying parent if container edge is attached to child
-			RegularConstraintBuilder(Constraint& c, Cluster& cc) : constraint(c), cluster(cc)
+			RegularConstraintBuilder(Constraint& c, std::list<Cluster>::iterator cc) : constraint(c), cluster(cc)
 			{
 				if (c.getType() != Constraint::Type::Regular)
 					throw std::logic_error("Wrong constraint type");
@@ -287,34 +350,103 @@ namespace Guider
 		{
 		private:
 			Constraint& constraint;
-			Cluster& cluster;
+			std::list<Cluster>::iterator cluster;
 		public:
-			ChainConstraintBuilder(Constraint& c, Cluster& cc) : constraint(c), cluster(cc)
+			//TODO: add methods for element sizing/flow
+
+			void attachStartTo(const Component::Type& target, bool toStart, float offset);
+			inline void attachLeftTo(const Component::Type& target, bool toLeft, float offset)
+			{
+				attachStartTo(target, toLeft, offset);
+			}
+			inline void attachTopTo(const Component::Type& target, bool toTop, float offset)
+			{
+				attachStartTo(target, toTop, offset);
+			}
+			void attachEndTo(const Component::Type& target, bool toStart, float offset);
+			inline void attachRightTo(const Component::Type& target, bool toLeft, float offset)
+			{
+				attachEndTo(target, toLeft, offset);
+			}
+			inline void attachBottomTo(const Component::Type& target, bool toTop, float offset)
+			{
+				attachEndTo(target, toTop, offset);
+			}
+			inline void attachBetween(const Component::Type& start, bool startToStart, float startOffset, const Component::Type& end, bool endToStart, float endOffset)
+			{
+				attachStartTo(start, startToStart, startOffset);
+				attachEndTo(end, endToStart, endOffset);
+			}
+			inline void attachBetween(const Component::Type& start, bool startToStart, const Component::Type& end, bool endToStart, float offset)
+			{
+				attachBetween(start, startToStart, offset, end, endToStart, offset);
+			}
+			ChainConstraintBuilder(Constraint& c, std::list<Cluster>::iterator cc) : constraint(c), cluster(cc)
 			{
 				if (c.getType() != Constraint::Type::Chain)
 					throw std::logic_error("Wrong constraint type");
 			}
 		};
+
+		static void registerProperties(Manager& m, const std::string& name);
+
+		/// @brief Sets background color and invalidates visuals.
+		/// All colors except that are not fully transparent are converted to fully opaque.
+		/// Forces visual invalidation.
+		/// @param color new background color.
+		void setBackgroundColor(const Color& color);
+
+		virtual void poke() override;
+
+		virtual void onResize(const Rect& bounds) override;
+		virtual void onChildStain(Component& c) override;
+		virtual void onChildNeedsRedraw(Component& c) override;
+
+		virtual void handleEvent(const Event& event) override;
+
+		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
+
+		virtual void removeChild(const Component::Type& child) override;
+		virtual void clearChildren() override;
+		virtual void addChild(const Component::Type& child);
+
+		virtual Iterator firstElement() override;
+
+		/// @brief Creates regural constraint for given element.
+		/// @param orientation either Vertical or Horizontal,
+		/// @param target target,
+		/// @param constOffset if true, size of target is calculated based on offset from edges, otherwise offset is calculated based on size,
+		/// @return Returns wrapper for created constraint.
+		std::unique_ptr<RegularConstraintBuilder> addConstraint(Constraint::Orientation orientation, const Component::Type& target, bool constOffset);
+		/// @brief Creates chain constraint for given element.
+		/// @param orientation either Vertical or Horizontal,
+		/// @param targets targets,
+		/// @param constOffset if true, size of target is calculated based on offset from edges, otherwise offset is calculated based on size.
+		/// @return Returns wrapper for created constraint.
+		std::unique_ptr<ChainConstraintBuilder> addChainConstraint(Constraint::Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset);
+
+		virtual void onMaskDraw(Canvas& canvas) const override;
+		virtual void onDraw(Canvas& canvas) override;
+		virtual void onRedraw(Canvas& canvas) override;
+		
+		virtual void postXmlConstruction(Manager& m, const XML::Tag& config, const StylingPack& pack);
+
+		ConstraintsContainer();
 	private:
-		class Cluster
-		{
-		public:
-			std::unordered_set<Constraint*> constraints;
-			std::unordered_set<Component*> dependencies, components;
-
-			Cluster() = default;
-			Cluster(Cluster&& t) noexcept : constraints(std::move(t.constraints)), dependencies(std::move(t.dependencies)), components(std::move(t.components)) {}
-		};
-
 		std::vector<std::shared_ptr<Component>> children;
 		std::unordered_map<Component*, Rect> boundaries;
 		std::list<Constraint> constraints;
+		//TODO: move other elements to using iterators instead of pointers
+		std::unordered_map<Constraint*, std::list<Constraint>::iterator> constraintMapping;
 		std::list<Cluster> clusters;
-		std::unordered_map<const Cluster*, std::unordered_set<const Cluster*>> clusterDependencies;
-		std::unordered_map<const Component*, const Cluster*> clusterMapping;
+
+		std::unordered_map<const Component*, std::list<Cluster>::iterator> clusterMapping;
 		std::unordered_set<Component*> updated;
 
-		mutable std::unordered_set<Component*> needsRedraw;
+		std::unordered_set<Component*> needsRedraw;
+		std::unordered_map<Component*,Rect> drawnLastFrame;
+		
+		bool firstDraw;
 
 		bool messyClusters;
 		bool invalidLayout;
@@ -336,34 +468,5 @@ namespace Guider
 		void applyConstraints();
 
 		using IteratorType = CommonIteratorTemplate<std::vector < std::shared_ptr<Component> >::iterator>;
-	public:
-		void setBackgroundColor(const Color& color);
-
-		virtual void drawMask(Backend& renderer) const override;
-
-		virtual void poke() override;
-		virtual void onResize(const Rect& bounds) override;
-		virtual void onChildStain(Component& c) override;
-		virtual void onChildNeedsRedraw(Component& c) override;
-
-		virtual void handleEvent(const Event& event) override;
-		
-		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
-
-		virtual void removeChild(const Component::Type& child) override;
-		virtual void clearChildren() override;
-		virtual void addChild(const Component::Type& child);
-
-		virtual Iterator firstElement() override;
-
-		std::unique_ptr<RegularConstraintBuilder> addConstraint(Constraint::Orientation orientation, const Component::Type& target, bool constOffset);
-		std::unique_ptr<ChainConstraintBuilder> addChainConstraint(Constraint::Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset);
-
-		virtual void onDraw(Canvas& canvas) const override;
-
-		virtual void postXmlConstruction(Manager& m, const XML::Tag& config, const Style& style);
-
-		ConstraintsContainer() : messyClusters(true), invalidLayout(true), canWrapW(false), canWrapH(false), backgroundColor(0) {}
-};
-
+	};
 }

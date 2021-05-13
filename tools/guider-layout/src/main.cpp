@@ -6,8 +6,6 @@
 #include <string>
 #include <fstream>
 
-#include <filesystem>
-
 using namespace sf;
 using namespace std;
 
@@ -25,7 +23,7 @@ int main(int argc, char* argv[])
 
 	app.initManager();
 
-	Guider::BasicButtonComponent::defineProperties(*app.getManager());
+	Guider::BasicButtonComponent::registerProperties(*app.getManager(),"common.Button");
 
 	app.addDefinitions();
 	app.loadResources();
@@ -36,7 +34,7 @@ int main(int argc, char* argv[])
 
 	std::string mainLayout;
 	{
-		std::ifstream t("resources/layouts/main_layout.xml");
+		std::ifstream t(RESOURCE_FOLDER"/layouts/main_layout.xml");
 
 		if (t.is_open())
 		{
@@ -55,7 +53,7 @@ int main(int argc, char* argv[])
 
 	auto xmlRoot = Guider::XML::parse(mainLayout);
 
-	Guider::Component::Type root = app.getManager()->instantiate(*static_cast<Guider::XML::Tag*>(xmlRoot->children[0].get()));
+	Guider::Component::Type root = app.getManager()->instantiate(*static_cast<Guider::XML::Tag*>(xmlRoot->children[0].get()), app.getManager()->getTheme("app.dark").theme);
 
 	std::shared_ptr<Guider::BasicButtonComponent> branchButton = static_pointer_cast<Guider::BasicButtonComponent>(app.getManager()->getElementById("branch_button"));
 	branchButton->setText("none");

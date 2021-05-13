@@ -1,4 +1,3 @@
-#include "..\..\guider\include\guider\base.hpp"
 #include <backend.hpp>
 #include <SFML/OpenGL.hpp>
 #include <cmath>
@@ -67,7 +66,7 @@ namespace Guider
 		}
 		std::pair<unsigned, float> FontResource::unpackTextSize(float textSize)
 		{
-			unsigned s = std::ceil(textSize);
+			unsigned s = static_cast<unsigned>(std::ceil(textSize));
 			return std::pair<unsigned, float>(s,textSize/s);
 		}
 		float FontResource::getLineHeight(float textSize) const
@@ -136,10 +135,16 @@ namespace Guider
 	{
 		sf::Vector2u size = canvas->getTarget().getSize();
 		origin = sf::Vector2f(x, y);
-		view.setCenter(-origin+sf::Vector2f(size.x,size.y)*0.5f);
+		view.setCenter(-origin+sf::Vector2f(
+			static_cast<float>(size.x),
+			static_cast<float>(size.y)
+		)*0.5f);
 		view.setViewport(sf::FloatRect(0, 0, 1, 1));
 		
-		view.setSize(sf::Vector2f(size.x,size.y));
+		view.setSize(sf::Vector2f(
+			static_cast<float>(size.x),
+			static_cast<float>(size.y)
+		));
 		canvas->getTarget().setView(view);
 	}
 
@@ -196,7 +201,12 @@ namespace Guider
 
 	void SfmlBackend::setBounds(const Rect& rect)
 	{
-		glScissor(origin.x+rect.left,origin.y+rect.top,rect.width,rect.height);
+		glScissor(
+			static_cast<GLint>(origin.x+rect.left),
+			static_cast<GLint>(origin.y+rect.top),
+			static_cast<GLint>(rect.width),
+			static_cast<GLint>(rect.height)
+		);
 	}
 
 	std::shared_ptr<Resources::RectangleShape> SfmlBackend::createRectangle(const Vec2& size, const Color& color)

@@ -1,8 +1,9 @@
 #include <guider/manager.hpp>
+#include <fstream>
 
 namespace Guider
 {
-	void ComponentBindings::registerElement(const std::string name, Component::Type& component)
+	void ComponentBindings::registerElement(const std::string name, const Component::Type& component)
 	{
 		idMapping.emplace(name,component);
 	}
@@ -98,7 +99,7 @@ namespace Guider
 		fontsByNames.emplace(name,backend.loadFontFromFile(filename, name));
 	}
 
-	Style Manager::generateStyle(const XML::Tag& config, const Style& parent)
+	StylingPack Manager::generateStyleInfo(const XML::Tag& config, const Theme& parent)
 	{
 		Style s;
 
@@ -110,9 +111,67 @@ namespace Guider
 				s.inheritAttributes(it->second);
 			}
 		}
-		//add values not set by default styles
-		s.inheritVariables(parent); 
-		
+		Theme theme = parent;
+		auto t = config.getAttribute("theme");
+		if (t.exists())
+		{
+			std::string v = Styles::trim(t.val);
+			if (v.find('?') == 0)
+				throw std::runtime_error("theme attribute cannot be a reference");
+			auto it = themes.find(v);
+			if (it == themes.end())
+			{
+				//error or smth
+			}
+			else
+			{
+				Theme tmp = it->second.theme;
+				std::swap(tmp, theme);
+				theme.inheritVariables(tmp);
+				Style tmp1 = s;
+				s = it->second.style;
+				s.inheritAttributes(tmp1);
+			}
+		}
+
+		std::unordered_set<std::string> propertiesToRemove;
+
+		for (auto& attr : s.attributes)
+		{
+			if (attr.first != "theme")
+			{
+				if (attr.second->checkType<Styles::UnresolvedValue>())
+				{
+					attr.second = createValueForProperty(config.name, attr.first, attr.second->as<Styles::UnresolvedValue>().getValue());
+					if (!attr.second)
+					{
+						propertiesToRemove.insert(attr.first);
+						continue;
+					}
+				}
+				if (attr.second->checkType<Styles::VariableReference>())
+				{
+					Styles::VariableReference& ref = attr.second->as<Styles::VariableReference>();
+					auto var = theme.dereferenceVariable(ref.getName());
+					if (var)
+					{
+						auto value = createValueForProperty(config.name, attr.first, var->getValue());
+
+						if (value)
+							s.setAttribute(attr.first, value);
+						else
+						{
+							//missing variable
+						}
+					}
+					else
+					{
+						propertiesToRemove.insert(attr.first);
+					}
+				}
+			}
+		}
+
 		//override by explicitly specified styles
 
 		for (const auto& i : config.attributes)
@@ -121,20 +180,34 @@ namespace Guider
 			if (!v.empty() && v[0] == '?')
 			{
 				v.erase(0, 1);
-				s.setAttribute(v, i.first);
+				auto var = theme.dereferenceVariable(v);
+
+				if (var)
+				{
+					v = var->getValue();
+				}
+				else
+				{
+					//missing variable
+				}
 			}
+
+			auto value = createValueForProperty(config.name, i.first, v);
+
+			propertiesToRemove.erase(i.first);
+
+			if (value)
+				s.setAttribute(i.first, value);
 			else
 			{
-				auto it = propertyDefinitions.find(i.first);
-				if (it != propertyDefinitions.end())
-				{
-
-					s.setAttribute(i.first, std::make_shared<Style::Value>(it->second.value(v)));
-				}
+				propertiesToRemove.insert(i.first);
 			}
 		}
 
-		return s;
+		for (const auto& i : propertiesToRemove)
+			s.attributes.erase(i);
+
+		return { s, theme };
 	}
 
 	void Manager::handleDefaultArguments(Component& c, const XML::Tag& config, const Style& style)
@@ -152,7 +225,7 @@ namespace Guider
 		c.setSizingMode(w.second, h.second);
 	}
 	
-	void Manager::registerTypeCreator(const std::function<Component::Type (Manager&, const XML::Tag&, ComponentBindings&,const Style&)>& f, const std::string& name)
+	void Manager::registerTypeCreator(const std::function<Component::Type (Manager&, const XML::Tag&, ComponentBindings&,const StylingPack&)>& f, const std::string& name)
 	{
 		creators.emplace(name, f);
 	}
@@ -162,14 +235,41 @@ namespace Guider
 		registerProperty<std::string>(name, [](const std::string& s) { return s; });
 	}
 
+	void Manager::registerStringProperty(const std::string& component, const std::string& name)
+	{
+		registerPropertyForComponent<std::string>(component, name, [](const std::string& s) { return s; });
+	}
+
 	void Manager::registerDrawableProperty(const std::string& name)
 	{
 		registerProperty<std::shared_ptr<Resources::Drawable>>(name,std::bind(std::mem_fn(&Manager::getDrawableByText),this,std::placeholders::_1));
 	}
 
+	void Manager::registerDrawableProperty(const std::string& component, const std::string& name)
+	{
+		registerPropertyForComponent<std::shared_ptr<Resources::Drawable>>(component, name, std::bind(std::mem_fn(&Manager::getDrawableByText), this, std::placeholders::_1));
+	}
+
 	void Manager::registerColorProperty(const std::string& name)
 	{
-		registerProperty<Color>(name,(Color(*)(const std::string&))Styles::strToColor);
+		registerProperty<Color>(name, [](const std::string& value) {
+			bool failed = false;
+			Color ret = Styles::strToColor(value);
+			if (failed)
+				throw std::invalid_argument("invalid color format");
+			return ret;
+		});
+	}
+
+	void Manager::registerColorProperty(const std::string& component, const std::string& name)
+	{
+		registerPropertyForComponent<Color>(component, name, [](const std::string& value) {
+			bool failed = false;
+			Color ret = Styles::strToColor(value);
+			if (failed)
+				throw std::invalid_argument("invalid color format");
+			return ret;
+		});
 	}
 
 	void Manager::setDefaultStyle(const std::string& component, const Style& style)
@@ -177,7 +277,207 @@ namespace Guider
 		defaultStyles[component] = style;
 	}
 
-	Component::Type Manager::instantiate(const XML::Tag& xml,ComponentBindings& bindings, const Style& parentStyle)
+	void Manager::loadStyleFromXml(const XML::Tag& xml)
+	{
+		Style style;
+
+		for (const auto& node : xml.children)
+		{
+			if (!node->isTextNode())
+			{
+				XML::Tag* tag = static_cast<XML::Tag*>(node.get());
+
+				if (tag->name == "attr")
+				{
+					auto name = tag->getAttribute("name");
+					auto value = tag->getAttribute("value");
+
+					if (name.exists() && value.exists())
+					{
+						std::string v = Styles::trim(value.val);
+						
+						if (!v.empty() && v[0] == '?')
+						{
+							v.erase(0, 1);
+							
+							style.setAttribute(name.val, v);
+						}
+						else
+						{
+							auto value = createValueForProperty(xml.name, name.val, v);
+							if (value)
+								style.setAttribute(name.val, value);
+							else
+							{
+								//missing variable
+							}
+						}
+					}
+				}
+			}
+		}
+
+		setDefaultStyle(xml.name, style);
+	}
+
+	void Manager::loadStylesFromXmlFile(const std::string& filename)
+	{
+		std::string content;
+		{
+			std::ifstream t(filename);
+
+			if (t.is_open())
+			{
+				t.seekg(0, std::ios::end);
+				content.reserve(t.tellg());
+				t.seekg(0, std::ios::beg);
+
+				content.assign((std::istreambuf_iterator<char>(t)),
+					std::istreambuf_iterator<char>());
+			}
+		}
+
+		auto xmlRoot = Guider::XML::parse(content);
+		for (const auto& s : xmlRoot->children)
+		{
+			if (!s->isTextNode())
+			{
+				XML::Tag* tag = static_cast<XML::Tag*>(s.get());
+
+				if (tag->name == "Styles")
+				{
+					for (const auto& t : tag->children)
+					{
+						if (!t->isTextNode())
+						{
+							loadStyleFromXml(*static_cast<XML::Tag*>(t.get()));
+						}
+					}
+				}
+			}
+		}
+	}
+
+	Style Manager::getDefaultStyleFor(const std::string& component)
+	{
+		auto it = defaultStyles.find(component);
+		if (it != defaultStyles.end())
+			return it->second;
+		return Style();
+	}
+
+	void Manager::registerTheme(const std::string& name, const Theme& theme)
+	{
+		themes[name] = { Style(), theme };
+	}
+
+	void Manager::registerTheme(const std::string& name, const StylingPack& theme)
+	{
+		themes[name] = theme;
+	}
+
+	void Manager::loadThemeFromXml(const XML::Tag& xml)
+	{
+		StylingPack pack;
+		auto parent = xml.getAttribute("extends");
+		if (parent.exists())
+		{
+			auto it = themes.find(parent.val);
+			if (it != themes.end())
+			{
+				pack.style.inheritAttributes(it->second.style);
+				pack.theme.inheritVariables(it->second.theme);
+			}
+		}
+		for (const auto& attr : xml.children)
+		{
+			if (!attr->isTextNode())
+			{
+				XML::Tag* tag = static_cast<XML::Tag*>(attr.get());
+				auto name = tag->getAttribute("name");
+				auto value = tag->getAttribute("value");
+				if (tag->name == "var" && name.exists() && value.exists())
+				{
+					std::string v = Styles::trim(value.val);
+					bool reference = v.find('?') == 0;
+					if (reference)
+						v.erase(0, 1);
+					pack.theme.setVariable(name.val, std::make_shared<Styles::Variable>(v, reference));
+				}
+				else if (tag->name == "attr" && name.exists() && value.exists())
+				{
+					std::string v = Styles::trim(value.val);
+
+					if (!v.empty() && v[0] == '?')
+					{
+						v.erase(0, 1);
+
+						pack.style.setAttribute(name.val, v);
+					}
+					else
+					{
+						auto value = createValueForProperty("", name.val, v);
+						if (value)
+							pack.style.setAttribute(name.val, value);
+						else
+						{
+							pack.style.setAttribute(name.val, Styles::Value::ofType<Styles::UnresolvedValue>(v));
+						}
+					}
+
+				}
+			}
+		}
+		themes.emplace(xml.name, pack);
+	}
+
+	void Manager::loadThemesFromXmlFile(const std::string& filename)
+	{
+		std::string content;
+		{
+			std::ifstream t(filename);
+
+			if (t.is_open())
+			{
+				t.seekg(0, std::ios::end);
+				content.reserve(t.tellg());
+				t.seekg(0, std::ios::beg);
+
+				content.assign((std::istreambuf_iterator<char>(t)),
+					std::istreambuf_iterator<char>());
+			}
+		}
+
+		auto xmlRoot = Guider::XML::parse(content);
+		for (const auto& s : xmlRoot->children)
+		{
+			if (!s->isTextNode())
+			{
+				XML::Tag* tag = static_cast<XML::Tag*>(s.get());
+
+				if (tag->name == "Themes")
+				{
+					for (const auto& t : tag->children)
+					{
+						if (!t->isTextNode())
+						{
+							loadThemeFromXml(*static_cast<XML::Tag*>(t.get()));
+						}
+					}
+				}
+			}
+		}
+	}
+
+	StylingPack Manager::getTheme(const std::string& theme)
+	{
+		auto it = themes.find(theme);
+		if (it != themes.end())
+			return it->second;
+		return StylingPack();
+	}
+
+	Component::Type Manager::instantiate(const XML::Tag& xml,ComponentBindings& bindings, const Theme& parentTheme)
 	{
 		auto it = creators.find(xml.name);
 		if (it == creators.end())
@@ -186,7 +486,7 @@ namespace Guider
 			return Component::Type();
 		}
 
-		Style style = generateStyle(xml,parentStyle);
+		StylingPack style = generateStyleInfo(xml,parentTheme);
 
 		return Component::Type(it->second(*this, xml,bindings,style));
 	}
@@ -222,5 +522,25 @@ namespace Guider
 		registerColorProperty("color");
 		registerProperty<std::pair<float, Component::SizingMode>>("width", strToMeasure);
 		registerProperty<std::pair<float, Component::SizingMode>>("height", strToMeasure);
+	}
+	std::shared_ptr<Styles::Value> Manager::createValueForProperty(const std::string& component, const std::string& name, const std::string& value)
+	{
+		std::string val = Styles::trim(value);
+		if (!val.empty() && val[0] == '?')
+		{
+			return Styles::Value::ofType<Styles::VariableReference>(val.substr(1));
+		}
+		auto comDef = componentsPropertyDefinitions.find(component);
+		if (comDef != componentsPropertyDefinitions.end())
+		{
+			auto propDef = comDef->second.find(name);
+			if (propDef != comDef->second.end())
+				return std::make_shared<Styles::Value>(propDef->second.value(val));
+		}
+
+		auto propDef = propertyDefinitions.find(name);
+		if (propDef != propertyDefinitions.end())
+			return std::make_shared<Styles::Value>(propDef->second.value(val));
+		return std::shared_ptr<Styles::Value>();
 	}
 }

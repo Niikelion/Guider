@@ -12,61 +12,19 @@ namespace Guider
 {
 	namespace Styles
 	{
-		static bool isDigitInBase(char c, unsigned base);
-		static unsigned digitFromChar(char c);
-
-		std::string trim(const std::string& s);
-
-		std::vector<std::string> splitString(const std::string& str);
-
-		uint64_t strToInt(const std::string& str, bool& failed, unsigned base = 10);
-		inline uint64_t strToInt(const std::string& str, unsigned base = 10)
+		namespace
 		{
-			bool a;
-			return strToInt(str, a, base);
+			template<class...>struct types { using type = types; };
+			template<class T>struct tag { using type = T; };
+			template<class Tag>using type_t = typename Tag::type;
 		}
-		float strToFloat(const std::string& str, bool& failed);
-		inline float strToFloat(const std::string& str)
-		{
-			bool failed = false;
-			return strToFloat(str, failed);
-		}
-		bool strToBool(const std::string& str, bool& failed);
-		inline bool strToBool(const std::string& str)
-		{
-			bool failed = false;
-			return strToBool(str, failed);
-		}
-		Color strToColor(const std::string& str, bool& failed);
-		inline Color strToColor(const std::string& str)
-		{
-			bool failed = false;
-			return strToColor(str, failed);
-		}
-	}
 
-	namespace
-	{
-		template<class...>struct types { using type = types; };
-		template<class T>struct tag { using type = T; };
-		template<class Tag>using type_t = typename Tag::type;
-	}
-
-	class Theme
-	{
-	public:
-
-	};
-
-	class Style
-	{
-	public:
 		class Value
 		{
 		public:
 			template<typename T, typename ...Args> static std::shared_ptr<Value> ofType(Args&&... args)
 			{
-				std::shared_ptr<Value> ret = std::make_shared<Value>(typeid(T),sizeof(T));
+				std::shared_ptr<Value> ret = std::make_shared<Value>(typeid(T), sizeof(T));
 				ret->prepare<T>(std::forward<Args>(args)...);
 				return ret;
 			}
@@ -87,12 +45,12 @@ namespace Guider
 					throw std::logic_error("Invalid type");
 				if (pointer == nullptr)
 				{
-					prepare<T>();
+					throw std::runtime_error("Missing value");
 				}
 				return *static_cast<T*>(pointer);
 			}
 
-			template<typename T,typename ...Args> void prepare(Args&&... args)
+			template<typename T, typename ...Args> void prepare(Args&&... args)
 			{
 				if (pointer == nullptr && type == typeid(T))
 				{
@@ -139,7 +97,7 @@ namespace Guider
 				return new T(*static_cast<T*>(p));
 			}
 			void(*deleter)(void*);
-			void*(*cloner)(void*);
+			void* (*cloner)(void*);
 			std::vector<uint8_t> data;
 			void* pointer;
 			std::type_index type;
@@ -179,6 +137,19 @@ namespace Guider
 			}
 		};
 
+		class Variable
+		{
+		public:
+			bool isReference() const;
+
+			std::string getValue() const;
+
+			Variable(const std::string& value, bool reference);
+		private:
+			bool reference;
+			std::string value;
+		};
+
 		class VariableReference
 		{
 		public:
@@ -198,28 +169,80 @@ namespace Guider
 			std::shared_ptr<Value> cache;
 		};
 
-		void inheritAll(const Style& parentStyle);
-		void inheritVariables(const Style& parentStyle);
+		class UnresolvedValue
+		{
+		public:
+			std::string getValue();
+
+			UnresolvedValue(const std::string& value);
+		private:
+			std::string value;
+		};
+
+		static bool isDigitInBase(char c, unsigned base);
+		static unsigned digitFromChar(char c);
+
+		std::string trim(const std::string& s);
+
+		std::vector<std::string> splitString(const std::string& str);
+
+		uint64_t strToInt(const std::string& str, bool& failed, unsigned base = 10);
+		inline uint64_t strToInt(const std::string& str, unsigned base = 10)
+		{
+			bool a;
+			return strToInt(str, a, base);
+		}
+		float strToFloat(const std::string& str, bool& failed);
+		inline float strToFloat(const std::string& str)
+		{
+			bool failed = false;
+			return strToFloat(str, failed);
+		}
+		bool strToBool(const std::string& str, bool& failed);
+		inline bool strToBool(const std::string& str)
+		{
+			bool failed = false;
+			return strToBool(str, failed);
+		}
+		Color strToColor(const std::string& str, bool& failed);
+		inline Color strToColor(const std::string& str)
+		{
+			bool failed = false;
+			return strToColor(str, failed);
+		}
+	}
+
+	class Style
+	{
+	public:
 		void inheritAttributes(const Style& parentStyle);
 
-		std::shared_ptr<Value> getAttribute(const std::string& name) const;
-		std::shared_ptr<Value> getVariable(const std::string& name) const;
+		std::shared_ptr<Styles::Value> getAttribute(const std::string& name) const;
 
-		std::shared_ptr<Value> getRawAttribute(const std::string& name) const;
-		std::shared_ptr<Value> getRawVariable(const std::string& name) const;
-
-		std::shared_ptr<Value> dereference(const std::shared_ptr<Value>& value) const;
-
-		void setVariable(const std::string& name, const std::shared_ptr<Value>& value);
-		void setAttribute(const std::string& name, const std::shared_ptr<Value>& value);
+		void setAttribute(const std::string& name, const std::shared_ptr<Styles::Value>& value);
 		void setAttribute(const std::string& name, const std::string& variable);
+		void removeAttribute(const std::string& name);
+
+		std::unordered_map<std::string, std::shared_ptr<Styles::Value>> attributes;
 	private:
-		std::unordered_map<std::string, std::shared_ptr<Value>> variables;
-		std::unordered_map<std::string, std::shared_ptr<Value>> attributes;
+	};
 
-		std::unordered_map<std::string, std::unordered_set<std::string>> variableDeps;
+	class Theme
+	{
+	public:
+		void setVariable(const std::string& name, const std::shared_ptr<Styles::Variable>& value);
+		std::shared_ptr<Styles::Variable> getVariable(const std::string& name) const;
 
-		void addDependency(const std::string& attribute,const std::string& variable);
-		void removeDependency(const std::string& attribute, const std::string& variable);
+		std::shared_ptr<Styles::Variable> dereferenceVariable(const std::string& name) const;
+
+		void inheritVariables(const Theme& parentTheme);
+	private:
+		std::unordered_map<std::string, std::shared_ptr<Styles::Variable>> variables;
+	};
+
+	struct StylingPack
+	{
+		Style style;
+		Theme theme;
 	};
 }

@@ -2,10 +2,163 @@
 #include <queue>
 #include <cstdlib>
 #include <limits>
+#include <cassert>
 #include <map>
 
 namespace Guider
 {
+	void AbsoluteContainer::addChild(const Component::Type& child)
+	{
+		addChild(child, 0, 0);
+	}
+
+	void AbsoluteContainer::addChild(const Component::Type& child, float x, float y)
+	{
+		Rect bounds = getBounds();
+		children.emplace_back(child, x, y);
+		child->setParent(*this);
+		child->poke();
+		toUpdate.insert(child.get());
+		std::pair<Component::DimensionDesc, Component::DimensionDesc> measurements = child->measure(
+			Component::DimensionDesc(bounds.width, Component::DimensionDesc::Mode::Max),
+			Component::DimensionDesc(bounds.height, Component::DimensionDesc::Mode::Max)
+		);
+		bounds.left = x;
+		bounds.top = y;
+		bounds.width = measurements.first.value;
+		bounds.height = measurements.second.value;
+		setBounds(*child, bounds);
+	}
+	void AbsoluteContainer::removeChild(const Component::Type& child)
+	{
+		for (auto it = children.begin(); it != children.end(); ++it)
+		{
+			if (it->component.get() == child.get())
+			{
+				toUpdate.erase(it->component.get());
+				children.erase(it);
+			}
+		}
+	}
+	void AbsoluteContainer::clearChildren()
+	{
+		toUpdate.clear();
+		children.clear();
+	}
+	Container::Iterator AbsoluteContainer::firstElement()
+	{
+		return createIterator<IteratorType>(children.begin(), children.end());
+	}
+	void AbsoluteContainer::poke()
+	{
+		Component::poke();
+		for (auto& i : children)
+		{
+			//TODO: move to another method
+			i.component->poke();
+			Rect bounds = getBounds();
+			std::pair<DimensionDesc, DimensionDesc> measurements = i.component->measure(DimensionDesc(bounds.width, DimensionDesc::Max),
+				DimensionDesc(bounds.height, DimensionDesc::Max)
+			);
+
+			bounds.left = i.x;
+			bounds.top = i.y;
+			bounds.width = measurements.first.value;
+			bounds.height = measurements.second.value;
+			setBounds(*i.component.get(), bounds);
+			toUpdate.insert(i.component.get());
+
+			for (auto& j : children)
+			{
+				if (i.component != j.component && bounds.intersects(j.component->getBounds()))
+				{
+					toUpdate.insert(j.component.get());
+				}
+			}
+		}
+	}
+	void AbsoluteContainer::onResize(const Rect& last)
+	{
+		if (last != getBounds())
+		{
+			for (auto& i : children)
+				toUpdate.insert(i.component.get());
+		}
+	}
+	void AbsoluteContainer::onChildStain(Component& c)
+	{
+		for (auto& i : children)
+		{
+			if (i.component.get() == &c)
+			{
+				Rect bounds = getBounds();
+				std::pair<DimensionDesc, DimensionDesc> measurements = c.measure(DimensionDesc(bounds.width, DimensionDesc::Max),
+					DimensionDesc(bounds.height, DimensionDesc::Max)
+				);
+
+				bounds.left = i.x;
+				bounds.top = i.y;
+				bounds.width = measurements.first.value;
+				bounds.height = measurements.second.value;
+				setBounds(c, bounds);
+				toUpdate.insert(&c);
+
+				for (auto& j : children)
+				{
+					if (i.component != j.component && bounds.intersects(j.component->getBounds()))
+					{
+						toUpdate.insert(j.component.get());
+					}
+				}
+
+				break;
+			}
+		}
+	}
+	void AbsoluteContainer::onChildNeedsRedraw(Component& c)
+	{
+		toUpdate.insert(&c);
+	}
+
+	void AbsoluteContainer::onMaskDraw(Canvas& canvas) const
+	{
+		for (auto i : toUpdate)
+		{
+			i->drawMask(canvas);
+		}
+	}
+	void AbsoluteContainer::onDraw(Canvas& canvas)
+	{
+		if (toUpdate.size() > 0)
+		{
+			Rect bounds = getGlobalBounds();
+			std::vector<Rect> base;
+			base.reserve(toUpdate.size());
+			for (auto i : toUpdate)
+			{
+				base.emplace_back(i->getBounds());
+			}
+			for (const auto& i : children)
+			{
+				Rect localBounds = i.component->getBounds();
+				for (const auto& rect : base)
+				{
+					if (localBounds.intersects(rect))
+					{
+						i.component->draw(canvas);
+						break;
+					}
+				}
+			}
+		}
+	}
+	AbsoluteContainer::Element::Element(const Component::Type& c, float x, float y)
+	{
+		component = c;
+		this->x = x;
+		this->y = y;
+	}
+
 	bool ListContainer::updateElementRect(Element& element, bool needsMeasure, float localOffset, const DimensionDesc& w, const DimensionDesc& h, const Rect& bounds)
 	{
 		Rect lb = element.component->getBounds();
@@ -76,6 +229,7 @@ namespace Guider
 		if (backgroundColor.a > 0)
 			backgroundColor.a = 255;
 		invalidateVisuals();
+		firstDraw = true;
 	}
 	void ListContainer::addChild(const Component::Type& child)
 	{
@@ -168,19 +322,19 @@ namespace Guider
 	{
 		return std::next(children.begin(),i)->component;
 	}
-	void ListContainer::drawMask(Backend& backend) const
+	void ListContainer::onMaskDraw(Canvas& canvas) const
 	{
-		if (backgroundColor.a > 0 && needsRedraw())
+		if (backgroundColor.a > 0 && firstDraw)
 		{
-			Component::drawMask(backend);
+			Component::onMaskDraw(canvas);
 		}
 		else
 		{
 			for (auto i : toRedraw)
 			{
-				i->drawMask(backend);
+				i->drawMask(canvas);
 			}
-			Rect bounds = getGlobalBounds();
+			Rect bounds = getBounds().at(Vec2(0.f, 0.f));
 			float d = 0;
 			if (horizontal)
 			{
@@ -194,13 +348,18 @@ namespace Guider
 			}
 			if (offset + size < d)
 			{
-				backend.addToMask(bounds);
+				getBackend()->addToMask(bounds);
 			}
 		}
 	}
 
-	void ListContainer::onDraw(Canvas& canvas) const
+	void ListContainer::onDraw(Canvas& canvas)
 	{
+		onRedraw(canvas);
+		return;
+
+		if (backgroundColor.a > 0 && firstDraw)
+			canvas.drawRectangle(getBounds().at(Vec2(0.f, 0.0f)), backgroundColor);
 		for (const auto& i : children)
 		{
 			if (backgroundColor.a > 0 || toRedraw.count(i.component.get()))
@@ -209,6 +368,16 @@ namespace Guider
 			}
 		}
 		toRedraw.clear();
+	}
+
+	void ListContainer::onRedraw(Canvas& canvas)
+	{
+		if (backgroundColor.a > 0)
+			canvas.drawRectangle(getBounds().at(Vec2(0.f, 0.0f)), backgroundColor);
+		for (const auto& i : children)
+			i.component->redraw(canvas);
+		toRedraw.clear();
+		firstDraw = false;
 	}
 
 	void ListContainer::poke()
@@ -257,8 +426,7 @@ namespace Guider
 	{
 		Rect bounds = getBounds();
 		
-		if (std::abs(bounds.width - lastBounds.width) > std::numeric_limits<float>::epsilon() ||
-			std::abs(bounds.height - lastBounds.height) > std::numeric_limits<float>::epsilon())
+		if (bounds != lastBounds)
 		{//TODO: remeasure only if logical width changes
 			float off = 0;
 
@@ -282,10 +450,13 @@ namespace Guider
 			}
 			size = off;
 			invalidate();
+
+			toOffset.clear();
+			for (auto& i : children)
+				i.component->invalidateVisuals();
+
+			firstDraw = true;
 		}
-		toOffset.clear();
-		for (auto& i : children)
-			i.component->invalidateVisuals();
 	}
 
 	void ListContainer::onChildStain(Component& c)
@@ -355,6 +526,35 @@ namespace Guider
 		return measurements;
 	}
 
+	ListContainer::ListContainer() : horizontal(false), size(0), offset(0), backgroundColor(0, 0, 0, 0), firstDraw(true)
+	{
+	}
+
+	ListContainer::ListContainer(Manager& manager, const XML::Tag& config, const StylingPack& style) : ListContainer()
+	{
+		Manager::handleDefaultArguments(*this, config, style.style);
+
+		XML::Value tmp = config.getAttribute("orientation");
+		if (tmp.exists())
+		{
+			if (tmp.val == "horizontal")
+				setOrientation(true);
+			else if (tmp.val == "vertical")
+				setOrientation(false);
+		}
+
+		for (const auto& child : config.children)
+		{
+			if (!child->isTextNode())
+			{
+				XML::Tag& tag = static_cast<XML::Tag&>(*child);
+				Component::Type t = manager.instantiate(tag, style.theme);
+
+				addChild(t);
+			}
+		}
+	}
+
 	std::vector<Component*> ConstraintsContainer::Constraint::getDeps() const
 	{
 		std::vector<Component*> ret;
@@ -371,10 +571,10 @@ namespace Guider
 		}
 		case Type::Chain:
 		{
-			if (chain.targets[0].first != nullptr)
-				ret.push_back(chain.targets[0].first);
-			if (chain.targets[1].first != nullptr)
-				ret.push_back(chain.targets[1].first);
+			if (chain.left != nullptr)
+				ret.push_back(chain.left);
+			if (chain.right != nullptr)
+				ret.push_back(chain.right);
 			break;
 		}
 		}
@@ -486,9 +686,17 @@ namespace Guider
 		constraint.regular.leftOffset = offset;
 		constraint.setFirstEdge(toStart);
 
-		cluster.dependencies.erase(constraint.regular.left);
+		Component* prevLeft = constraint.regular.left;
+
 		constraint.regular.left = target.get();
-		cluster.dependencies.insert(constraint.regular.left);
+		cluster->dependencies[constraint.regular.left]++;
+
+		if (prevLeft != nullptr)
+		{
+			cluster->dependencies.at(prevLeft)--;
+			if (cluster->dependencies.at(prevLeft) == 0)
+				cluster->dependencies.erase(prevLeft);
+		}
 	}
 
 	void ConstraintsContainer::RegularConstraintBuilder::attachEndTo(const Component::Type& target, bool toStart, float offset)
@@ -496,9 +704,53 @@ namespace Guider
 		constraint.regular.rightOffset = offset;
 		constraint.setSecondEdge(toStart);
 
-		cluster.dependencies.erase(constraint.regular.right);
+		Component* prevRight = constraint.regular.right;
+
 		constraint.regular.right = target.get();
-		cluster.dependencies.insert(constraint.regular.right);
+		cluster->dependencies[constraint.regular.right]++;
+
+		if (prevRight != nullptr)
+		{
+			cluster->dependencies.at(prevRight)--;
+			if (cluster->dependencies.at(prevRight) == 0)
+				cluster->dependencies.erase(prevRight);
+		}
+	}
+
+	void ConstraintsContainer::ChainConstraintBuilder::attachStartTo(const Component::Type& target, bool toStart, float offset)
+	{
+		constraint.chain.leftOffset = offset;
+		constraint.setFirstEdge(toStart);
+
+		Component* prevLeft = constraint.chain.left;
+
+		constraint.chain.left = target.get();
+		cluster->dependencies[constraint.chain.left]++;
+
+		if (prevLeft != nullptr)
+		{
+			cluster->dependencies.at(prevLeft)--;
+			if (cluster->dependencies.at(prevLeft) == 0)
+				cluster->dependencies.erase(prevLeft);
+		}
+	}
+
+	void ConstraintsContainer::ChainConstraintBuilder::attachEndTo(const Component::Type& target, bool toStart, float offset)
+	{
+		constraint.chain.rightOffset = offset;
+		constraint.setSecondEdge(toStart);
+
+		Component* prevRight = constraint.chain.right;
+
+		constraint.chain.right = target.get();
+		cluster->dependencies[constraint.chain.right]++;
+
+		if (prevRight != nullptr)
+		{
+			cluster->dependencies.at(prevRight)--;
+			if (cluster->dependencies.at(prevRight) == 0)
+				cluster->dependencies.erase(prevRight);
+		}
 	}
 
 	float ConstraintsContainer::getEdge(Component* c, Constraint::Edge e)
@@ -535,42 +787,58 @@ namespace Guider
 	{
 		updated.clear();
 		size_t n = clusters.size();
-		std::unordered_map<const Cluster*, unsigned> ndeps;
-		for (const auto& i : clusters)
+		//number of references pointing to me
+		std::unordered_map<std::list<Cluster>::iterator, unsigned, ClusterHash> ndeps;
+
+		std::unordered_map<std::list<Cluster>::iterator, std::unordered_set<std::list<Cluster>::iterator, ClusterHash>, ClusterHash> clusterDependencies;
+
+		for (auto it = clusters.begin(); it != clusters.end(); ++it)
 		{
-			ndeps[&i] = 0;
+			ndeps[it] = 0;
 		}
 
-		for (const auto& i : clusters)
+		for (auto cluster = clusters.begin(); cluster != clusters.end(); ++cluster)
 		{
-			auto& clusterDependency = clusterDependencies[&i];
-			for (auto it = clusterDependency.begin(); it != clusterDependency.end(); it++)
-				ndeps[*it]++;
+			for (const auto& dep : cluster->dependencies)
+			{
+				auto mapping = clusterMapping.find(dep.first);
+				
+				if (mapping != clusterMapping.end())
+				{
+					ndeps[mapping->second]++;
+					clusterDependencies[cluster].insert(mapping->second);
+				}
+				else if (dep.first != this)
+					throw std::runtime_error("Internal error");
+			}
 		}
 
 		// Create an queue and enqueue all vertices with 
 		// depth 0 
-		std::queue<const Cluster*> q;
-		for (const auto& i : clusters)
-			if (ndeps[&i] == 0)
-				q.push(&i);
+		std::queue<std::list<Cluster>::iterator> q;
+
+		for (auto it = clusters.begin(); it != clusters.end(); ++it)
+		{
+			if (ndeps[it] == 0)
+				q.push(it);
+		}
 
 		unsigned cnt = 0;
 
-		std::unordered_set<const Cluster*> visited;
-		std::vector<const Cluster*> ret;
+		std::unordered_set<std::list<Cluster>::iterator, ClusterHash> visited;
+		std::vector<Cluster*> ret;
 
 		ret.reserve(n);
 
 		while (!q.empty())
 		{
-			const Cluster* front = q.front();
+			auto front = q.front();
 			q.pop();
-			ret.emplace_back(front);
+			ret.emplace_back(&(*front));
 			auto& clusterDependency = clusterDependencies[front];
-			for (auto it = clusterDependency.begin(); it != clusterDependency.end(); it++)
-				if (--ndeps[*it] == 0)
-					q.push(*it);
+			for (auto it : clusterDependency)
+				if (--ndeps[it] == 0)
+					q.push(it);
 
 			cnt++;
 		}
@@ -663,10 +931,10 @@ namespace Guider
 		{
 			if (c.chain.targets.size() < 3)
 				return;
-			Component* start = c.chain.targets[0].first;
-			float soff = c.chain.targets[0].second;
-			Component* end = c.chain.targets[1].first;
-			float eoff = c.chain.targets[1].second;
+			Component* start = c.chain.left;
+			float soff = c.chain.leftOffset;
+			Component* end = c.chain.right;
+			float eoff = c.chain.rightOffset;
 
 			float s = getEdge(start, c.getFirstEdge()) + soff;
 			float e = getEdge(end, c.getSecondEdge()) - eoff;
@@ -679,7 +947,7 @@ namespace Guider
 			}
 
 			float width = 0;
-			for (unsigned j = 2; j < c.chain.targets.size(); ++j)
+			for (unsigned j = 0; j < c.chain.targets.size(); ++j)
 			{
 				switch (pass)
 				{
@@ -704,7 +972,7 @@ namespace Guider
 				}
 			}
 
-			size_t n = c.chain.targets.size() - 2;
+			size_t n = c.chain.targets.size();
 			float spacing = c.chain.spacing;
 			float totalSpacing = spacing * (n - 1);
 
@@ -731,7 +999,7 @@ namespace Guider
 
 				float sp = s;
 
-				for (unsigned i = 2; i < c.chain.targets.size(); ++i)
+				for (unsigned i = 0; i < c.chain.targets.size(); ++i)
 				{
 					float size = 0;
 
@@ -776,7 +1044,7 @@ namespace Guider
 
 				float sp = center - (width + totalSpacing) / 2;
 
-				for (unsigned i = 2; i < c.chain.targets.size(); ++i)
+				for (unsigned i = 0; i < c.chain.targets.size(); ++i)
 				{
 					float size = 0;
 
@@ -935,33 +1203,30 @@ namespace Guider
 	}
 	void ConstraintsContainer::applyConstraints()
 	{
-		for (auto& child : children)
+		for (auto it = children.begin(); it != children.end(); ++it)
 		{
-			if (child->getBounds() != boundaries[child.get()])
-				setBounds(*child, boundaries[child.get()]);
+			auto child = *it;
+			Component* p = child.get();
+			if (p->getBounds() != boundaries[p])
+			{
+				drawnLastFrame[p] = p->getBounds();
+				setBounds(*p, boundaries[p]);
+			}
+
 		}
 		invalidLayout = false;
+	}
+	void ConstraintsContainer::registerProperties(Manager& m, const std::string& name)
+	{
+		m.registerPropertyForComponent<Color>(name,"backgroundColor", (Color(*)(const std::string&))Styles::strToColor);
 	}
 	void ConstraintsContainer::setBackgroundColor(const Color& color)
 	{
 		backgroundColor = color;
 		if (backgroundColor.a > 0)
 			backgroundColor.a = 255;
+		firstDraw = true;
 		invalidateVisuals();
-	}
-	void ConstraintsContainer::drawMask(Backend& renderer) const
-	{
-		if (backgroundColor.a > 0 && Component::needsRedraw())
-		{
-			Component::drawMask(renderer);
-		}
-		else
-		{
-			for (auto element : this->needsRedraw)
-			{
-				element->drawMask(renderer);
-			}
-		}
 	}
 	void ConstraintsContainer::poke()
 	{
@@ -979,8 +1244,9 @@ namespace Guider
 	}
 	void ConstraintsContainer::onResize(const Rect& bounds)
 	{
-		if (getBounds() != boundaries[this] || invalidLayout)
+		if (getBounds() != bounds || invalidLayout)
 		{
+			firstDraw = true;
 			solveConstraints();
 			invalidLayout = false;
 			applyConstraints();
@@ -1071,23 +1337,104 @@ namespace Guider
 	}
 	void ConstraintsContainer::removeChild(const Component::Type& child)
 	{
-		//todo
+		auto it = std::find(children.begin(), children.end(), child);
+		Component* p = child.get();
+		if (it != children.end())
+		{
+			//find and delete cluster
+			auto cit = clusterMapping.find(p);
+			if (cit != clusterMapping.end())
+			{
+				if (!cit->second->components.count(p))
+					throw std::runtime_error("Internal ConstraintsContainer error(cluster mapping desync)");
+				cit->second->components.erase(p);
+				std::vector<Constraint*> constraintsToRemove;
+				for (auto constraint : cit->second->constraints)
+				{
+					if (constraint->isFor(*p))
+					{
+						switch (constraint->getType())
+						{
+						case Constraint::Type::Regular:
+						{
+							//delete immidiately, regular constraints have only one target
+							constraintsToRemove.push_back(constraint);
+							constraints.erase(constraintMapping.at(constraint));
+							break;
+						}
+						case Constraint::Type::Chain:
+						{
+							std::remove_if(constraint->chain.targets.begin(), constraint->chain.targets.end(), [p](const std::pair<Component*,float>& a) {
+								return a.first == p;
+							});
+							if (constraint->chain.targets.empty())
+							{
+								//delete empty chain constraint
+								constraintsToRemove.push_back(constraint);
+								constraints.erase(constraintMapping.at(constraint));
+							}
+							break;
+						}
+						default:
+							break;
+						}
+					}
+				}
+
+				for (auto constraint : constraintsToRemove)
+				{
+					//remove dependency reference from cluster
+					std::vector<Component*> deps = constraint->getDeps();
+					for (auto dep : deps)
+						cit->second->dependencies.at(dep)--;
+					cit->second->constraints.erase(constraint);
+				}
+
+				//remove cluster if empty
+				if (cit->second->constraints.empty())
+				{
+					clusters.erase(cit->second);
+				}
+				else
+				{
+					//otherwise remove handing dependencies
+					std::vector<Component*> dependenciesToRemove;
+					for (auto i : cit->second->dependencies)
+						if (i.second == 0)
+							dependenciesToRemove.push_back(i.first);
+					for (auto i : dependenciesToRemove)
+						cit->second->dependencies.erase(i);
+				}
+
+				invalidate();
+			}
+			children.erase(it);
+		}
+
 	}
 	void ConstraintsContainer::clearChildren()
 	{
+		//basics
 		Rect bounds = boundaries[this];
 		children.clear();
 		boundaries.clear();
 		boundaries[this] = bounds;
+
+		//constraints&clusters
 		constraints.clear();
+		constraintMapping.clear();
 		clusters.clear();
-		clusterDependencies.clear();
 		clusterMapping.clear();
-		updated.clear();
 		messyClusters = true;
 		invalidLayout = true;
 		canWrapH = false;
 		canWrapW = false;
+
+		//drawing caches
+		drawnLastFrame.clear();
+		needsRedraw.clear();
+		firstDraw = true;
+		updated.clear();
 	}
 	void ConstraintsContainer::addChild(const Component::Type& child)
 	{
@@ -1118,7 +1465,7 @@ namespace Guider
 
 		auto it = clusterMapping.find(target.get());
 
-		Cluster* cluster = nullptr;
+		auto cluster = clusters.end();
 
 		if (it != clusterMapping.end())
 		{
@@ -1129,96 +1476,286 @@ namespace Guider
 					return std::unique_ptr<RegularConstraintBuilder>();
 				}
 			}
-			cluster = &const_cast<Cluster&>(*it->second);
+			cluster = it->second;
 		}
 		else
 		{
 			clusters.emplace_back();
-			cluster = &clusters.back();
+			cluster = std::prev(clusters.end());
 		}
 
-		if (cluster != nullptr)
+		if (cluster != clusters.end())//TODO: potential lack of redraw, fix needed
 		{
 			if (target.get() != this)
 				needsRedraw.insert(target.get());
 			cluster->components.insert(target.get());
 			constraints.emplace_back(std::move(c));
+			constraintMapping[&constraints.back()] = std::prev(constraints.end());
 			cluster->constraints.insert(&constraints.back());
 			clusterMapping[target.get()] = cluster;
 
 			invalidLayout = true;
 			messyClusters = true;
-			return std::make_unique<RegularConstraintBuilder>(constraints.back(), *cluster);
+			return std::make_unique<RegularConstraintBuilder>(constraints.back(), cluster);
 		}
 
 		return std::unique_ptr<RegularConstraintBuilder>();
 	}
 	std::unique_ptr<ConstraintsContainer::ChainConstraintBuilder> ConstraintsContainer::addChainConstraint(Constraint::Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset)
 	{
+		//TODO: potentially merge some for loops?
+
+		if (targets.empty())
+			return std::unique_ptr<ChainConstraintBuilder>();
+
+		Constraint c(Constraint::Type::Chain, orientation);
+
+		c.chain.targets.reserve(targets.size());
+
+		std::unordered_set<std::list<Cluster>::iterator, ClusterHash> clustersToMerge;
+
+		for (const auto& target : targets)
+		{
+			Component* t = target.get();
+			if (t == this)
+				return std::unique_ptr<ChainConstraintBuilder>();
+			c.chain.targets.emplace_back(t, 0.f);
+
+			auto it = clusterMapping.find(target.get());
+			if (it != clusterMapping.end())
+			{
+				for (const auto& i : it->second->constraints)
+				{
+					if (i->getType() == Constraint::Type::Chain) //there is another chain constraint on one target
+					{
+						return std::unique_ptr<ChainConstraintBuilder>();
+					}
+					else if (i->getOrientation() == orientation && i->isFor(*target)) //there is already constraint for that orientation on one target
+					{
+						return std::unique_ptr<ChainConstraintBuilder>();
+					}
+				}
+				clustersToMerge.emplace(it->second);
+			}
+		}
+
+		c.constOffset = constOffset;
+
+		c.chain.spacing = 0;
+
+		c.setFirstEdge(true);
+		c.setSecondEdge(false);
+
+		for (const auto& target : targets)
+		{
+			needsRedraw.insert(target.get());
+		}
+
+		if (clustersToMerge.empty()) //elements are not in clusters, create new one
+		{
+			clusters.emplace_back();
+			auto cluster = std::prev(clusters.end());
+
+			//create cluster
+			constraints.emplace_back(std::move(c));
+			constraintMapping[&constraints.back()] = std::prev(constraints.end());
+			cluster->constraints.insert(&constraints.back());
+			for (const auto& target : targets)
+			{
+				clusterMapping[target.get()] = cluster;
+				cluster->components.insert(target.get());
+			}
+
+			invalidLayout = true;
+			messyClusters = true;
+
+			return std::make_unique<ChainConstraintBuilder>(constraints.back(), cluster);
+		}
+		else //move constraints to one cluster
+		{
+			clusters.emplace_back();
+			auto cluster = std::prev(clusters.end());
+			//steel constraints
+			for (auto clusterToMerge : clustersToMerge)
+			{
+				for (auto constraint : clusterToMerge->constraints)
+				{
+					cluster->constraints.insert(constraint);
+				}
+				for (auto dependency : clusterToMerge->dependencies)
+				{
+					cluster->dependencies.insert(dependency);
+				}
+				//remove unwanted clusters
+				clusters.erase(clusterToMerge);
+			}
+			//add new one
+			constraints.emplace_back(std::move(c));
+			cluster->constraints.insert(&constraints.back());
+			for (const auto& target : targets)
+			{
+				clusterMapping[target.get()] = cluster;
+				cluster->components.insert(target.get());
+			}
+
+			invalidLayout = true;
+			messyClusters = true;
+
+			return std::make_unique<ChainConstraintBuilder>(constraints.back(), cluster);
+		}
+
 		return std::unique_ptr<ChainConstraintBuilder>();
+		
 	}
-	void ConstraintsContainer::onDraw(Canvas& canvas) const
+	
+	void ConstraintsContainer::onMaskDraw(Canvas& canvas) const
+	{
+		if (backgroundColor.a > 0 && firstDraw)
+		{
+			Component::onMaskDraw(canvas);
+		}
+		else
+		{
+			for (const auto& i : drawnLastFrame)
+				getBackend()->addToMask(i.second);
+			for (auto element : needsRedraw)
+			{
+				element->drawMask(canvas);
+			}
+		}
+	}
+	void ConstraintsContainer::onDraw(Canvas& canvas)
 	{
 		if (needsRedraw.size() > 0)
 		{
-			Rect bounds = getBounds();
-			bounds.left = 0;
-			bounds.top = 0;
-			std::vector<Rect> base;
-
-			if (backgroundColor.a > 0)
+			if (backgroundColor.a > 0 && firstDraw)
 			{
-				base.emplace_back(bounds);
-				canvas.drawRectangle(bounds,backgroundColor);
-
+				Rect bounds = getBounds().at(Vec2(0.f, 0.f));
+				canvas.drawRectangle(bounds, backgroundColor);
+				for (const auto& i : children)
+				{
+					i->redraw(canvas);
+				}
 			}
 			else
 			{
+				std::unordered_set<Component*> forceRedraw;
+
+				std::vector<std::pair<Rect, Component*>> base;
+				std::vector<std::pair<Rect, Component*>> lastBase;
 				base.reserve(needsRedraw.size());
 				for (auto i : needsRedraw)
 				{
 					Rect localBounds = i->getBounds();
-					base.emplace_back(localBounds);
+					base.emplace_back(localBounds, i);
 				}
-			}
 
-			for (const auto& i : children)
-			{
-				Rect localBounds = i->getBounds();
-				for (const auto& rect : base)
+				for (auto& i : drawnLastFrame)
 				{
-					if (localBounds.intersects(rect))
+					Rect localBounds = i.second;
+					lastBase.emplace_back(localBounds, i.first);
+				}
+
+				for (const auto& i : children)
+				{
+					Component* p = i.get();
+					//all elements that were moved should redraw all its content internally,
+					//so we only need to worry about not updated ones
+					if (!drawnLastFrame.count(p))
 					{
-						i->draw(canvas);
-						break;
+						//check if element intersects with any object moved during this frame
+						//and force redraw if it does
+						Rect localBounds = p->getBounds();
+						for (const auto& j : lastBase)
+						{
+							if (j.first.intersects(localBounds))
+							{
+								forceRedraw.insert(p);
+							}
+						}
+					}
+					//check if element intersects with any object currently being drawn
+					//and force redraw if it does
+					Rect localBounds = i->getBounds();
+					for (const auto& j : base)
+					{
+						if (j.first.intersects(localBounds))
+						{
+							forceRedraw.insert(j.second);
+							forceRedraw.insert(p);
+						}
+					}
+
+				}
+				if (backgroundColor.a > 0)
+					canvas.drawRectangle(getBounds().at(Vec2(0.f, 0.f)), backgroundColor);
+				for (const auto& i : children)
+				{
+					Rect localBounds = i->getBounds();
+					Component* c = i.get();
+					if (forceRedraw.count(c))
+					{
+						c->redraw(canvas);
+					}
+					else if (needsRedraw.count(c))
+					{
+						c->draw(canvas);
 					}
 				}
 			}
 			needsRedraw.clear();
+			drawnLastFrame.clear();
 		}
+		else if (backgroundColor.a > 0 && firstDraw)
+		{
+			onRedraw(canvas);
+		}
+		firstDraw = false;
 	}
-	void ConstraintsContainer::postXmlConstruction(Manager& manager, const XML::Tag& config, const Style& style)
+	void ConstraintsContainer::onRedraw(Canvas& canvas)
+	{
+		Rect bounds = getBounds();
+		bounds.left = 0;
+		bounds.top = 0;
+
+		bool hasBackground = backgroundColor.a > 0;
+
+		if (hasBackground)
+		{
+			canvas.drawRectangle(bounds, backgroundColor);
+		}
+
+		for (const auto& i : children)
+		{
+			i->redraw(canvas);
+		}
+		needsRedraw.clear();
+		drawnLastFrame.clear();
+		firstDraw = false;
+	}
+
+	void ConstraintsContainer::postXmlConstruction(Manager& manager, const XML::Tag& config, const StylingPack& pack)
 	{
 		std::unordered_map<std::string, Component::Type> nameMapping;
-		Manager::handleDefaultArguments(*this, config, style);
+		Manager::handleDefaultArguments(*this, config, pack.style);
 
 		std::vector<Component::Type> childMapping;
 
-		XML::Value tmp = config.getAttribute("backgroundColor");
-		if (tmp.exists())
+		XML::Value tmp;
 		{
-			bool failed = false;
-			Color color = Styles::strToColor(tmp.val,failed);
-			if (!failed)
-				setBackgroundColor(color);
+			auto background = pack.style.getAttribute("backgroundColor");
+			if (background && background->checkType<Color>())
+			{
+				setBackgroundColor(background->as<Color>());
+			}
 		}
-
+		
 		for (const auto& child : config.children)
 		{
 			if (!child->isTextNode())
 			{
 				XML::Tag& tag = static_cast<XML::Tag&>(*child);
-				Component::Type t = manager.instantiate(tag);
+				Component::Type t = manager.instantiate(tag, pack.theme);
 				auto it = tag.attributes.find("name");
 				if (it != tag.attributes.end())
 				{
@@ -1654,6 +2191,9 @@ namespace Guider
 				++i;
 			}
 		}
+	}
+	ConstraintsContainer::ConstraintsContainer() : firstDraw(true), messyClusters(true), invalidLayout(true), canWrapW(false), canWrapH(false), backgroundColor(0)
+	{
 	}
 	ConstraintsContainer::Iterator ConstraintsContainer::firstElement()
 	{
