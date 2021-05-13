@@ -17,7 +17,7 @@ namespace Guider
 	{
 		void ImageResource::draw(Canvas& canvas, const Rect& bounds)
 		{
-			sprite.setScale(bounds.width/width,bounds.height/height);
+			sprite.setScale(bounds.width / width, bounds.height / height);
 			canvas.as<SfmlCanvas>().getTarget().draw(sprite);
 		}
 		ImageResource::ImageResource(const std::string& path)
@@ -39,7 +39,7 @@ namespace Guider
 		void ConstImageResource::draw(Canvas& canvas, const Rect& rect)
 		{
 			sf::Vector2u size = texture.getSize();
-			sprite.setTexture(texture,true);
+			sprite.setTexture(texture, true);
 			sprite.setScale(rect.width / size.x, rect.height / size.y);
 		}
 		void RectangleShape::draw(Canvas& canvas, const Rect& bounds)
@@ -49,26 +49,26 @@ namespace Guider
 			if (rectangle.getSize() == sf::Vector2f(0, 0))
 			{
 				resetSize = true;
-				rectangle.setSize(sf::Vector2f(bounds.width,bounds.height));
+				rectangle.setSize(sf::Vector2f(bounds.width, bounds.height));
 			}
 			canvas.as<SfmlCanvas>().getTarget().draw(rectangle);
 			if (resetSize)
 			{
-				rectangle.setSize(sf::Vector2f(0,0));
+				rectangle.setSize(sf::Vector2f(0, 0));
 			}
 		}
 		void RectangleShape::setSize(const Vec2& size)
 		{
-			rectangle.setSize(sf::Vector2f(size.x,size.y));
+			rectangle.setSize(sf::Vector2f(size.x, size.y));
 		}
 		void RectangleShape::setColor(const Color& color)
 		{
-			rectangle.setFillColor(sf::Color(color.r,color.g,color.b,color.a));
+			rectangle.setFillColor(sf::Color(color.r, color.g, color.b, color.a));
 		}
 		std::pair<unsigned, float> FontResource::unpackTextSize(float textSize)
 		{
 			unsigned s = static_cast<unsigned>(std::ceil(textSize));
-			return std::pair<unsigned, float>(s,textSize/s);
+			return std::pair<unsigned, float>(s, textSize / s);
 		}
 		float FontResource::getLineHeight(float textSize) const
 		{
@@ -112,7 +112,7 @@ namespace Guider
 		}
 		void TextResource::setColor(const Color& color)
 		{
-			text.setFillColor(sf::Color(color.r,color.g,color.b,color.a));
+			text.setFillColor(sf::Color(color.r, color.g, color.b, color.a));
 		}
 		float TextResource::getLineHeight() const
 		{
@@ -126,7 +126,7 @@ namespace Guider
 		{
 			if (fontResource != nullptr)
 			{
-				return fontResource->getLineWidth(textSize,text.getString());
+				return fontResource->getLineWidth(textSize, text.getString());
 			}
 			return 0;
 		}
@@ -138,7 +138,7 @@ namespace Guider
 		origin = sf::Vector2f(x, y);
 		view.setCenter(-origin + sf::Vector2f(static_cast<float>(size.x), static_cast<float>(size.y)) * 0.5f);
 		view.setViewport(sf::FloatRect(0, 0, 1, 1));
-		
+
 		view.setSize(sf::Vector2f(static_cast<float>(size.x), static_cast<float>(size.y)));
 		canvas->getTarget().setView(view);
 	}
@@ -179,8 +179,8 @@ namespace Guider
 	void SfmlBackend::addToMask(const Rect& rect)
 	{
 		glColorMask(false, false, false, false);
-		maskRect.setSize(Vec2(0,0));
-		maskRect.draw(*canvas,Rect(rect.left, rect.top, rect.width, rect.height) + getDrawOffset());
+		maskRect.setSize(Vec2(0, 0));
+		maskRect.draw(*canvas, Rect(rect.left, rect.top, rect.width, rect.height) + getDrawOffset());
 		glColorMask(true, true, true, true);
 	}
 
@@ -197,8 +197,8 @@ namespace Guider
 	void SfmlBackend::setBounds(const Rect& rect)
 	{
 		glScissor(
-			static_cast<GLint>(origin.x+rect.left),
-			static_cast<GLint>(origin.y+rect.top),
+			static_cast<GLint>(origin.x + rect.left),
+			static_cast<GLint>(origin.y + rect.top),
 			static_cast<GLsizei>(rect.width),
 			static_cast<GLsizei>(rect.height)
 		);
@@ -206,7 +206,7 @@ namespace Guider
 
 	std::shared_ptr<Resources::RectangleShape> SfmlBackend::createRectangle(const Vec2& size, const Color& color)
 	{
-		std::shared_ptr<Resources::RectangleShape> ret = std::make_shared<SFMLResources::RectangleShape>(size.x,size.y);
+		std::shared_ptr<Resources::RectangleShape> ret = std::make_shared<SFMLResources::RectangleShape>(size.x, size.y);
 		ret->setColor(color);
 		return ret;
 	}
@@ -236,7 +236,7 @@ namespace Guider
 		sf::Font f;
 		if (f.loadFromFile(filename))
 		{
-			std::shared_ptr<SFMLResources::FontResource> font = std::make_shared<SFMLResources::FontResource>(f,name);
+			std::shared_ptr<SFMLResources::FontResource> font = std::make_shared<SFMLResources::FontResource>(f, name);
 			fonts[name] = font;
 			return font;
 		}

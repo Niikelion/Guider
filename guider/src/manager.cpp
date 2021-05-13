@@ -5,7 +5,7 @@ namespace Guider
 {
 	void ComponentBindings::registerElement(const std::string name, const Component::Type& component)
 	{
-		idMapping.emplace(name,component);
+		idMapping.emplace(name, component);
 	}
 
 	Component::Type ComponentBindings::getElementById(const std::string& name)
@@ -39,7 +39,7 @@ namespace Guider
 	std::shared_ptr<Resources::Drawable> Manager::getDrawableByText(const std::string& text)
 	{
 		std::string t = Styles::trim(text);
-		
+
 		if (!t.empty())
 		{
 			if (t[0] == '@') //resource handler
@@ -69,10 +69,10 @@ namespace Guider
 
 	void Manager::registerDrawable(const std::shared_ptr<Resources::Drawable>& drawable, uint64_t id, const std::string& name)
 	{
-		drawablesById.emplace(id,drawable);
+		drawablesById.emplace(id, drawable);
 		if (!name.empty())
 		{
-			drawableNameToIdMapping.emplace(name,id);
+			drawableNameToIdMapping.emplace(name, id);
 		}
 	}
 
@@ -96,7 +96,7 @@ namespace Guider
 
 	void Manager::loadFont(const std::string& filename, const std::string& name)
 	{
-		fontsByNames.emplace(name,backend.loadFontFromFile(filename, name));
+		fontsByNames.emplace(name, backend.loadFontFromFile(filename, name));
 	}
 
 	StylingPack Manager::generateStyleInfo(const XML::Tag& config, const Theme& parent)
@@ -221,11 +221,11 @@ namespace Guider
 		if (heightP)
 			h = heightP->as<decltype(h)>();
 
-		c.setSize(w.first,h.first);
+		c.setSize(w.first, h.first);
 		c.setSizingMode(w.second, h.second);
 	}
-	
-	void Manager::registerTypeCreator(const std::function<Component::Type (Manager&, const XML::Tag&, ComponentBindings&,const StylingPack&)>& f, const std::string& name)
+
+	void Manager::registerTypeCreator(const std::function<Component::Type(Manager&, const XML::Tag&, ComponentBindings&, const StylingPack&)>& f, const std::string& name)
 	{
 		creators.emplace(name, f);
 	}
@@ -242,7 +242,7 @@ namespace Guider
 
 	void Manager::registerDrawableProperty(const std::string& name)
 	{
-		registerProperty<std::shared_ptr<Resources::Drawable>>(name,std::bind(std::mem_fn(&Manager::getDrawableByText),this,std::placeholders::_1));
+		registerProperty<std::shared_ptr<Resources::Drawable>>(name, std::bind(std::mem_fn(&Manager::getDrawableByText), this, std::placeholders::_1));
 	}
 
 	void Manager::registerDrawableProperty(const std::string& component, const std::string& name)
@@ -258,7 +258,7 @@ namespace Guider
 			if (failed)
 				throw std::invalid_argument("invalid color format");
 			return ret;
-		});
+			});
 	}
 
 	void Manager::registerColorProperty(const std::string& component, const std::string& name)
@@ -269,7 +269,7 @@ namespace Guider
 			if (failed)
 				throw std::invalid_argument("invalid color format");
 			return ret;
-		});
+			});
 	}
 
 	void Manager::setDefaultStyle(const std::string& component, const Style& style)
@@ -295,11 +295,11 @@ namespace Guider
 					if (name.exists() && value.exists())
 					{
 						std::string v = Styles::trim(value.val);
-						
+
 						if (!v.empty() && v[0] == '?')
 						{
 							v.erase(0, 1);
-							
+
 							style.setAttribute(name.val, v);
 						}
 						else
@@ -477,7 +477,7 @@ namespace Guider
 		return StylingPack();
 	}
 
-	Component::Type Manager::instantiate(const XML::Tag& xml,ComponentBindings& bindings, const Theme& parentTheme)
+	Component::Type Manager::instantiate(const XML::Tag& xml, ComponentBindings& bindings, const Theme& parentTheme)
 	{
 		auto it = creators.find(xml.name);
 		if (it == creators.end())
@@ -486,11 +486,11 @@ namespace Guider
 			return Component::Type();
 		}
 
-		StylingPack style = generateStyleInfo(xml,parentTheme);
+		StylingPack style = generateStyleInfo(xml, parentTheme);
 
-		return Component::Type(it->second(*this, xml,bindings,style));
+		return Component::Type(it->second(*this, xml, bindings, style));
 	}
-	
+
 	std::pair<float, Component::SizingMode> strToMeasure(const std::string& str)
 	{
 		Component::SizingMode mode = Component::SizingMode::GivenSize;
@@ -514,7 +514,7 @@ namespace Guider
 		}
 		return { value, mode };
 	}
-	
+
 	void Manager::initDefaultProperties()
 	{
 		registerStringProperty("id");

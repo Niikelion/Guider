@@ -53,7 +53,7 @@ namespace Guider
 
 	bool Rect::contains(const Vec2& pos) const noexcept
 	{
-		return left <= pos.x && top <= pos.y && left+width >= pos.x && top+height >= pos.y;
+		return left <= pos.x && top <= pos.y && left + width >= pos.x && top + height >= pos.y;
 	}
 
 	Rect::Rect()
@@ -212,7 +212,7 @@ namespace Guider
 		}
 	}
 
-	Event Event::createMouseEvent(MouseEvent::Subtype subtype,float  x, float y, uint8_t button)
+	Event Event::createMouseEvent(MouseEvent::Subtype subtype, float  x, float y, uint8_t button)
 	{
 		Event e(Type::MouseMoved);
 		switch (subtype)
@@ -233,7 +233,7 @@ namespace Guider
 			break;
 		}
 		}
-		new (&e.mouseEvent) MouseEvent(x,y,button);
+		new (&e.mouseEvent) MouseEvent(x, y, button);
 		return e;
 	}
 
@@ -263,7 +263,7 @@ namespace Guider
 		}
 	}
 
-	Event::Event(const Event& t): type(t.type)
+	Event::Event(const Event& t) : type(t.type)
 	{
 		switch (t.type)
 		{
@@ -333,7 +333,7 @@ namespace Guider
 		case Event::Type::MouseButtonUp:
 		case Event::Type::MouseMoved:
 		{
-			if (getBounds().at(Vec2(0,0)).contains(Vec2(event.mouseEvent.x, event.mouseEvent.y)))
+			if (getBounds().at(Vec2(0, 0)).contains(Vec2(event.mouseEvent.x, event.mouseEvent.y)))
 			{
 				setMouseOver();
 			}
@@ -530,7 +530,7 @@ namespace Guider
 		Iterator it = firstElement();
 		while (!it.end())
 		{
-			handleEventForComponent(event,it.current());
+			handleEventForComponent(event, it.current());
 			it.loadNext();
 		}
 	}
@@ -573,7 +573,7 @@ namespace Guider
 				else
 					shouldHandle = false;
 			}
-			
+
 			break;
 		}
 		case Event::Type::MouseLeft:
@@ -583,7 +583,7 @@ namespace Guider
 		}
 		}
 		if (shouldHandle)
-			component.handleEvent(adjustEventForComponent(copy,component));
+			component.handleEvent(adjustEventForComponent(copy, component));
 	}
 
 	void Engine::addChild(const Component::Type& child)
@@ -620,7 +620,7 @@ namespace Guider
 	}
 	Container::Iterator Engine::firstElement()
 	{
-		return createIterator<IteratorType>(elements.begin(),elements.end());
+		return createIterator<IteratorType>(elements.begin(), elements.end());
 	}
 	void Engine::onChildNeedsRedraw(Component& c)
 	{
@@ -662,7 +662,7 @@ namespace Guider
 					DimensionDesc(bounds.width, DimensionDesc::Max),
 					DimensionDesc(bounds.height, DimensionDesc::Max));
 
-				measurements.first.value = std::min(measurements.first.value,bounds.width);
+				measurements.first.value = std::min(measurements.first.value, bounds.width);
 				measurements.second.value = std::min(measurements.second.value, bounds.height);
 
 				if (measurements.first.value != oldRect.width || measurements.second.value != oldRect.height)

@@ -18,7 +18,7 @@ namespace Guider
 	{
 	public:
 		float x, y;
- 
+
 		Vec2& operator = (const Vec2&) = default;
 		Vec2& operator = (Vec2&&) noexcept = default;
 
@@ -63,17 +63,17 @@ namespace Guider
 		/// @brief Returns copy of rect with top left corner at pos.
 		inline Rect at(const Vec2& pos) const noexcept
 		{
-			return Rect(pos.x,pos.y,width,height);
+			return Rect(pos.x, pos.y, width, height);
 		}
 		/// @brief Returns top left corner as point. 
 		inline Vec2 position() const noexcept
 		{
-			return Vec2(left,top);
+			return Vec2(left, top);
 		}
 		/// @brief Returns size of the rect as vector.
 		inline Vec2 size() const noexcept
 		{
-			return Vec2(width,height);
+			return Vec2(width, height);
 		}
 
 		Rect();
@@ -122,7 +122,7 @@ namespace Guider
 		}
 		Color(const Color& t) : value(t.value) {}
 	};
-	
+
 	class Padding
 	{
 	public:
@@ -227,7 +227,7 @@ namespace Guider
 		class TextResource : public Drawable
 		{
 		public:
-			Gravity verticalAlignment,horizontalAlignment;
+			Gravity verticalAlignment, horizontalAlignment;
 
 			virtual void setText(const std::string& text) = 0;
 			virtual void setTextSize(float size) = 0;
@@ -261,7 +261,7 @@ namespace Guider
 			CompositeDrawable(const CompositeDrawable&) = default;
 		};
 	}
-	
+
 	/// @interface Backend
 	/// @brief Base for rendering backend.
 	class Backend
@@ -325,7 +325,7 @@ namespace Guider
 				Left
 			};
 
-			MouseEvent(float xpos,float ypos, uint8_t buttonCode) : x(xpos), y(ypos), button(buttonCode) {}
+			MouseEvent(float xpos, float ypos, uint8_t buttonCode) : x(xpos), y(ypos), button(buttonCode) {}
 			MouseEvent(const MouseEvent& t, const Rect& bounds) : MouseEvent(t)
 			{
 				x -= bounds.left;
@@ -362,7 +362,7 @@ namespace Guider
 			new(&e.backendConnected) BackendConnectedEvent(backend);
 			return e;
 		}
-		static Event createMouseEvent(MouseEvent::Subtype subtype,float x,float y, uint8_t button);
+		static Event createMouseEvent(MouseEvent::Subtype subtype, float x, float y, uint8_t button);
 
 		void dispose();
 
@@ -498,7 +498,7 @@ namespace Guider
 		Rect getGlobalBounds() const;
 
 		using Type = std::shared_ptr<Component>;
-		
+
 		/// @name Callbacks
 		/// @{
 
@@ -597,7 +597,7 @@ namespace Guider
 			virtual ~IteratorBase() = default;
 		};
 
-		template<typename T> class IteratorTemplate: public IteratorBase
+		template<typename T> class IteratorTemplate : public IteratorBase
 		{
 		public:
 			virtual std::unique_ptr<IteratorBase> clone() const override
@@ -606,7 +606,7 @@ namespace Guider
 			}
 		};
 
-		template<typename IteratorT> class CommonIteratorTemplate: public IteratorBase
+		template<typename IteratorT> class CommonIteratorTemplate : public IteratorBase
 		{
 		public:
 			virtual bool end() const override
@@ -630,7 +630,7 @@ namespace Guider
 				return std::unique_ptr<IteratorBase>(new CommonIteratorTemplate<IteratorT>(*this));
 			}
 
-			CommonIteratorTemplate(const IteratorT& begin, const IteratorT& end): currentIt(begin), endIt(end) {}
+			CommonIteratorTemplate(const IteratorT& begin, const IteratorT& end) : currentIt(begin), endIt(end) {}
 		private:
 			IteratorT currentIt;
 			const IteratorT endIt;

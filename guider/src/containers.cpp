@@ -262,7 +262,7 @@ namespace Guider
 			float height = measurements.second.value;
 			if (height > bounds.height)
 				height = bounds.height;
-			lb = Rect(size,(bounds.height-height)/2,off,height);
+			lb = Rect(size, (bounds.height - height) / 2, off, height);
 		}
 		else
 		{
@@ -270,10 +270,10 @@ namespace Guider
 			float width = measurements.first.value;
 			if (width > bounds.width)
 				width = bounds.width;
-			lb = Rect((bounds.width - width) / 2,size, width, off);
+			lb = Rect((bounds.width - width) / 2, size, width, off);
 		}
 
-		children.emplace_back(child,off,size);
+		children.emplace_back(child, off, size);
 		toUpdate.insert(child.get());
 		toRedraw.insert(child.get());
 
@@ -305,7 +305,7 @@ namespace Guider
 	}
 	void ListContainer::removeChild(unsigned n)
 	{
-		removeChild(std::next(children.begin(),n)->component);
+		removeChild(std::next(children.begin(), n)->component);
 	}
 	void ListContainer::clearChildren()
 	{
@@ -320,7 +320,7 @@ namespace Guider
 	}
 	Component::Type ListContainer::getChild(unsigned i)
 	{
-		return std::next(children.begin(),i)->component;
+		return std::next(children.begin(), i)->component;
 	}
 	void ListContainer::onMaskDraw(Canvas& canvas) const
 	{
@@ -401,7 +401,7 @@ namespace Guider
 			h.mode = DimensionDesc::Min;
 		}
 
-		for (auto& i:children)
+		for (auto& i : children)
 		{
 			bool needsMeasureing = !i.component->isClean();
 			if (!i.component->isClean())
@@ -425,7 +425,7 @@ namespace Guider
 	void ListContainer::onResize(const Rect& lastBounds)
 	{
 		Rect bounds = getBounds();
-		
+
 		if (bounds != lastBounds)
 		{//TODO: remeasure only if logical width changes
 			float off = 0;
@@ -471,7 +471,7 @@ namespace Guider
 
 	ListContainer::Iterator ListContainer::firstElement()
 	{
-		return createIterator<IteratorType>(children.begin(),children.end());
+		return createIterator<IteratorType>(children.begin(), children.end());
 	}
 
 	std::pair<Component::DimensionDesc, Component::DimensionDesc> ListContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
@@ -514,7 +514,7 @@ namespace Guider
 		}
 		size = off;
 
-		std::pair<DimensionDesc, DimensionDesc> measurements = Component::measure(w,h);
+		std::pair<DimensionDesc, DimensionDesc> measurements = Component::measure(w, h);
 		if (getSizingModeHorizontal() == SizingMode::WrapContent && horizontal)
 		{
 			measurements.first = DimensionDesc(size, DimensionDesc::Exact);
@@ -802,7 +802,7 @@ namespace Guider
 			for (const auto& dep : cluster->dependencies)
 			{
 				auto mapping = clusterMapping.find(dep.first);
-				
+
 				if (mapping != clusterMapping.end())
 				{
 					ndeps[mapping->second]++;
@@ -1218,7 +1218,7 @@ namespace Guider
 	}
 	void ConstraintsContainer::registerProperties(Manager& m, const std::string& name)
 	{
-		m.registerPropertyForComponent<Color>(name,"backgroundColor", (Color(*)(const std::string&))Styles::strToColor);
+		m.registerPropertyForComponent<Color>(name, "backgroundColor", (Color(*)(const std::string&))Styles::strToColor);
 	}
 	void ConstraintsContainer::setBackgroundColor(const Color& color)
 	{
@@ -1364,9 +1364,9 @@ namespace Guider
 						}
 						case Constraint::Type::Chain:
 						{
-							std::remove_if(constraint->chain.targets.begin(), constraint->chain.targets.end(), [p](const std::pair<Component*,float>& a) {
+							std::remove_if(constraint->chain.targets.begin(), constraint->chain.targets.end(), [p](const std::pair<Component*, float>& a) {
 								return a.first == p;
-							});
+								});
 							if (constraint->chain.targets.empty())
 							{
 								//delete empty chain constraint
@@ -1605,9 +1605,9 @@ namespace Guider
 		}
 
 		return std::unique_ptr<ChainConstraintBuilder>();
-		
+
 	}
-	
+
 	void ConstraintsContainer::onMaskDraw(Canvas& canvas) const
 	{
 		if (backgroundColor.a > 0 && firstDraw)
@@ -1749,7 +1749,7 @@ namespace Guider
 				setBackgroundColor(background->as<Color>());
 			}
 		}
-		
+
 		for (const auto& child : config.children)
 		{
 			if (!child->isTextNode())
@@ -2197,6 +2197,6 @@ namespace Guider
 	}
 	ConstraintsContainer::Iterator ConstraintsContainer::firstElement()
 	{
-		return createIterator<IteratorType>(children.begin(),children.end());
+		return createIterator<IteratorType>(children.begin(), children.end());
 	}
 }

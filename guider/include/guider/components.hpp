@@ -52,7 +52,7 @@ namespace Guider
 		virtual void handleEvent(const Event& event) override;
 
 		RectangleShapeComponent() : shape(nullptr), color(255, 255, 255, 255) {}
-		RectangleShapeComponent(SizingMode mode, const Color& c): shape(nullptr), color(c)
+		RectangleShapeComponent(SizingMode mode, const Color& c) : shape(nullptr), color(c)
 		{
 			setSizingMode(mode, mode);
 		}
@@ -74,12 +74,12 @@ namespace Guider
 			}
 		}
 	};
-	
+
 	class TextComponent : public CommonComponent
 	{
 	private:
 		std::shared_ptr<Resources::TextResource> textRes;
-		std::string text,font;
+		std::string text, font;
 		float textSize;
 		Color color;
 		Gravity horizontalTextAlign, verticalTextAlign;
@@ -102,14 +102,14 @@ namespace Guider
 		}
 
 		virtual void onDraw(Canvas& canvas) override;
-		
+
 		virtual void handleEvent(const Event& event) override;
 
 		virtual std::pair<float, float> getContentSize(bool getWidth, bool getHeight) override;
 
-		TextComponent() : textRes(nullptr), textSize(10),color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center) {}
+		TextComponent() : textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center) {}
 
-		TextComponent(Manager& manager, const XML::Tag& config, const StylingPack& pack): CommonComponent(manager, config, pack), textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
+		TextComponent(Manager& manager, const XML::Tag& config, const StylingPack& pack) : CommonComponent(manager, config, pack), textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
 		{
 			Manager::handleDefaultArguments(*this, config, pack.style);
 			setBackend(manager.getBackend());
@@ -213,7 +213,7 @@ namespace Guider
 		void handleEvent(const Event& event) override;
 
 		BasicButtonComponent() = default;
-		
+
 		BasicButtonComponent(Manager& manager, const XML::Tag& config, const StylingPack& style) : TextComponent(manager, config, style)
 		{
 			auto backgroundP = style.style.getAttribute("background");

@@ -283,7 +283,7 @@ namespace Guider
 			Constraint(Constraint&&) noexcept;
 			~Constraint();
 		};
-		
+
 		class Cluster
 		{
 		public:
@@ -294,7 +294,7 @@ namespace Guider
 			Cluster() = default;
 			Cluster(Cluster&& t) noexcept : constraints(std::move(t.constraints)), components(std::move(t.components)), dependencies(std::move(t.dependencies)) {}
 		};
-		
+
 		class ClusterHash
 		{
 		public:
@@ -428,7 +428,7 @@ namespace Guider
 		virtual void onMaskDraw(Canvas& canvas) const override;
 		virtual void onDraw(Canvas& canvas) override;
 		virtual void onRedraw(Canvas& canvas) override;
-		
+
 		virtual void postXmlConstruction(Manager& m, const XML::Tag& config, const StylingPack& pack);
 
 		ConstraintsContainer();
@@ -444,8 +444,8 @@ namespace Guider
 		std::unordered_set<Component*> updated;
 
 		std::unordered_set<Component*> needsRedraw;
-		std::unordered_map<Component*,Rect> drawnLastFrame;
-		
+		std::unordered_map<Component*, Rect> drawnLastFrame;
+
 		bool firstDraw;
 
 		bool messyClusters;

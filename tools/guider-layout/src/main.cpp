@@ -23,13 +23,13 @@ int main(int argc, char* argv[])
 
 	app.initManager();
 
-	Guider::BasicButtonComponent::registerProperties(*app.getManager(),"common.Button");
+	Guider::BasicButtonComponent::registerProperties(*app.getManager(), "common.Button");
 
 	app.addDefinitions();
 	app.loadResources();
 
 	auto enginePointer = app.getEngine();
-	Gui::Engine &engine = *enginePointer;
+	Gui::Engine& engine = *enginePointer;
 	engine.resize(Gui::Vec2((float)width, (float)height));
 
 	std::string mainLayout;
@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
 
 	std::shared_ptr<Guider::BasicButtonComponent> branchButton = static_pointer_cast<Guider::BasicButtonComponent>(app.getManager()->getElementById("branch_button"));
 	branchButton->setText("none");
-	
+
 	app.getEngine()->addChild(root);
 
 	app.showWindow(true);

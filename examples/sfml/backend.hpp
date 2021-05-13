@@ -56,7 +56,7 @@ namespace Guider
 			virtual void drawRectangle(const Rect& rect, const Color& color) override;
 
 			ImageCanvas() : SfmlCanvas(texture), imageResourceWrapper(texture.getTexture()) {}
-			ImageCanvas(uint32_t width,uint32_t height) : SfmlCanvas(texture), imageResourceWrapper(texture.getTexture())
+			ImageCanvas(uint32_t width, uint32_t height) : SfmlCanvas(texture), imageResourceWrapper(texture.getTexture())
 			{
 				texture.create(width, height, sf::ContextSettings(0, 8));
 			}
@@ -77,7 +77,7 @@ namespace Guider
 			virtual void setColor(const Color& color) override;
 
 			RectangleShape() = default;
-			RectangleShape(float width,float height)
+			RectangleShape(float width, float height)
 			{
 				rectangle.setSize(sf::Vector2f(width, height));
 			}

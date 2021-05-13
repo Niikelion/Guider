@@ -57,10 +57,10 @@ namespace Guider
 					}
 				}
 				break;
-				}
+			}
 			}
 			throw std::invalid_argument("invalid padding value");
-		});
+			});
 	}
 
 	void CommonComponent::setPadding(const Padding& pad)
@@ -80,7 +80,7 @@ namespace Guider
 		bool w = getSizingModeHorizontal() == SizingMode::WrapContent;
 		bool h = getSizingModeVertical() == SizingMode::WrapContent;
 
-		std::pair<float, float> contentSizes = getContentSize(w,h);
+		std::pair<float, float> contentSizes = getContentSize(w, h);
 
 		if (w)
 		{
@@ -120,8 +120,8 @@ namespace Guider
 	void RectangleShapeComponent::onDraw(Canvas& canvas)
 	{
 		Rect bounds = getBounds();
-		shape->setSize(Vec2(bounds.width,bounds.height));
-		shape->draw(canvas,Rect(0,0,bounds.width,bounds.height));
+		shape->setSize(Vec2(bounds.width, bounds.height));
+		shape->draw(canvas, Rect(0, 0, bounds.width, bounds.height));
 	}
 	void RectangleShapeComponent::handleEvent(const Event& event)
 	{
@@ -179,7 +179,7 @@ namespace Guider
 	{
 		horizontalTextAlign = horizontal;
 		verticalTextAlign = vertical;
-		
+
 		invalidateVisuals();
 	}
 	void TextComponent::onDraw(Canvas& canvas)
@@ -187,18 +187,18 @@ namespace Guider
 		//float xoff = 0, yoff = 0;
 
 		Rect bounds = getBounds();
-		Rect contentRect = getPading().calcContentArea(bounds.at(Vec2(0,0)));
+		Rect contentRect = getPading().calcContentArea(bounds.at(Vec2(0, 0)));
 		textRes->horizontalAlignment = getHorizontalTextAlignment();
 		textRes->verticalAlignment = getVerticalTextAlignment();
 
-		textRes->draw(canvas,contentRect);
+		textRes->draw(canvas, contentRect);
 	}
 	void TextComponent::handleEvent(const Event& event)
 	{
 		Component::handleEvent(event);
 		if (event.type == Event::BackendConnected)
 		{
-			textRes = getBackend()->createText(text,*getBackend()->getFontByName(font), textSize, color);
+			textRes = getBackend()->createText(text, *getBackend()->getFontByName(font), textSize, color);
 			textRes->setFont(*event.backendConnected.backend.getFontByName(font));
 			textRes->setTextSize(textSize);
 			textRes->setColor(color);
@@ -240,7 +240,7 @@ namespace Guider
 			if (event.mouseEvent.button == 0)
 			{
 				ButtonState p = buttonState;
-				if (getThisComponent().getBounds().at(Vec2(0,0)).contains(Vec2(event.mouseEvent.x, event.mouseEvent.y)))
+				if (getThisComponent().getBounds().at(Vec2(0, 0)).contains(Vec2(event.mouseEvent.x, event.mouseEvent.y)))
 					buttonState = ButtonState::Hovered;
 				else
 					buttonState = ButtonState::Default;
@@ -308,7 +308,7 @@ namespace Guider
 		if (!shape)
 			shape = getBackgroundDrawable(ButtonState::Default);
 		if (shape)
-			shape->draw(canvas, bounds.at(Vec2(0,0)));
+			shape->draw(canvas, bounds.at(Vec2(0, 0)));
 		TextComponent::onDraw(canvas);
 	}
 	void BasicButtonComponent::handleEvent(const Event& event)
@@ -320,7 +320,7 @@ namespace Guider
 		case Event::Type::BackendConnected:
 		{
 			if (!backgroundDefault)
-				backgroundDefault = getBackend()->createRectangle(Vec2(0, 0), Color(255,255,255));
+				backgroundDefault = getBackend()->createRectangle(Vec2(0, 0), Color(255, 255, 255));
 			break;
 		}
 		}
