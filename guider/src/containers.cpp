@@ -1335,8 +1335,20 @@ namespace Guider
 
 	bool ConstraintsContainer::handleEvent(const Event& event)
 	{
-		if (event.type == Event::Type::BackendConnected)
+		switch (event.type)
+		{
+		case Event::Type::BackendConnected:
+		{
 			invalidLayout = true;
+			break;
+		}
+		case Event::Type::Invalidated:
+		case Event::Type::VisualsInvalidated:
+		{
+			firstDraw = true;
+			break;
+		}
+		}
 		return Container::handleEvent(event);
 	}
 

@@ -213,6 +213,11 @@ namespace Guider
 		return Event(Type::Invalidated);
 	}
 
+	inline Event Event::createVisualsInvalidatedEvent()
+	{
+		return Event(Type::VisualsInvalidated);
+	}
+
 	inline Event Event::createBackendConnectedEvent(Backend& backend)
 	{
 		Event e(Type::BackendConnected);
@@ -250,8 +255,8 @@ namespace Guider
 		switch (type)
 		{
 		case Guider::Event::None:
-			break;
 		case Guider::Event::Invalidated:
+		case Guider::Event::VisualsInvalidated:
 			break;
 		case Guider::Event::BackendConnected:
 		{
@@ -433,6 +438,11 @@ namespace Guider
 			invalidate();
 			break;
 		}
+		case Event::Type::VisualsInvalidated:
+		{
+			invalidateVisuals();
+			break;
+		}
 		case Event::Type::MouseButtonDown:
 		case Event::Type::MouseButtonUp:
 		case Event::Type::MouseMoved:
@@ -501,6 +511,16 @@ namespace Guider
 				p->invalidateVisuals();
 			}
 		}
+	}
+
+	void Component::invalidateRecursive()
+	{
+		handleEvent(Event::createInvalidatedEvent());
+	}
+
+	void Component::invalidateVisualsRecursive()
+	{
+		handleEvent(Event::createVisualsInvalidatedEvent());
 	}
 
 	std::pair<Component::DimensionDesc, Component::DimensionDesc> Component::measure(const DimensionDesc& width, const DimensionDesc& height)
@@ -665,19 +685,6 @@ namespace Guider
 		{
 			it.current().invalidateVisuals();
 			it.loadNext();
-		}
-	}
-
-	void Container::invalidateVisualsRecursive()
-	{
-		invalidateVisuals();
-		for (Iterator it=firstElement(); !it.end(); it.loadNext())
-		{
-			Container* c = dynamic_cast<Container*>(&it.current());
-			if (c == nullptr)
-				it.current().invalidateVisuals();
-			else
-				c->invalidateVisualsRecursive();
 		}
 	}
 

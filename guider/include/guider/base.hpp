@@ -340,6 +340,7 @@ namespace Guider
 		{
 			None,
 			Invalidated,
+			VisualsInvalidated,
 			BackendConnected,
 			MouseMoved,
 			MouseButtonDown,
@@ -355,6 +356,7 @@ namespace Guider
 		};
 
 		static inline Event createInvalidatedEvent();
+		static inline Event createVisualsInvalidatedEvent();
 		static inline Event createBackendConnectedEvent(Backend& backend);
 		static Event createMouseEvent(MouseEvent::Subtype subtype, float x, float y, uint8_t button);
 
@@ -422,6 +424,10 @@ namespace Guider
 
 		void invalidate();
 		virtual void invalidateVisuals();
+
+		void invalidateRecursive();
+		void invalidateVisualsRecursive();
+
 		virtual std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& width, const DimensionDesc& height);
 
 		Component* getParent();
@@ -603,7 +609,6 @@ namespace Guider
 		}
 
 		virtual void invalidateVisuals() override;
-		virtual void invalidateVisualsRecursive();
 
 		virtual void addChild(const Component::Type& child) = 0;
 		virtual void removeChild(const Component::Type& child) = 0;
