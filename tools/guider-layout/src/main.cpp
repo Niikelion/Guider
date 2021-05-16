@@ -57,6 +57,9 @@ int main(int argc, char* argv[])
 
 	std::shared_ptr<Guider::BasicButtonComponent> branchButton = static_pointer_cast<Guider::BasicButtonComponent>(app.getManager()->getElementById("branch_button"));
 	branchButton->setText("none");
+	branchButton->setOnClickCallback([&app](Guider::Component& c) {
+		app.resetTimer();
+	});
 
 	app.getEngine()->addChild(root);
 

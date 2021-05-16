@@ -14,6 +14,8 @@ set(headers
 	include/guider/components.hpp
 	include/guider/containers.hpp
 	include/guider/styles.hpp
+
+	include/guider/shortcuts.hpp
 )
 
 add_library(guider STATIC ${sources} ${headers})

@@ -63,12 +63,8 @@ namespace Guider
 		width = 0;
 		height = 0;
 	}
-	Rect::Rect(float l, float t, float w, float h)
+	Rect::Rect(float l, float t, float w, float h) : left(l), top(t), width(w), height(h)
 	{
-		left = l;
-		top = t;
-		width = w;
-		height = h;
 	}
 
 	Vec2& Vec2::operator+=(const Vec2& t) noexcept
@@ -156,8 +152,8 @@ namespace Guider
 			for (auto& sub : elements)
 			{
 				Rect b = sub.padding.calcContentArea(bounds);
-				//TODO: apply gravity
-				sub.drawable->draw(canvas, bounds);
+				//TODO: apply gravity(currently not possible-cannot get drawable rect)
+				sub.drawable->draw(canvas, b);
 			}
 		}
 
@@ -210,6 +206,18 @@ namespace Guider
 
 			return Rect(r.left + pos.x, r.top + pos.y, width, height);
 		}
+	}
+
+	inline Event Event::createInvalidatedEvent()
+	{
+		return Event(Type::Invalidated);
+	}
+
+	inline Event Event::createBackendConnectedEvent(Backend& backend)
+	{
+		Event e(Type::BackendConnected);
+		new(&e.backendConnected) BackendConnectedEvent(backend);
+		return e;
 	}
 
 	Event Event::createMouseEvent(MouseEvent::Subtype subtype, float  x, float y, uint8_t button)
@@ -296,6 +304,102 @@ namespace Guider
 		this->mode = mode;
 	}
 
+	bool Component::isMouseOver() const
+	{
+		return hasMouseOver;
+	}
+
+	bool Component::hasMouseButtonFocus() const
+	{
+		return hasMouseFocus;
+	}
+
+	void Component::setSizingMode(SizingMode w, SizingMode h)
+	{
+		if (sizingModeW != w)
+		{
+			sizingModeW = w;
+			invalidate();
+		}
+		if (sizingModeH != h)
+		{
+			sizingModeH = h;
+			invalidate();
+		}
+	}
+
+	Component::SizingMode Component::getSizingModeVertical() const noexcept
+	{
+		return sizingModeH;
+	}
+
+	Component::SizingMode Component::getSizingModeHorizontal() const noexcept
+	{
+		return sizingModeW;
+	}
+
+	void Component::setParent(Component& p)
+	{
+		parent = &p;
+		if (parent->backend != nullptr)
+			handleEvent(Event::createBackendConnectedEvent(*parent->backend));
+		invalidate();
+	}
+
+	bool Component::isClean() const noexcept
+	{
+		return clean;
+	}
+
+	bool Component::needsRedraw() const
+	{
+		return toRedraw;
+	}
+
+	void Component::setWidth(float w)
+	{
+		width = w;
+		invalidate();
+	}
+
+	void Component::setHeight(float h)
+	{
+		height = h;
+		invalidate();
+	}
+
+	void Component::setSize(float w, float h)
+	{
+		width = w;
+		height = h;
+		invalidate();
+	}
+
+	void Component::setSize(const Vec2& size)
+	{
+		setSize(size.x, size.y);
+	}
+
+	float Component::getWidth() const noexcept
+	{
+		return width;
+	}
+
+	float Component::getHeight() const noexcept
+	{
+		return height;
+	}
+
+	Backend* Component::getBackend() const noexcept
+	{
+		return backend;
+	}
+
+	void Component::setBackend(Backend& b)
+	{
+		handleEvent(Event::createBackendConnectedEvent(b));
+	}
+
 	void Component::poke()
 	{
 		setClean();
@@ -314,7 +418,7 @@ namespace Guider
 	{
 	}
 
-	void Component::handleEvent(const Event& event)
+	bool Component::handleEvent(const Event& event)
 	{
 		switch (event.type)
 		{
@@ -354,10 +458,14 @@ namespace Guider
 		case Event::Type::MouseLeft:
 		{
 			resetMouseOver();
+			break;
 		}
 		default:
 			break;
 		}
+		if (eventCallback)
+			return eventCallback(event);
+		return false;
 	}
 
 	void Component::invalidate()
@@ -369,11 +477,10 @@ namespace Guider
 			Component* p = getParent();
 			Component* c = this;
 
-			while (p != nullptr)
+			if (p != nullptr)
 			{
 				p->onChildStain(*c);
-				c = p;
-				p = p->getParent();
+				p->invalidate();
 			}
 			invalidateVisuals();
 		}
@@ -388,11 +495,10 @@ namespace Guider
 			Component* p = getParent();
 			Component* c = this;
 
-			while (p != nullptr)
+			if (p != nullptr)
 			{
 				p->onChildNeedsRedraw(*c);
-				c = p;
-				p = p->getParent();
+				p->invalidateVisuals();
 			}
 		}
 	}
@@ -508,10 +614,48 @@ namespace Guider
 		getBackend()->popDrawOffset();
 	}
 
+	std::function<bool(const Event&)> Component::setOnEventCallback(const std::function<bool(const Event&)>& callback)
+	{
+		auto lf = eventCallback;
+		eventCallback = callback;
+		return lf;
+	}
+
 	Component::Component() :backend(nullptr), parent(nullptr), toRedraw(true), clean(false), hasMouseOver(false), hasMouseFocus(false), sizingModeH(SizingMode::OwnSize), sizingModeW(SizingMode::OwnSize), width(0), height(0)
 	{
 	}
 
+	void Component::setBounds(Component& c, const Rect& r) const
+	{
+		Rect lastBounds = c.bounds;
+		c.bounds = r;
+		c.onResize(lastBounds);
+	}
+
+	void Component::setClean()
+	{
+		clean = true;
+	}
+
+	void Component::setMouseOver()
+	{
+		hasMouseOver = true;
+	}
+
+	void Component::resetMouseOver()
+	{
+		hasMouseOver = false;
+	}
+
+	void Component::setMouseFocus()
+	{
+		hasMouseFocus = true;
+	}
+
+	void Component::resetMouseFocus()
+	{
+		hasMouseFocus = false;
+	}
 
 	void Container::invalidateVisuals()
 	{
@@ -524,15 +668,25 @@ namespace Guider
 		}
 	}
 
-	void Container::handleEvent(const Event& event)
+	void Container::invalidateVisualsRecursive()
 	{
-		Component::handleEvent(event);
-		Iterator it = firstElement();
-		while (!it.end())
+		invalidateVisuals();
+		for (Iterator it=firstElement(); !it.end(); it.loadNext())
 		{
-			handleEventForComponent(event, it.current());
-			it.loadNext();
+			Container* c = dynamic_cast<Container*>(&it.current());
+			if (c == nullptr)
+				it.current().invalidateVisuals();
+			else
+				c->invalidateVisualsRecursive();
 		}
+	}
+
+	bool Container::handleEvent(const Event& event)
+	{
+		bool r = Component::handleEvent(event);
+		for (Iterator it = firstElement(); !it.end(); it.loadNext())
+			handleEventForComponent(event, it.current());
+		return r;
 	}
 
 	Event Container::adjustEventForComponent(const Event& event, Component& component)
@@ -591,17 +745,14 @@ namespace Guider
 		Rect bounds = getBounds();
 		elements.emplace_back(child);
 		child->setParent(*this);
-		child->poke();
-		std::pair<Component::DimensionDesc, Component::DimensionDesc> measurements = child->measure(
-			Component::DimensionDesc(bounds.width, Component::DimensionDesc::Mode::Max),
-			Component::DimensionDesc(bounds.height, Component::DimensionDesc::Mode::Max)
-		);
+		child->handleEvent(Event::createInvalidatedEvent());
 		bounds.left = 0;
 		bounds.top = 0;
-		bounds.width = measurements.first.value;
-		bounds.height = measurements.second.value;
+		bounds.width = 0;
+		bounds.height = 0;
 		setBounds(*child, bounds);
 		toRedraw.insert(child.get());
+		invalidate();
 	}
 	void Engine::removeChild(const Component::Type& child)
 	{
@@ -631,23 +782,7 @@ namespace Guider
 		backend.setSize(size);
 		Rect bounds(0, 0, size.x, size.y);
 		setBounds(*this, bounds);
-		for (auto element : elements)
-		{
-			Rect oldRect = element->getBounds();
-			element->poke();
-			std::pair<DimensionDesc, DimensionDesc> measurements = element->measure(
-				DimensionDesc(bounds.width, DimensionDesc::Max),
-				DimensionDesc(bounds.height, DimensionDesc::Max));
-
-			measurements.first.value = std::min(measurements.first.value, bounds.width);
-			measurements.second.value = std::min(measurements.second.value, bounds.height);
-
-			if (measurements.first.value != oldRect.width || measurements.second.value != oldRect.height)
-			{
-				setBounds(*element, Rect(0, 0, measurements.first.value, measurements.second.value));
-			}
-
-		}
+		handleEvent(Event::createInvalidatedEvent());
 	}
 	void Engine::update()
 	{
@@ -657,18 +792,20 @@ namespace Guider
 			if (!element->isClean())
 			{
 				Rect oldRect = element->getBounds();
-				element->poke();
 				std::pair<DimensionDesc, DimensionDesc> measurements = element->measure(
 					DimensionDesc(bounds.width, DimensionDesc::Max),
 					DimensionDesc(bounds.height, DimensionDesc::Max));
 
 				measurements.first.value = std::min(measurements.first.value, bounds.width);
 				measurements.second.value = std::min(measurements.second.value, bounds.height);
+				
+				Rect newRect(0, 0, measurements.first.value, measurements.second.value);
 
-				if (measurements.first.value != oldRect.width || measurements.second.value != oldRect.height)
+				if (oldRect != newRect)
 				{
-					setBounds(*element, Rect(0, 0, measurements.first.value, measurements.second.value));
+					setBounds(*element, newRect);
 				}
+				element->poke();
 			}
 		}
 	}

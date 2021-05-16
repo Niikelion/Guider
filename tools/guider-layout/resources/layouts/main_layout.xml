@@ -89,6 +89,26 @@
 			attachTopTo="parent top"
 			attachBottomTo="parent bottom"
 		>
+			<common.Text
+				id="time"
+				width="60"
+				height="wrap_content"
+				text="0"
+				textSize="15"
+				font=""
+				color="#000000"
+				
+				horizontalConstraint="regular"
+				horizontalSizing="const_size"
+				
+				attachLeftTo="parent right"
+				
+				verticalConstraint="regular"
+				verticalSizing="const_size"
+				
+				attachTopTo="toolbar bottom"
+				attachBottomTo="parent bottom"
+			/>
 			<common.Button
 				theme="toolbar.Button"
 				

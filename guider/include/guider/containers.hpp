@@ -63,7 +63,7 @@ namespace Guider
 		};
 		std::vector<Element> children;
 
-		mutable std::unordered_set<Component*> toUpdate;
+		std::unordered_set<Component*> toUpdate;
 	};
 
 	//TODO: rewrite
@@ -173,16 +173,6 @@ namespace Guider
 		};
 		class Constraint
 		{
-		private:
-			static constexpr uint8_t OrientationMask = 1 << 1;
-			static constexpr uint8_t TypeMask = 1 << 2 | 1 << 3;
-			static constexpr uint8_t TypeOffset = 2;
-			static constexpr uint8_t EdgeFirstMask = 1 << 4;
-			static constexpr uint8_t EdgeSecondMask = 1 << 5;
-			static constexpr uint8_t ConstOffsetMask = 1 << 6;
-
-			uint8_t flags;
-
 		public:
 			enum class Edge
 			{
@@ -211,69 +201,26 @@ namespace Guider
 				Chain = 2
 			};
 
-
 			union
 			{
 				RegularConstraintData regular;
 				ChainConstraintData chain;
 			};
+
 			bool constOffset;
 
-		private:
-			inline void setOrientation(Orientation o)
-			{
-				flags = flags & (~OrientationMask) | (o == Orientation::Vertical ? OrientationMask : 0);
-			}
-			inline void setType(Type type)
-			{
-				flags = flags & (~TypeMask) | ((type == Type::Chain ? 2 : 1) << TypeOffset);
-			}
-		public:
+			Orientation getOrientation() const noexcept;
+			Type getType() const noexcept;
 
-			inline Orientation getOrientation() const noexcept
-			{
-				return (flags & OrientationMask) ? Orientation::Vertical : Orientation::Horizontal;
-			}
-			inline Type getType() const noexcept
-			{
-				uint8_t v = (flags & TypeMask) >> TypeOffset;
-				switch (v)
-				{
-				case 1:
-					return Type::Regular;
-				case 2:
-					return Type::Chain;
-				default:
-					return Type::None;
-				}
-			}
+			bool isOffsetContant() const noexcept;
 
-			inline bool isOffsetContant() const noexcept
-			{
-				return (flags & ConstOffsetMask) > 0;
-			}
+			Edge getFirstEdge() const noexcept;
 
-			inline Edge getFirstEdge() const noexcept
-			{
-				bool e = flags & EdgeFirstMask;
-				return getOrientation() == Orientation::Horizontal ? (e ? Edge::Right : Edge::Left) : (e ? Edge::Bottom : Edge::Top);
-			}
+			Edge getSecondEdge() const noexcept;
 
-			inline Edge getSecondEdge() const noexcept
-			{
-				bool e = flags & EdgeSecondMask;
-				return getOrientation() == Orientation::Horizontal ? (e ? Edge::Right : Edge::Left) : (e ? Edge::Bottom : Edge::Top);
-			}
+			void setFirstEdge(bool start);
 
-			inline void setFirstEdge(bool start)
-			{
-				flags = (flags & ~EdgeFirstMask) | (start ? 0 : EdgeFirstMask);
-			}
-
-			inline void setSecondEdge(bool start)
-			{
-				flags = (flags & ~EdgeSecondMask) | (start ? 0 : EdgeSecondMask);
-			}
+			void setSecondEdge(bool start);
 
 			std::vector<Component*> getDeps() const;
 			bool isFor(const Component& c) const;
@@ -282,6 +229,24 @@ namespace Guider
 
 			Constraint(Constraint&&) noexcept;
 			~Constraint();
+		private:
+			static constexpr uint8_t OrientationMask = 1 << 1;
+			static constexpr uint8_t TypeMask = 1 << 2 | 1 << 3;
+			static constexpr uint8_t TypeOffset = 2;
+			static constexpr uint8_t EdgeFirstMask = 1 << 4;
+			static constexpr uint8_t EdgeSecondMask = 1 << 5;
+			static constexpr uint8_t ConstOffsetMask = 1 << 6;
+
+			uint8_t flags;
+
+			inline void setOrientation(Orientation o)
+			{
+				flags = flags & (~OrientationMask) | (o == Orientation::Vertical ? OrientationMask : 0);
+			}
+			inline void setType(Type type)
+			{
+				flags = flags & (~TypeMask) | ((type == Type::Chain ? 2 : 1) << TypeOffset);
+			}
 		};
 
 		class Cluster
@@ -313,28 +278,12 @@ namespace Guider
 			void setSize(float size);
 			void setFlow(float flow);
 			void attachStartTo(const Component::Type& target, bool toStart, float offset);
-			inline void attachLeftTo(const Component::Type& target, bool toLeft, float offset)
-			{
-				attachStartTo(target, toLeft, offset);
-			}
-			inline void attachTopTo(const Component::Type& target, bool toTop, float offset)
-			{
-				attachStartTo(target, toTop, offset);
-			}
 			void attachEndTo(const Component::Type& target, bool toStart, float offset);
-			inline void attachRightTo(const Component::Type& target, bool toLeft, float offset)
-			{
-				attachEndTo(target, toLeft, offset);
-			}
-			inline void attachBottomTo(const Component::Type& target, bool toTop, float offset)
-			{
-				attachEndTo(target, toTop, offset);
-			}
-			inline void attachBetween(const Component::Type& start, bool startToStart, float startOffset, const Component::Type& end, bool endToStart, float endOffset)
-			{
-				attachStartTo(start, startToStart, startOffset);
-				attachEndTo(end, endToStart, endOffset);
-			}
+			void attachLeftTo(const Component::Type& target, bool toLeft, float offset);
+			void attachRightTo(const Component::Type& target, bool toLeft, float offset);
+			void attachTopTo(const Component::Type& target, bool toTop, float offset);
+			void attachBottomTo(const Component::Type& target, bool toTop, float offset);
+			void attachBetween(const Component::Type& start, bool startToStart, float startOffset, const Component::Type& end, bool endToStart, float endOffset);
 			inline void attachBetween(const Component::Type& start, bool startToStart, const Component::Type& end, bool endToStart, float offset)
 			{
 				attachBetween(start, startToStart, offset, end, endToStart, offset);
@@ -402,13 +351,13 @@ namespace Guider
 		virtual void onChildStain(Component& c) override;
 		virtual void onChildNeedsRedraw(Component& c) override;
 
-		virtual void handleEvent(const Event& event) override;
+		virtual bool handleEvent(const Event& event) override;
 
 		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
 
 		virtual void removeChild(const Component::Type& child) override;
 		virtual void clearChildren() override;
-		virtual void addChild(const Component::Type& child);
+		virtual void addChild(const Component::Type& child) override;
 
 		virtual Iterator firstElement() override;
 
@@ -433,6 +382,8 @@ namespace Guider
 
 		ConstraintsContainer();
 	private:
+		using IteratorType = CommonIteratorTemplate<std::vector < std::shared_ptr<Component> >::iterator>;
+
 		std::vector<std::shared_ptr<Component>> children;
 		std::unordered_map<Component*, Rect> boundaries;
 		std::list<Constraint> constraints;
@@ -466,7 +417,5 @@ namespace Guider
 		void solveConstraints(const DimensionDesc& w, const DimensionDesc& h);
 
 		void applyConstraints();
-
-		using IteratorType = CommonIteratorTemplate<std::vector < std::shared_ptr<Component> >::iterator>;
 	};
 }

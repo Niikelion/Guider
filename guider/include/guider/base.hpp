@@ -9,6 +9,8 @@
 #include <string>
 #include <stdexcept>
 #include <memory>
+#include <functional>
+#include <algorithm>
 
 
 namespace Guider
@@ -166,7 +168,7 @@ namespace Guider
 		void draw(Resources::Drawable& drawable, const Rect& rect);
 
 		/// @brief Cast from canvas interface to implementation.
-		/// @tparam T imlpementation type
+		/// @tparam T implementation type
 		template<typename T>T& as()
 		{
 			return static_cast<T&>(*this);
@@ -352,16 +354,8 @@ namespace Guider
 			MouseEvent mouseEvent;
 		};
 
-		static inline Event createInvalidatedEvent()
-		{
-			return Event(Type::Invalidated);
-		}
-		static inline Event createBackendConnectedEvent(Backend& backend)
-		{
-			Event e(Type::BackendConnected);
-			new(&e.backendConnected) BackendConnectedEvent(backend);
-			return e;
-		}
+		static inline Event createInvalidatedEvent();
+		static inline Event createBackendConnectedEvent(Backend& backend);
 		static Event createMouseEvent(MouseEvent::Subtype subtype, float x, float y, uint8_t button);
 
 		void dispose();
@@ -376,14 +370,6 @@ namespace Guider
 	class Component
 	{
 	public:
-		inline bool isMouseOver() const
-		{
-			return hasMouseOver;
-		}
-		inline bool hasMouseButtonFocus() const
-		{
-			return hasMouseFocus;
-		}
 		enum class SizingMode
 		{
 			OwnSize,
@@ -391,83 +377,6 @@ namespace Guider
 			MatchParent,
 			WrapContent
 		};
-
-		inline void setSizingMode(SizingMode w, SizingMode h)
-		{
-			if (sizingModeW != w)
-			{
-				sizingModeW = w;
-				invalidate();
-			}
-			if (sizingModeH != h)
-			{
-				sizingModeH = h;
-				invalidate();
-			}
-		}
-		inline SizingMode getSizingModeVertical() const noexcept
-		{
-			return sizingModeH;
-		}
-		inline SizingMode getSizingModeHorizontal() const noexcept
-		{
-			return sizingModeW;
-		}
-		inline void setParent(Component& p)
-		{
-			parent = &p;
-			if (parent->backend != nullptr)
-				handleEvent(Event::createBackendConnectedEvent(*parent->backend));
-			invalidate();
-		}
-		inline bool isClean() const noexcept
-		{
-			return clean;
-		}
-		inline bool needsRedraw() const
-		{
-			return toRedraw;
-		}
-		inline void setWidth(float w)
-		{
-			width = w;
-			invalidate();
-		}
-		inline void setHeight(float h)
-		{
-			height = h;
-			invalidate();
-		}
-		inline void setSize(float w, float h)
-		{
-			width = w;
-			height = h;
-			invalidate();
-		}
-		inline void setSize(const Vec2& size)
-		{
-			setSize(size.x, size.y);
-		}
-
-		inline float getWidth() const noexcept
-		{
-			return width;
-		}
-		inline float getHeight() const noexcept
-		{
-			return height;
-		}
-
-		inline Backend* getBackend() const noexcept
-		{
-			return backend;
-		}
-		inline void setBackend(Backend& b)
-		{
-			handleEvent(Event::createBackendConnectedEvent(b));
-		}
-
-		virtual void poke();
 
 		class DimensionDesc
 		{
@@ -485,7 +394,31 @@ namespace Guider
 			DimensionDesc(const DimensionDesc&) = default;
 		};
 
-		virtual void handleEvent(const Event& event);
+		using Type = std::shared_ptr<Component>;
+
+		bool isMouseOver() const;
+		bool hasMouseButtonFocus() const;
+
+		void setSizingMode(SizingMode w, SizingMode h);
+		SizingMode getSizingModeVertical() const noexcept;
+		SizingMode getSizingModeHorizontal() const noexcept;
+		void setParent(Component& p);
+		bool isClean() const noexcept;
+		bool needsRedraw() const;
+		void setWidth(float w);
+		void setHeight(float h);
+		void setSize(float w, float h);
+		void setSize(const Vec2& size);
+
+		float getWidth() const noexcept;
+		float getHeight() const noexcept;
+
+		Backend* getBackend() const noexcept;
+		void setBackend(Backend& b);
+
+		virtual void poke();
+
+		virtual bool handleEvent(const Event& event);
 
 		void invalidate();
 		virtual void invalidateVisuals();
@@ -497,19 +430,17 @@ namespace Guider
 		Rect getBounds() const;
 		Rect getGlobalBounds() const;
 
-		using Type = std::shared_ptr<Component>;
-
 		/// @name Callbacks
 		/// @{
 
-		/// @brief 
-		/// @param lastBounds 
+		/// @brief Callback for bounds change.
+		/// @param lastBounds bounds from before the change.
 		virtual void onResize(const Rect& lastBounds);
-		/// @brief 
-		/// @param c 
+		/// @brief Callback for childs invalidation.
+		/// @param c child
 		virtual void onChildStain(Component& c);
-		/// @brief 
-		/// @param c 
+		/// @brief Callback for childs visual invalidation.
+		/// @param c child
 		virtual void onChildNeedsRedraw(Component& c);
 		/// @brief Callback for drawing mask.
 		/// @note Should not modify any internal state(for potential redrawing in the same frame).
@@ -537,48 +468,45 @@ namespace Guider
 		void draw(Canvas& canvas);
 		void redraw(Canvas& canvas);
 
+		std::function<bool(const Event&)> setOnEventCallback(const std::function<bool(const Event&)>& callback);
+
+		template<typename T>T& as()
+		{
+			T* ret = dynamic_cast<T*>(this);
+			if (ret == nullptr)
+				throw std::runtime_error("Invalid cast");
+			return *ret;
+		}
+		template<typename T>bool is()
+		{
+			return dynamic_cast<T*>(this) != nullptr;
+		}
+
 		Component();
 
 		virtual ~Component() = default;
 
 	protected:
-		inline void setBounds(Component& c, const Rect& r) const
-		{
-			Rect lastBounds = c.bounds;
-			c.bounds = r;
-			c.onResize(lastBounds);
-		}
-		inline void setClean()
-		{
-			clean = true;
-		}
+		void setBounds(Component& c, const Rect& r) const;
+		void setClean();
 	private:
 		Backend* backend;
 		Component* parent;
 		bool clean;
-		mutable bool toRedraw;
+		bool toRedraw;
 		Rect bounds;
 		bool hasMouseOver;
 		bool hasMouseFocus;
 
-		inline void setMouseOver()
-		{
-			hasMouseOver = true;
-		}
-		inline void resetMouseOver()
-		{
-			hasMouseOver = false;
-		}
-		inline void setMouseFocus()
-		{
-			hasMouseFocus = true;
-		}
-		inline void resetMouseFocus()
-		{
-			hasMouseFocus = false;
-		}
 		SizingMode sizingModeW, sizingModeH;
 		float width, height;
+
+		std::function<bool(const Event&)> eventCallback;
+
+		void setMouseOver();
+		void resetMouseOver();
+		void setMouseFocus();
+		void resetMouseFocus();
 	};
 
 	/// @interface Container
@@ -602,7 +530,7 @@ namespace Guider
 		public:
 			virtual std::unique_ptr<IteratorBase> clone() const override
 			{
-				return std::unique_ptr<IteratorBase>(new T(*(T*)(this)));
+				return std::make_unique<T>(*static_cast<const T*>(this));
 			}
 		};
 
@@ -627,7 +555,7 @@ namespace Guider
 
 			virtual std::unique_ptr<IteratorBase> clone() const
 			{
-				return std::unique_ptr<IteratorBase>(new CommonIteratorTemplate<IteratorT>(*this));
+				return std::make_unique<CommonIteratorTemplate<IteratorT>>(*this);
 			}
 
 			CommonIteratorTemplate(const IteratorT& begin, const IteratorT& end) : currentIt(begin), endIt(end) {}
@@ -669,12 +597,13 @@ namespace Guider
 			std::unique_ptr<IteratorBase> ptr;
 		};
 
-		template<typename T, typename... Args>static Iterator createIterator(Args... args)
+		template<typename T, typename... Args>static Iterator createIterator(Args&&... args)
 		{
 			return Iterator((IteratorBase*)new T(std::forward<Args>(args)...));
 		}
 
 		virtual void invalidateVisuals() override;
+		virtual void invalidateVisualsRecursive();
 
 		virtual void addChild(const Component::Type& child) = 0;
 		virtual void removeChild(const Component::Type& child) = 0;
@@ -682,7 +611,7 @@ namespace Guider
 
 		virtual Iterator firstElement() = 0;
 
-		void handleEvent(const Event& event) override;
+		virtual bool handleEvent(const Event& event) override;
 		static Event adjustEventForComponent(const Event& event, Component& component);
 		void handleEventForComponent(const Event& event, Component& component);
 	};
@@ -714,7 +643,7 @@ namespace Guider
 	private:
 		using IteratorType = CommonIteratorTemplate<std::vector<Component::Type>::iterator>;
 		Backend& backend;
-		mutable std::unordered_set<Component*> toRedraw;
+		std::unordered_set<Component*> toRedraw;
 		std::shared_ptr<Canvas> canvas;
 		std::vector<Component::Type> elements;
 	};

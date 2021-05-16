@@ -1,8 +1,9 @@
 #include <guider/containers.hpp>
-#include <queue>
+#include <guider/shortcuts.hpp>
 #include <cstdlib>
-#include <limits>
 #include <cassert>
+#include <limits>
+#include <queue>
 #include <map>
 
 namespace Guider
@@ -19,9 +20,9 @@ namespace Guider
 		child->setParent(*this);
 		child->poke();
 		toUpdate.insert(child.get());
-		std::pair<Component::DimensionDesc, Component::DimensionDesc> measurements = child->measure(
-			Component::DimensionDesc(bounds.width, Component::DimensionDesc::Mode::Max),
-			Component::DimensionDesc(bounds.height, Component::DimensionDesc::Mode::Max)
+		std::pair<DimensionDesc, DimensionDesc> measurements = child->measure(
+			DimensionDesc(bounds.width, DimensionMode::Max),
+			DimensionDesc(bounds.height, DimensionMode::Max)
 		);
 		bounds.left = x;
 		bounds.top = y;
@@ -57,8 +58,8 @@ namespace Guider
 			//TODO: move to another method
 			i.component->poke();
 			Rect bounds = getBounds();
-			std::pair<DimensionDesc, DimensionDesc> measurements = i.component->measure(DimensionDesc(bounds.width, DimensionDesc::Max),
-				DimensionDesc(bounds.height, DimensionDesc::Max)
+			std::pair<DimensionDesc, DimensionDesc> measurements = i.component->measure(DimensionDesc(bounds.width, DimensionMode::Max),
+				DimensionDesc(bounds.height, DimensionMode::Max)
 			);
 
 			bounds.left = i.x;
@@ -92,8 +93,8 @@ namespace Guider
 			if (i.component.get() == &c)
 			{
 				Rect bounds = getBounds();
-				std::pair<DimensionDesc, DimensionDesc> measurements = c.measure(DimensionDesc(bounds.width, DimensionDesc::Max),
-					DimensionDesc(bounds.height, DimensionDesc::Max)
+				std::pair<DimensionDesc, DimensionDesc> measurements = c.measure(DimensionDesc(bounds.width, DimensionMode::Max),
+					DimensionDesc(bounds.height, DimensionMode::Max)
 				);
 
 				bounds.left = i.x;
@@ -238,18 +239,18 @@ namespace Guider
 		float off;
 		Rect bounds = getBounds();
 
-		DimensionDesc w(bounds.width, DimensionDesc::Max);
-		DimensionDesc h(bounds.height, DimensionDesc::Max);
+		DimensionDesc w(bounds.width, DimensionMode::Max);
+		DimensionDesc h(bounds.height, DimensionMode::Max);
 
 		if (horizontal)
 		{
 			w.value = 0;
-			w.mode = DimensionDesc::Min;
+			w.mode = DimensionMode::Min;
 		}
 		else
 		{
 			h.value = 0;
-			h.mode = DimensionDesc::Min;
+			h.mode = DimensionMode::Min;
 		}
 
 		std::pair<DimensionDesc, DimensionDesc> measurements = child->measure(w, h);
@@ -387,18 +388,18 @@ namespace Guider
 		bool offsetting = false;
 
 		Rect bounds = getBounds();
-		DimensionDesc w(bounds.width, DimensionDesc::Max);
-		DimensionDesc h(bounds.height, DimensionDesc::Max);
+		DimensionDesc w(bounds.width, DimensionMode::Max);
+		DimensionDesc h(bounds.height, DimensionMode::Max);
 
 		if (horizontal)
 		{
 			w.value = 0;
-			w.mode = DimensionDesc::Min;
+			w.mode = DimensionMode::Min;
 		}
 		else
 		{
 			h.value = 0;
-			h.mode = DimensionDesc::Min;
+			h.mode = DimensionMode::Min;
 		}
 
 		for (auto& i : children)
@@ -430,18 +431,18 @@ namespace Guider
 		{//TODO: remeasure only if logical width changes
 			float off = 0;
 
-			DimensionDesc w(bounds.width, DimensionDesc::Max);
-			DimensionDesc h(bounds.height, DimensionDesc::Max);
+			DimensionDesc w(bounds.width, DimensionMode::Max);
+			DimensionDesc h(bounds.height, DimensionMode::Max);
 
 			if (horizontal)
 			{
 				w.value = 0;
-				w.mode = DimensionDesc::Min;
+				w.mode = DimensionMode::Min;
 			}
 			else
 			{
 				h.value = 0;
-				h.mode = DimensionDesc::Min;
+				h.mode = DimensionMode::Min;
 			}
 			for (auto& i : children)
 			{
@@ -474,25 +475,25 @@ namespace Guider
 		return createIterator<IteratorType>(children.begin(), children.end());
 	}
 
-	std::pair<Component::DimensionDesc, Component::DimensionDesc> ListContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
+	std::pair<DimensionDesc, DimensionDesc> ListContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
 	{
 		//TODO: move to function i guess
 		float off = 0;
 		bool offsetting = false;
 
 		Rect bounds = getBounds();
-		DimensionDesc ww(bounds.width, DimensionDesc::Max);
-		DimensionDesc hh(bounds.height, DimensionDesc::Max);
+		DimensionDesc ww(bounds.width, DimensionMode::Max);
+		DimensionDesc hh(bounds.height, DimensionMode::Max);
 
 		if (horizontal)
 		{
 			ww.value = 0;
-			ww.mode = DimensionDesc::Min;
+			ww.mode = DimensionMode::Min;
 		}
 		else
 		{
 			hh.value = 0;
-			hh.mode = DimensionDesc::Min;
+			hh.mode = DimensionMode::Min;
 		}
 
 		for (auto& i : children)
@@ -517,11 +518,11 @@ namespace Guider
 		std::pair<DimensionDesc, DimensionDesc> measurements = Component::measure(w, h);
 		if (getSizingModeHorizontal() == SizingMode::WrapContent && horizontal)
 		{
-			measurements.first = DimensionDesc(size, DimensionDesc::Exact);
+			measurements.first = DimensionDesc(size, DimensionMode::Exact);
 		}
 		else if (getSizingModeVertical() == SizingMode::WrapContent && !horizontal)
 		{
-			measurements.second = DimensionDesc(size, DimensionDesc::Exact);
+			measurements.second = DimensionDesc(size, DimensionMode::Exact);
 		}
 		return measurements;
 	}
@@ -553,6 +554,52 @@ namespace Guider
 				addChild(t);
 			}
 		}
+	}
+
+	ConstraintsContainer::Constraint::Orientation ConstraintsContainer::Constraint::getOrientation() const noexcept
+	{
+		return (flags & OrientationMask) ? Orientation::Vertical : Orientation::Horizontal;
+	}
+
+	ConstraintsContainer::Constraint::Type ConstraintsContainer::Constraint::getType() const noexcept
+	{
+		uint8_t v = (flags & TypeMask) >> TypeOffset;
+		switch (v)
+		{
+		case 1:
+			return Type::Regular;
+		case 2:
+			return Type::Chain;
+		default:
+			return Type::None;
+		}
+	}
+
+	bool ConstraintsContainer::Constraint::isOffsetContant() const noexcept
+	{
+		return (flags & ConstOffsetMask) > 0;
+	}
+
+	ConstraintsContainer::Constraint::Edge ConstraintsContainer::Constraint::getFirstEdge() const noexcept
+	{
+		bool e = flags & EdgeFirstMask;
+		return getOrientation() == Orientation::Horizontal ? (e ? Edge::Right : Edge::Left) : (e ? Edge::Bottom : Edge::Top);
+	}
+
+	ConstraintsContainer::Constraint::Edge ConstraintsContainer::Constraint::getSecondEdge() const noexcept
+	{
+		bool e = flags & EdgeSecondMask;
+		return getOrientation() == Orientation::Horizontal ? (e ? Edge::Right : Edge::Left) : (e ? Edge::Bottom : Edge::Top);
+	}
+
+	void ConstraintsContainer::Constraint::setFirstEdge(bool start)
+	{
+		flags = (flags & ~EdgeFirstMask) | (start ? 0 : EdgeFirstMask);
+	}
+
+	void ConstraintsContainer::Constraint::setSecondEdge(bool start)
+	{
+		flags = (flags & ~EdgeSecondMask) | (start ? 0 : EdgeSecondMask);
 	}
 
 	std::vector<Component*> ConstraintsContainer::Constraint::getDeps() const
@@ -619,7 +666,6 @@ namespace Guider
 		}
 		}
 	}
-
 	ConstraintsContainer::Constraint::Constraint(Constraint&& t) noexcept
 	{
 		switch (getType())
@@ -675,12 +721,10 @@ namespace Guider
 	{
 		constraint.regular.size = size;
 	}
-
 	void ConstraintsContainer::RegularConstraintBuilder::setFlow(float flow)
 	{
 		constraint.regular.flow = flow;
 	}
-
 	void ConstraintsContainer::RegularConstraintBuilder::attachStartTo(const Component::Type& target, bool toStart, float offset)
 	{
 		constraint.regular.leftOffset = offset;
@@ -698,7 +742,6 @@ namespace Guider
 				cluster->dependencies.erase(prevLeft);
 		}
 	}
-
 	void ConstraintsContainer::RegularConstraintBuilder::attachEndTo(const Component::Type& target, bool toStart, float offset)
 	{
 		constraint.regular.rightOffset = offset;
@@ -715,6 +758,27 @@ namespace Guider
 			if (cluster->dependencies.at(prevRight) == 0)
 				cluster->dependencies.erase(prevRight);
 		}
+	}
+	void ConstraintsContainer::RegularConstraintBuilder::attachLeftTo(const Component::Type& target, bool toLeft, float offset)
+	{
+		attachStartTo(target, toLeft, offset);
+	}
+	void ConstraintsContainer::RegularConstraintBuilder::attachRightTo(const Component::Type& target, bool toLeft, float offset)
+	{
+		attachEndTo(target, toLeft, offset);
+	}
+	void ConstraintsContainer::RegularConstraintBuilder::attachTopTo(const Component::Type& target, bool toTop, float offset)
+	{
+		attachStartTo(target, toTop, offset);
+	}
+	void ConstraintsContainer::RegularConstraintBuilder::attachBottomTo(const Component::Type& target, bool toTop, float offset)
+	{
+		attachEndTo(target, toTop, offset);
+	}
+	void ConstraintsContainer::RegularConstraintBuilder::attachBetween(const Component::Type& start, bool startToStart, float startOffset, const Component::Type& end, bool endToStart, float endOffset)
+	{
+		attachStartTo(start, startToStart, startOffset);
+		attachEndTo(end, endToStart, endOffset);
 	}
 
 	void ConstraintsContainer::ChainConstraintBuilder::attachStartTo(const Component::Type& target, bool toStart, float offset)
@@ -787,9 +851,10 @@ namespace Guider
 	{
 		updated.clear();
 		size_t n = clusters.size();
-		//number of references pointing to me
+		//number of references i have
 		std::unordered_map<std::list<Cluster>::iterator, unsigned, ClusterHash> ndeps;
 
+		//list of elements dependent on me
 		std::unordered_map<std::list<Cluster>::iterator, std::unordered_set<std::list<Cluster>::iterator, ClusterHash>, ClusterHash> clusterDependencies;
 
 		for (auto it = clusters.begin(); it != clusters.end(); ++it)
@@ -805,8 +870,8 @@ namespace Guider
 
 				if (mapping != clusterMapping.end())
 				{
-					ndeps[mapping->second]++;
-					clusterDependencies[cluster].insert(mapping->second);
+					ndeps[cluster]++;
+					clusterDependencies[mapping->second].insert(cluster);
 				}
 				else if (dep.first != this)
 					throw std::runtime_error("Internal error");
@@ -1102,9 +1167,9 @@ namespace Guider
 			if (i != this)
 			{
 				Rect& bounds = boundaries[i];
-				std::pair<Component::DimensionDesc, Component::DimensionDesc> measures = i->measure(
-					Component::DimensionDesc(bounds.width, Component::DimensionDesc::Mode::Max),
-					Component::DimensionDesc(bounds.height, Component::DimensionDesc::Mode::Max)
+				std::pair<DimensionDesc, DimensionDesc> measures = i->measure(
+					DimensionDesc(bounds.width, DimensionMode::Max),
+					DimensionDesc(bounds.height, DimensionMode::Max)
 				);
 				if (measures.first.value < bounds.width)
 					bounds.width = measures.first.value;
@@ -1120,7 +1185,7 @@ namespace Guider
 	void ConstraintsContainer::solveConstraints()
 	{
 		Rect bounds = getBounds();
-		solveConstraints(DimensionDesc(bounds.width, DimensionDesc::Exact), DimensionDesc(bounds.height, DimensionDesc::Exact));
+		solveConstraints(DimensionDesc(bounds.width, DimensionMode::Exact), DimensionDesc(bounds.height, DimensionMode::Exact));
 	}
 	void ConstraintsContainer::solveConstraints(const DimensionDesc& w, const DimensionDesc& h)
 	{
@@ -1176,21 +1241,21 @@ namespace Guider
 
 		switch (w.mode)
 		{
-		case DimensionDesc::Mode::Exact:
+		case DimensionMode::Exact:
 			bounds.width = w.value; break;
-		case DimensionDesc::Mode::Max:
+		case DimensionMode::Max:
 			bounds.width = bounds.width <= w.value ? bounds.width : w.value; break;
-		case DimensionDesc::Mode::Min:
+		case DimensionMode::Min:
 			bounds.width = bounds.width >= w.value ? bounds.width : w.value; break;
 		}
 
 		switch (h.mode)
 		{
-		case DimensionDesc::Mode::Exact:
+		case DimensionMode::Exact:
 			bounds.height = h.value; break;
-		case DimensionDesc::Mode::Max:
+		case DimensionMode::Max:
 			bounds.height = bounds.height <= h.value ? bounds.height : h.value; break;
-		case DimensionDesc::Mode::Min:
+		case DimensionMode::Min:
 			bounds.height = bounds.height >= h.value ? bounds.height : h.value; break;
 		}
 
@@ -1247,18 +1312,17 @@ namespace Guider
 		if (getBounds() != bounds || invalidLayout)
 		{
 			firstDraw = true;
-			solveConstraints();
-			invalidLayout = false;
-			applyConstraints();
-			for (auto& i : children)
-				i->invalidateVisuals();
-			invalidateVisuals();
+			invalidLayout = true;
+			handleEvent(Event::createInvalidatedEvent());
+			//solveConstraints();
+			//applyConstraints();
 		}
 	}
 	void ConstraintsContainer::onChildStain(Component& c)
 	{
+		Rect pbounds = getBounds().at(Vec2(0.f, 0.f));
 		Rect bounds = boundaries[&c];
-		std::pair<DimensionDesc, DimensionDesc> measurements = c.measure(DimensionDesc(bounds.width, DimensionDesc::Exact), DimensionDesc(bounds.height, DimensionDesc::Exact));
+		std::pair<DimensionDesc, DimensionDesc> measurements = c.measure(DimensionDesc(pbounds.width, DimensionMode::Max), DimensionDesc(pbounds.height, DimensionMode::Max));
 		if (measurements.first.value != bounds.width || measurements.second.value != bounds.height)
 		{
 			invalidLayout = true;
@@ -1269,14 +1333,14 @@ namespace Guider
 		needsRedraw.insert(&c);
 	}
 
-	void ConstraintsContainer::handleEvent(const Event& event)
+	bool ConstraintsContainer::handleEvent(const Event& event)
 	{
 		if (event.type == Event::Type::BackendConnected)
 			invalidLayout = true;
-		Container::handleEvent(event);
+		return Container::handleEvent(event);
 	}
 
-	std::pair<Component::DimensionDesc, Component::DimensionDesc> ConstraintsContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
+	std::pair<DimensionDesc, DimensionDesc> ConstraintsContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
 	{
 		Rect bounds = boundaries[this];
 		float ws = bounds.width, hs = bounds.height;
@@ -1331,8 +1395,8 @@ namespace Guider
 			}
 		}
 		return std::make_pair<DimensionDesc, DimensionDesc>(
-			DimensionDesc(ws, DimensionDesc::Mode::Exact),
-			DimensionDesc(hs, DimensionDesc::Mode::Exact)
+			DimensionDesc(ws, DimensionMode::Exact),
+			DimensionDesc(hs, DimensionMode::Exact)
 			);
 	}
 	void ConstraintsContainer::removeChild(const Component::Type& child)
@@ -1421,7 +1485,7 @@ namespace Guider
 		boundaries.clear();
 		boundaries[this] = bounds;
 
-		//constraints&clusters
+		//constraints & clusters
 		constraints.clear();
 		constraintMapping.clear();
 		clusters.clear();
@@ -1485,7 +1549,7 @@ namespace Guider
 			cluster = std::prev(clusters.end());
 		}
 
-		if (cluster != clusters.end())//TODO: potential lack of redraw, fix needed
+		if (cluster != clusters.end())
 		{
 			if (target.get() != this)
 				needsRedraw.insert(target.get());
@@ -1497,6 +1561,7 @@ namespace Guider
 
 			invalidLayout = true;
 			messyClusters = true;
+			invalidate();
 			return std::make_unique<RegularConstraintBuilder>(constraints.back(), cluster);
 		}
 
@@ -1504,8 +1569,6 @@ namespace Guider
 	}
 	std::unique_ptr<ConstraintsContainer::ChainConstraintBuilder> ConstraintsContainer::addChainConstraint(Constraint::Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset)
 	{
-		//TODO: potentially merge some for loops?
-
 		if (targets.empty())
 			return std::unique_ptr<ChainConstraintBuilder>();
 

@@ -1,7 +1,8 @@
 #include <app.hpp>
 
-#include <filesystem>
 #include <SFML/OpenGL.hpp>
+#include <filesystem>
+#include <deque>
 
 void App::createWindow(size_t width, size_t height, const std::string& title)
 {
@@ -104,9 +105,11 @@ void App::run()
 {
 	if (window)
 	{
+		bool first = true;
 		while (window->isOpen())
 		{
 			sf::Event event;
+			std::deque<sf::Event> events;
 			while (window->pollEvent(event))
 			{
 				switch (event.type)
@@ -118,15 +121,46 @@ void App::run()
 				}
 				case sf::Event::Resized:
 				{
+					events.push_back(event);
 					sf::Vector2f size(static_cast<float>(event.size.width), static_cast<float>(event.size.height));
 
 					buffer->create(event.size.width, event.size.height, sf::ContextSettings(0, 8, 4));
 
 					sf::FloatRect visibleArea(0, 0, size.x, size.y);
 					window->setView(sf::View(visibleArea));
-					engine->resize(Gui::Vec2(size.x, size.y));
 
 					guiSprite->setTexture(buffer->getTexture(), true);
+					break;
+				}
+				case sf::Event::MouseMoved:
+				case sf::Event::MouseButtonPressed:
+				case sf::Event::MouseButtonReleased:
+				{
+					events.push_back(event);
+					break;
+				}
+				case sf::Event::KeyPressed:
+				{
+					if (event.key.code == sf::Keyboard::Escape)
+						window->close();
+					break;
+				}
+				default:
+					break;
+				}
+			}
+
+			timer.start();
+
+			for (const auto& e : events)
+			{
+				switch (e.type)
+				{
+				case sf::Event::Resized:
+				{
+					sf::Vector2f size(static_cast<float>(e.size.width), static_cast<float>(e.size.height));
+
+					engine->resize(Gui::Vec2(size.x, size.y));
 					break;
 				}
 				case sf::Event::MouseMoved:
@@ -144,18 +178,10 @@ void App::run()
 					engine->handleEvent(Guider::Event::createMouseEvent(Guider::Event::MouseEvent::Subtype::ButtonUp, static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y), event.mouseButton.button));
 					break;
 				}
-				case sf::Event::KeyPressed:
-				{
-					if (event.key.code == sf::Keyboard::Escape)
-						window->close();
-					break;
-				}
 				default:
 					break;
 				}
 			}
-
-			window->clear(sf::Color(200, 200, 200));
 
 			buffer->setActive();
 			engine->update();
@@ -163,9 +189,20 @@ void App::run()
 
 			buffer->display();
 
+			if (first)
+			{
+				first = false;
+				timer.start();
+			}
+
+			timer.sample();
+
+			window->clear(sf::Color(200, 200, 200));
 			window->setActive();
 			window->draw(*guiSprite);
 			window->display();
+			
+			getManager()->getElementById("time")->as<Guider::TextComponent>().setText(std::to_string(timer.getMax()) + " / " + std::to_string(timer.getAverage()));
 		}
 	}
 }
