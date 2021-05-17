@@ -62,6 +62,8 @@ namespace Guider
 
 		void registerStringProperty(const std::string& name);
 		void registerStringProperty(const std::string& component, const std::string& name);
+		void registerNumericProperty(const std::string& name);
+		void registerNumericProperty(const std::string& component, const std::string& name);
 		void registerDrawableProperty(const std::string& name);
 		void registerDrawableProperty(const std::string& component, const std::string& name);
 		void registerColorProperty(const std::string& name);

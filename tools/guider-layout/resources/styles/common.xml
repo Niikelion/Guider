@@ -1,5 +1,7 @@
 <Styles>
 	<common.Text>
+		<attr name="width" value="wrap_content"/>
+		<attr name="height" value="wrap_content"/>
 		<attr name="font" value="?font"/>
 		<attr name="color" value="?textColor"/>
 		<attr name="textSize" value="?textSize"/>
@@ -7,8 +9,8 @@
 	</common.Text>
 	
 	<common.Button parent="common.Text">
-		<attr name="background" value="?primaryColor"/>
-		<attr name="hoveredBackground" value="?primaryColorLight"/>
-		<attr name="selectedBackground" value="?primaryColorDark"/>
+		<attr name="background" value="?accentColor"/>
+		<attr name="hoveredBackground" value="?accentColorLight"/>
+		<attr name="selectedBackground" value="?accentColorDark"/>
 	</common.Button>
 </Styles>

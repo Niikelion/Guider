@@ -752,14 +752,11 @@ namespace Guider
 		Rect bounds = getBounds();
 		elements.emplace_back(child);
 		child->setParent(*this);
-		child->handleEvent(Event::createInvalidatedEvent());
-		bounds.left = 0;
-		bounds.top = 0;
-		bounds.width = 0;
-		bounds.height = 0;
-		setBounds(*child, bounds);
-		toRedraw.insert(child.get());
+		child->invalidateRecursive();
+		child->invalidateVisualsRecursive();
 		invalidate();
+
+		toRedraw.insert(child.get());
 	}
 	void Engine::removeChild(const Component::Type& child)
 	{
@@ -789,7 +786,8 @@ namespace Guider
 		backend.setSize(size);
 		Rect bounds(0, 0, size.x, size.y);
 		setBounds(*this, bounds);
-		handleEvent(Event::createInvalidatedEvent());
+		invalidateRecursive();
+		invalidateVisuals();
 	}
 	void Engine::update()
 	{

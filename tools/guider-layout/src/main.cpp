@@ -14,16 +14,14 @@ using SizingMode = Gui::Component::SizingMode;
 
 int main(int argc, char* argv[])
 {
-	unsigned width = 800;
-	unsigned height = 450;
+	unsigned width = 800 * 2;
+	unsigned height = 450 * 2;
 
 	App app;
 	app.createWindow(width, height, "Guider layout creator");
 	app.showWindow(false);
 
 	app.initManager();
-
-	Guider::BasicButtonComponent::registerProperties(*app.getManager(), "common.Button");
 
 	app.addDefinitions();
 	app.loadResources();
@@ -55,9 +53,8 @@ int main(int argc, char* argv[])
 
 	Guider::Component::Type root = app.getManager()->instantiate(*static_cast<Guider::XML::Tag*>(xmlRoot->children[0].get()), app.getManager()->getTheme("app.dark").theme);
 
-	std::shared_ptr<Guider::BasicButtonComponent> branchButton = static_pointer_cast<Guider::BasicButtonComponent>(app.getManager()->getElementById("branch_button"));
-	branchButton->setText("none");
-	branchButton->setOnClickCallback([&app](Guider::Component& c) {
+	auto& resetButton = app.getManager()->getElementById("reset_button")->as<Guider::BasicButtonComponent>();
+	resetButton.setOnClickCallback([&app](Guider::Component& c) {
 		app.resetTimer();
 	});
 

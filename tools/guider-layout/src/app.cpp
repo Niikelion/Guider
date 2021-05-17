@@ -91,7 +91,9 @@ void App::addDefinitions()
 		guiManager->registerType<Guider::RectangleShapeComponent>("shapes.Rectangle");
 		guiManager->registerType<Guider::EmptyComponent>("common.Guide");
 		guiManager->registerType<Guider::TextComponent>("common.Text");
+		guiManager->registerTypeProperties<Guider::TextComponent>("common.Text");
 		guiManager->registerType<Guider::BasicButtonComponent>("common.Button");
+		guiManager->registerTypeProperties<Guider::BasicButtonComponent>("common.Button");
 	}
 }
 

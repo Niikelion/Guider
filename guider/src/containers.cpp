@@ -1296,15 +1296,16 @@ namespace Guider
 	void ConstraintsContainer::poke()
 	{
 		Component::poke();
-		for (auto& i : children)
-		{
-			if (!i->isClean())
-				i->poke();
-		}
+
 		if (invalidLayout)
 		{
 			solveConstraints();
 			applyConstraints();
+		}
+		for (auto& i : children)
+		{
+			if (!i->isClean())
+				i->poke();
 		}
 	}
 	void ConstraintsContainer::onResize(const Rect& bounds)

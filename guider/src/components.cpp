@@ -116,6 +116,7 @@ namespace Guider
 		if (shape != nullptr)
 		{
 			shape->setColor(color);
+			invalidateVisuals();
 		}
 	}
 
@@ -167,6 +168,7 @@ namespace Guider
 		CommonComponent::registerProperties(m, name);
 		m.registerColorProperty(name, "color");
 		m.registerStringProperty(name, "text");
+		m.registerNumericProperty(name, "textSize");
 	}
 	void TextComponent::setTextSize(float textSize)
 	{
@@ -283,16 +285,14 @@ namespace Guider
 			if (text)
 				setText(text->as<std::string>());
 		}
-		auto tmp = config.getAttribute("textSize");
-		if (tmp.exists())
+
 		{
-			bool failed = false;
-			float v = Styles::strToFloat(tmp.val, failed);
-			if (!failed)
-				setTextSize(v);
+			auto textSize = pack.style.getAttribute("textSize");
+			if (textSize)
+				setTextSize(textSize->as<float>());
 		}
 
-		tmp = config.getAttribute("font");
+		auto tmp = config.getAttribute("font");
 		if (tmp.exists())
 		{
 			auto font = manager.getFontByName(tmp.val);
