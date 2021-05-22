@@ -351,6 +351,12 @@ namespace Guider
 		invalidate();
 	}
 
+	void Component::removeParent()
+	{
+		parent = nullptr;
+		invalidate();
+	}
+
 	bool Component::isClean() const noexcept
 	{
 		return clean;

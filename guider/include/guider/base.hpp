@@ -97,6 +97,7 @@ namespace Guider
 		};
 
 		/// @brief Returns color as number in standard format.
+		/// 
 		/// Result is in 0xrrggbbaa format for easier printing and parsing.
 		inline uint32_t hex() const noexcept
 		{
@@ -168,7 +169,7 @@ namespace Guider
 		void draw(Resources::Drawable& drawable, const Rect& rect);
 
 		/// @brief Cast from canvas interface to implementation.
-		/// @tparam T implementation type
+		/// @tparam T implementation type.
 		template<typename T>T& as()
 		{
 			return static_cast<T&>(*this);
@@ -372,14 +373,22 @@ namespace Guider
 	class Component
 	{
 	public:
+		/// @brief Mode for calculating size.
 		enum class SizingMode
 		{
+			/// @brief Maintain size set by setWidth and setHeight.
 			OwnSize,
+			/// @brief Maintain given size.
 			GivenSize,
+			/// @brief Fill parent rect.
 			MatchParent,
+			/// @brief Wrap content.
 			WrapContent
 		};
 
+		/// @brief Used as hint in calculating size.
+		/// 
+		/// Carries data for sizing used in container <-> element communication.
 		class DimensionDesc
 		{
 		public:
@@ -389,78 +398,178 @@ namespace Guider
 				Max,
 				Min
 			};
+			/// @brief Size
 			float value;
+			/// @brief Mode
 			Mode mode;
 
 			DimensionDesc(float value, Mode mode);
 			DimensionDesc(const DimensionDesc&) = default;
 		};
 
+		/// @brief Shortcut for defining type to store component.
 		using Type = std::shared_ptr<Component>;
 
+		/// @brief Checks if mouse is currently over component
+		/// @return True when mouse is inside bounding rect, false otherwise.
 		bool isMouseOver() const;
+
+		/// @brief Checks if component has mouse focus.
+		/// 
+		/// Element gains mouse focus when user starts mouse click
+		/// inside bounds of given element.
+		/// @return True when has focus, false otherwise.
 		bool hasMouseButtonFocus() const;
 
+		/// @brief Set sizing mode for components.
+		/// @param w Horizontal sizing mode.
+		/// @param h Vertical sizing mode.
 		void setSizingMode(SizingMode w, SizingMode h);
+		/// @brief Gets vertical sizing mode.
 		SizingMode getSizingModeVertical() const noexcept;
+		/// @brief Gets horizontal sizing mode. 
 		SizingMode getSizingModeHorizontal() const noexcept;
+		/// @brief Sets parent for element.
+		/// 
+		/// Invalidates element.
+		/// Additionaly, if parent has connected backed, BackendConnected event is sent to current element.
+		/// @warn Should only be used by containers for setting themselfs as parents.
+		/// @param p New parent.
 		void setParent(Component& p);
+		/// @brief Removes parent.
+		void removeParent();
+		/// @brief Checks if element needs udpate.
 		bool isClean() const noexcept;
+		/// @brief Checks if elements needs redraw. 
 		bool needsRedraw() const;
+		/// @brief Sets width.
+		/// 
+		/// Invalidates element.
+		/// @note Note, that depending on sizing mode and container, 
+		/// actuall element size might end up different than this.
+		/// @param w Width.
 		void setWidth(float w);
+		/// @brief Sets height.
+		/// 
+		/// Invalidates element.
+		/// @note Note, that depending on sizing mode and container, 
+		/// actuall element size might end up different than this.
+		/// @param h Height.
 		void setHeight(float h);
+		/// @brief Sets size.
+		/// 
+		/// Invalidates element.
+		/// @note Note, that depending on sizing mode and container, 
+		/// actuall element size might end up different than this.
+		/// @param w Width.
+		/// @param h Height.
 		void setSize(float w, float h);
+		/// @brief Sets size.
+		/// 
+		/// Invalidates element.
+		/// @note Note, that depending on sizing mode and container, 
+		/// actuall element size might end up different than this.
+		/// @param size Size.
 		void setSize(const Vec2& size);
-
+		/// @brief Gets width set by setWidth.
+		/// 
+		/// @note This is may not be the real width,
+		/// to get actuall width, use getBounds().
 		float getWidth() const noexcept;
+		/// @brief Gets height set by setHeight.
+		/// 
+		/// @note This is may not be the real height,
+		/// to get actuall height, use @ref getBounds().
 		float getHeight() const noexcept;
 
+		/// @brief Returns pointer to connected backend.
+		/// @return Pointer to backend if connected, nullptr otherwise.
 		Backend* getBackend() const noexcept;
+		/// @brief Sets 
+		/// @param b 
 		void setBackend(Backend& b);
 
+		/// @brief Updates element.
+		/// 
+		/// @note When overriding, base @ref poke should be called.
 		virtual void poke();
 
+		/// @brief Processes event.
+		/// 
+		/// @note When overriding, base @ref handleEvent should be called.
+		/// @param event 
+		/// @return True when event should not be futher processed.
 		virtual bool handleEvent(const Event& event);
 
+		/// @brief Marks component as dirty.
+		/// 
+		/// Tels container that this component needs update.
 		void invalidate();
+		/// @brief Invalidates visuals.
+		/// 
+		/// Tells container that this component need redraw.
 		virtual void invalidateVisuals();
 
+		/// @brief Recursively invalidates components.
 		void invalidateRecursive();
+		/// @brief Recursively invalidates visuals.
 		void invalidateVisualsRecursive();
 
+		/// @brief Measures components desired size.
+		/// @param width Width sugesstion.
+		/// @param height Height suggestion.
+		/// @return Measurements desired by component.
 		virtual std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& width, const DimensionDesc& height);
 
+		/// @brief Returns current parent.
 		Component* getParent();
+		/// @brief Returns current parent.
 		const Component* getParent() const;
 
+		/// @brief Returns local bounding box.
+		/// 
+		/// Local position is measured relative to parents left top corner.
 		Rect getBounds() const;
+		/// @brief Returns global rect.
+		/// 
+		/// @warn Potentially expensive as it needs to get positions of all parent components.
 		Rect getGlobalBounds() const;
 
 		/// @name Callbacks
 		/// @{
 
 		/// @brief Callback for bounds change.
+		/// 
+		/// @note Preferred way of handling is to mark internal structure
+		/// as invalid and recalculate it in the next poke call. 
 		/// @param lastBounds bounds from before the change.
 		virtual void onResize(const Rect& lastBounds);
 		/// @brief Callback for childs invalidation.
+		/// 
 		/// @param c child
 		virtual void onChildStain(Component& c);
 		/// @brief Callback for childs visual invalidation.
+		/// 
+		/// Called every time direct child is invalidated.
 		/// @param c child
 		virtual void onChildNeedsRedraw(Component& c);
 		/// @brief Callback for drawing mask.
+		/// 
+		/// Called every time direct child needs redraw.
 		/// @note Should not modify any internal state(for potential redrawing in the same frame).
 		/// @warning Should not be called directly.
 		/// @param canvas Target surface.
 		virtual void onMaskDraw(Canvas& canvas) const;
 		/// @brief Main callback for drawing component.
+		/// 
 		/// Enables custom drawing for components.
 		/// Called every frame that component has invalided visuals.
 		/// @note Component is allowed to not redraw itself every frame, but rather only draw updated fragments.
 		/// @warning Should not be called directly.
 		/// @param canvas Target surface.
 		virtual void onDraw(Canvas& canvas) = 0;
-		/// @brief Secondary callback for drawing
+		/// @brief Secondary callback for drawing.
+		/// 
 		/// Enables custom drawing for components.
 		/// Called every frame that component has invalidated visuals and should be entirely redrawn.
 		/// @note Unlike onDraw, component should redraw itself completely.
@@ -470,12 +579,35 @@ namespace Guider
 
 		/// @}
 
+		/// @brief Draws mask.
+		/// 
+		/// Calls @ref onMaskDraw.
+		/// @param canvas Canvas to draw on.
 		void drawMask(Canvas& canvas) const;
+		/// @brief Draws component.
+		/// 
+		/// Calls @ref onDraw.
+		/// @param canvas Canvas to draw on.
 		void draw(Canvas& canvas);
+		/// @brief Redraws component.
+		/// 
+		/// Calls @ref onRedraw.
+		/// @param canvas Canvas to draw on.
 		void redraw(Canvas& canvas);
 
+		/// @brief Sets event callback.
+		/// 
+		/// Callback is called every time component receives an event.
+		/// @note When callback returns true, it steals event(it is not passed to the rest of this subtree).
+		/// @param callback Callback to set.
+		/// @return Returns last callback.
 		std::function<bool(const Event&)> setOnEventCallback(const std::function<bool(const Event&)>& callback);
 
+		/// @brief Casts component to derived type.
+		/// 
+		/// Performs runtime type checks.
+		/// Throws exception on error.
+		/// @tparam T Derived type.
 		template<typename T>T& as()
 		{
 			T* ret = dynamic_cast<T*>(this);
@@ -483,6 +615,8 @@ namespace Guider
 				throw std::runtime_error("Invalid cast");
 			return *ret;
 		}
+		/// @brief Checks if component can be casted to given type.
+		/// @tparam T Type to check.
 		template<typename T>bool is()
 		{
 			return dynamic_cast<T*>(this) != nullptr;
