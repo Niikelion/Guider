@@ -8,9 +8,9 @@ namespace Guider
 		return paddings.calcContentArea(getBounds());
 	}
 
-	void CommonComponent::registerProperties(Manager& m, const std::string& name)
+	void CommonComponent::registerProperties(Manager& manager, const std::string& name)
 	{
-		m.registerPropertyForComponent<Padding>(name, "padding", [](const std::string& value) {
+		manager.registerPropertyForComponent<Padding>(name, "padding", [](const std::string& value) {
 			std::vector<std::string> args = Styles::splitString(value);
 			switch (args.size())
 			{
@@ -60,7 +60,7 @@ namespace Guider
 			}
 			}
 			throw std::invalid_argument("invalid padding value");
-			});
+		});
 	}
 
 	void CommonComponent::setPadding(const Padding& pad)
@@ -97,7 +97,7 @@ namespace Guider
 		return measurements;
 	}
 
-	CommonComponent::CommonComponent(Manager& m, const XML::Tag& tag, const StylingPack& pack)
+	CommonComponent::CommonComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack)
 	{
 		auto padding = pack.style.getAttribute("padding");
 		if (padding)
@@ -106,8 +106,15 @@ namespace Guider
 		}
 	}
 
-	EmptyComponent::EmptyComponent(Manager& m, const XML::Tag& config, const StylingPack& style)
+	EmptyComponent::EmptyComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack)
 	{
+	}
+
+
+	void RectangleShapeComponent::registerProperties(Manager& manager, const std::string& name)
+	{
+		CommonComponent::registerProperties(manager, name);
+		manager.registerColorProperty(name, "fillColor");
 	}
 
 	void RectangleShapeComponent::setColor(const Color& c)
@@ -152,23 +159,21 @@ namespace Guider
 		setSize(Vec2(w, h));
 		setSizingMode(SizingMode::OwnSize, SizingMode::OwnSize);
 	}
-	RectangleShapeComponent::RectangleShapeComponent(Manager& m, const XML::Tag& config, const StylingPack& style) : RectangleShapeComponent()
+	RectangleShapeComponent::RectangleShapeComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack) : RectangleShapeComponent()
 	{
-		Manager::handleDefaultArguments(*this, config, style.style);
+		Manager::handleDefaultArguments(*this, tag, pack.style);
 		{
-			XML::Value fillColor = config.getAttribute("fillColor");
-			if (fillColor.exists())
-			{
-				color = Styles::strToColor(fillColor.val);
-			}
+			auto color = pack.style.getAttribute("fillColor");
+			if (color)
+				setColor(color->as<Color>());
 		}
 	}
-	void TextComponent::registerProperties(Manager& m, const std::string& name)
+	void TextComponent::registerProperties(Manager& manager, const std::string& name)
 	{
-		CommonComponent::registerProperties(m, name);
-		m.registerColorProperty(name, "color");
-		m.registerStringProperty(name, "text");
-		m.registerNumericProperty(name, "textSize");
+		CommonComponent::registerProperties(manager, name);
+		manager.registerColorProperty(name, "color");
+		manager.registerStringProperty(name, "text");
+		manager.registerNumericProperty(name, "textSize");
 	}
 	void TextComponent::setTextSize(float textSize)
 	{
@@ -269,9 +274,9 @@ namespace Guider
 	TextComponent::TextComponent() : textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
 	{
 	}
-	TextComponent::TextComponent(Manager& manager, const XML::Tag& config, const StylingPack& pack) : CommonComponent(manager, config, pack), textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
+	TextComponent::TextComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack) : CommonComponent(manager, tag, pack), textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
 	{
-		Manager::handleDefaultArguments(*this, config, pack.style);
+		Manager::handleDefaultArguments(*this, tag, pack.style);
 		setBackend(manager.getBackend());
 
 		{
@@ -292,7 +297,7 @@ namespace Guider
 				setTextSize(textSize->as<float>());
 		}
 
-		auto tmp = config.getAttribute("font");
+		auto tmp = tag.getAttribute("font");
 		if (tmp.exists())
 		{
 			auto font = manager.getFontByName(tmp.val);
@@ -303,7 +308,8 @@ namespace Guider
 		}
 
 		Gravity hor = Gravity::Center, ver = Gravity::Center;
-		tmp = config.getAttribute("textAlignmentHorizontal");
+		//TODO: move to style approach
+		tmp = tag.getAttribute("textAlignmentHorizontal");
 		if (tmp.exists())
 		{
 			if (tmp.val == "left" || tmp.val == "start")
@@ -313,7 +319,8 @@ namespace Guider
 			else if (tmp.val == "right" || tmp.val == "end")
 				hor = Gravity::Right;
 		}
-		tmp = config.getAttribute("textAlignmentVertical");
+		//TODO: move to style approach
+		tmp = tag.getAttribute("textAlignmentVertical");
 		if (tmp.exists())
 		{
 			if (tmp.val == "top" || tmp.val == "start")
@@ -388,15 +395,15 @@ namespace Guider
 	ButtonBase::ButtonBase() : buttonState(ButtonState::Default)
 	{
 	}
-	BasicButtonComponent::BasicButtonComponent(Manager& manager, const XML::Tag& config, const StylingPack& style) : TextComponent(manager, config, style)
+	BasicButtonComponent::BasicButtonComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack) : TextComponent(manager, tag, pack)
 	{
-		auto backgroundP = style.style.getAttribute("background");
+		auto backgroundP = pack.style.getAttribute("background");
 		if (backgroundP)
 			backgroundDefault = backgroundP->as<std::shared_ptr<Resources::Drawable>>();
-		auto selectedBackgroundP = style.style.getAttribute("selectedBackground");
+		auto selectedBackgroundP = pack.style.getAttribute("selectedBackground");
 		if (selectedBackgroundP)
 			backgroundClicked = selectedBackgroundP->as<std::shared_ptr<Resources::Drawable>>();
-		auto hoveredBackgroundP = style.style.getAttribute("hoveredBackground");
+		auto hoveredBackgroundP = pack.style.getAttribute("hoveredBackground");
 		if (hoveredBackgroundP)
 			backgroundSelected = hoveredBackgroundP->as<std::shared_ptr<Resources::Drawable>>();
 	}
@@ -404,11 +411,11 @@ namespace Guider
 	{
 		return *this;
 	}
-	void BasicButtonComponent::registerProperties(Manager& m, const std::string& name)
+	void BasicButtonComponent::registerProperties(Manager& manager, const std::string& name)
 	{
-		TextComponent::registerProperties(m, name);
-		m.registerDrawableProperty(name, "selectedBackground");
-		m.registerDrawableProperty(name, "hoveredBackground");
+		TextComponent::registerProperties(manager, name);
+		manager.registerDrawableProperty(name, "selectedBackground");
+		manager.registerDrawableProperty(name, "hoveredBackground");
 	}
 	std::shared_ptr<Resources::Drawable> BasicButtonComponent::getBackgroundDrawable(ButtonState state) const
 	{

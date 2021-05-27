@@ -5,6 +5,44 @@ namespace Guider
 {
 	constexpr float feps = std::numeric_limits<float>::epsilon();
 
+
+	Vec2& Vec2::operator+=(const Vec2& t) noexcept
+	{
+		x += t.x;
+		y += t.y;
+		return *this;
+	}
+	
+	Vec2 Vec2::operator+(const Vec2& t) const noexcept
+	{
+		return Vec2(*this) += t;
+	}
+	
+	Vec2& Vec2::operator-=(const Vec2& t) noexcept
+	{
+		x -= t.x;
+		y -= t.y;
+		return *this;
+	}
+	
+	Vec2 Vec2::operator-(const Vec2& t) const noexcept
+	{
+		return Vec2(*this) -= t;
+	}
+	
+	Vec2::Vec2()
+	{
+		x = 0;
+		y = 0;
+	}
+	
+	Vec2::Vec2(float w, float h)
+	{
+		x = w;
+		y = h;
+	}
+
+	
 	bool Rect::operator==(const Rect& t) const noexcept
 	{
 		return
@@ -13,6 +51,7 @@ namespace Guider
 			feps >= std::abs(top - t.top) &&
 			feps >= std::abs(height - t.height);
 	}
+	
 	bool Rect::operator!=(const Rect& t) const noexcept
 	{
 		return
@@ -21,39 +60,59 @@ namespace Guider
 			feps < std::abs(top - t.top) ||
 			feps < std::abs(height - t.height);
 	}
+	
 	Rect& Rect::operator+=(const Vec2& offset)noexcept
 	{
 		left += offset.x;
 		top += offset.y;
 		return *this;
 	}
+	
 	Rect& Rect::operator-=(const Vec2& offset) noexcept
 	{
 		left -= offset.x;
 		top -= offset.y;
 		return *this;
 	}
+	
 	Rect Rect::operator+(const Vec2& offset) const noexcept
 	{
 		Rect tmp = *this;
 		tmp += offset;
 		return tmp;
 	}
+	
 	Rect Rect::operator-(const Vec2& offset) const noexcept
 	{
 		Rect tmp = *this;
 		tmp -= offset;
 		return tmp;
 	}
+	
 	bool Rect::intersects(const Rect& rect) const noexcept
 	{
 		return	(rect.left <= left + width && rect.left + rect.width >= left) &&
 			(rect.top <= top + height && rect.top + rect.height >= top);
 	}
-
+	
 	bool Rect::contains(const Vec2& pos) const noexcept
 	{
 		return left <= pos.x && top <= pos.y && left + width >= pos.x && top + height >= pos.y;
+	}
+	
+	Rect Rect::at(const Vec2& pos) const noexcept
+	{
+		return Rect(pos.x, pos.y, width, height);
+	}
+	
+	Vec2 Rect::position() const noexcept
+	{
+		return Vec2(left, top);
+	}
+	
+	Vec2 Rect::size() const noexcept
+	{
+		return Vec2(width, height);
 	}
 
 	Rect::Rect()
@@ -63,43 +122,42 @@ namespace Guider
 		width = 0;
 		height = 0;
 	}
+	
 	Rect::Rect(float l, float t, float w, float h) : left(l), top(t), width(w), height(h)
 	{
 	}
 
-	Vec2& Vec2::operator+=(const Vec2& t) noexcept
-	{
-		x += t.x;
-		y += t.y;
-		return *this;
-	}
 
-	Vec2 Vec2::operator+(const Vec2& t) const noexcept
+	uint32_t Color::hex() const noexcept
 	{
-		return Vec2(*this) += t;
+		return r << 24 | g << 16 | b << 8 | a;
 	}
-
-	Vec2& Vec2::operator-=(const Vec2& t) noexcept
+	
+	Color::Color() : r(0), g(0), b(0), a(255)
 	{
-		x -= t.x;
-		y -= t.y;
-		return *this;
 	}
-
-	Vec2 Vec2::operator-(const Vec2& t) const noexcept
+	
+	Color::Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
 	{
-		return Vec2(*this) -= t;
+		this->r = r;
+		this->g = g;
+		this->b = b;
+		this->a = a;
 	}
-
-	Vec2::Vec2()
+	
+	Color::Color(uint32_t v)
 	{
-		x = 0;
-		y = 0;
+		a = v & 0xFF;
+		v >>= 8;
+		b = v & 0xFF;
+		v >>= 8;
+		g = v & 0xFF;
+		v >>= 8;
+		r = v & 0xFF;
 	}
-	Vec2::Vec2(float w, float h)
+	
+	Color::Color(const Color& t) : value(t.value)
 	{
-		x = w;
-		y = h;
 	}
 
 	Rect Padding::calcContentArea(const Rect& bounds) const
@@ -120,11 +178,21 @@ namespace Guider
 
 		return ret;
 	}
+	
+	Padding::Padding() : left(0), right(0), top(0), bottom(0)
+	{
+	}
+
+	Padding::Padding(float l, float r, float t, float b) : left(l), right(r), top(t), bottom(b)
+	{
+	}
+
 
 	void Canvas::draw(Resources::Drawable& drawable, const Rect& bounds)
 	{
 		drawable.draw(*this, bounds);
 	}
+
 
 	void Backend::pushDrawOffset(const Vec2& offset)
 	{
@@ -134,16 +202,19 @@ namespace Guider
 		offsets.emplace_back(pos);
 		setDrawOrigin(pos.x, pos.y);
 	}
+	
 	Vec2 Backend::getDrawOffset() const
 	{
 		if (!offsets.empty())
 			return offsets.back();
 		return Vec2(0.f, 0.f);
 	}
+	
 	void Backend::popDrawOffset()
 	{
 		offsets.pop_back();
 	}
+
 
 	namespace Resources
 	{
@@ -152,7 +223,7 @@ namespace Guider
 			for (auto& sub : elements)
 			{
 				Rect b = sub.padding.calcContentArea(bounds);
-				//TODO: apply gravity(currently not possible-cannot get drawable rect)
+				//TODO: apply gravity(currently not possible-cannot get rect from drawable)
 				sub.drawable->draw(canvas, b);
 			}
 		}

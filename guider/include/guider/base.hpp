@@ -15,6 +15,8 @@
 
 namespace Guider
 {
+	using String = std::string;
+
 	/// @brief Basic class representing 2d point/vector.
 	class Vec2
 	{
@@ -63,20 +65,11 @@ namespace Guider
 		bool contains(const Vec2& point) const noexcept;
 
 		/// @brief Returns copy of rect with top left corner at pos.
-		inline Rect at(const Vec2& pos) const noexcept
-		{
-			return Rect(pos.x, pos.y, width, height);
-		}
+		Rect at(const Vec2& pos) const noexcept;
 		/// @brief Returns top left corner as point. 
-		inline Vec2 position() const noexcept
-		{
-			return Vec2(left, top);
-		}
+		Vec2 position() const noexcept;
 		/// @brief Returns size of the rect as vector.
-		inline Vec2 size() const noexcept
-		{
-			return Vec2(width, height);
-		}
+		Vec2 size() const noexcept;
 
 		Rect();
 		Rect(float l, float t, float w, float h);
@@ -99,33 +92,16 @@ namespace Guider
 		/// @brief Returns color as number in standard format.
 		/// 
 		/// Result is in 0xrrggbbaa format for easier printing and parsing.
-		inline uint32_t hex() const noexcept
-		{
-			return r << 24 | g << 16 | b << 8 | a;
-		}
+		uint32_t hex() const noexcept;
 
-		Color() : r(0), g(0), b(0), a(255) {}
-		Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 0xFF)
-		{
-			this->r = r;
-			this->g = g;
-			this->b = b;
-			this->a = a;
-		}
+		/// @brief Creates solid black color.
+		Color();
+		Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 0xFF);
 		/// @brief Constructs color from hex reprezentation.
-		Color(uint32_t v)
-		{
-			a = v & 0xFF;
-			v >>= 8;
-			b = v & 0xFF;
-			v >>= 8;
-			g = v & 0xFF;
-			v >>= 8;
-			r = v & 0xFF;
-		}
-		Color(const Color& t) : value(t.value) {}
+		Color(uint32_t v);
+		Color(const Color& t);
 	};
-
+	/// @brief Padding.
 	class Padding
 	{
 	public:
@@ -134,13 +110,11 @@ namespace Guider
 		/// @brief Returns adjusted content rect inside provided rect.
 		Rect calcContentArea(const Rect& bounds) const;
 
-		Padding() : left(0), right(0), top(0), bottom(0) {}
-		Padding(float l, float r, float t, float b) : left(l), right(r), top(t), bottom(b) {}
+		Padding();
+		Padding(float l, float r, float t, float b);
 		Padding(const Padding&) = default;
 	};
-
-	using String = std::string;
-
+	/// @brief Defines float directions.
 	enum class Gravity
 	{
 		Start = 0,
@@ -165,7 +139,13 @@ namespace Guider
 	class Canvas
 	{
 	public:
+		/// @brief Draws solid color rectangle.
+		/// @param rect Rect.
+		/// @param color Color.
 		virtual void drawRectangle(const Rect& rect, const Color& color) = 0;
+		/// @brief Draws drawable within give bounds.
+		/// @param drawable Drawanble.
+		/// @param rect Bounds.
 		void draw(Resources::Drawable& drawable, const Rect& rect);
 
 		/// @brief Cast from canvas interface to implementation.
@@ -178,18 +158,27 @@ namespace Guider
 
 	namespace Resources
 	{
+		/// @interface Resource
+		/// @brief Resource base.
 		class Resource
 		{
 		public:
 			virtual ~Resource() = default;
 		};
-
+		/// @interface Drawable
+		/// @brief Drawable resource.
 		class Drawable : public Resource
 		{
 		public:
+			/// @brief Draws resource on given canvas with provided size and position.
+			/// 
+			/// Drawable may not fill entire rect but it should not draw outside it.
+			/// @param canvas Canvas.
+			/// @param bounds Drawing area for drawable.
 			virtual void draw(Canvas& canvas, const Rect& bounds) = 0;
 		};
-
+		/// @interface ImageResource
+		/// @brief Image resource.
 		class ImageResource : public Drawable
 		{
 		public:
@@ -433,7 +422,7 @@ namespace Guider
 		/// 
 		/// Invalidates element.
 		/// Additionaly, if parent has connected backed, BackendConnected event is sent to current element.
-		/// @warn Should only be used by containers for setting themselfs as parents.
+		/// @warning Should only be used by containers for setting themselfs as parents.
 		/// @param p New parent.
 		void setParent(Component& p);
 		/// @brief Removes parent.
@@ -532,7 +521,7 @@ namespace Guider
 		Rect getBounds() const;
 		/// @brief Returns global rect.
 		/// 
-		/// @warn Potentially expensive as it needs to get positions of all parent components.
+		/// @warning Potentially expensive as it needs to get positions of all parent components.
 		Rect getGlobalBounds() const;
 
 		/// @name Callbacks
@@ -654,17 +643,31 @@ namespace Guider
 	class Container : public Component
 	{
 	public:
+		/// @interface IteratorBase
+		/// @brief Base for iterator implementations.
 		class IteratorBase
 		{
 		public:
+			/// @brief Checks if reached end.
+			/// @return True if there are no more elements to load, false otherwise.
 			virtual bool end() const = 0;
+			/// @brief Loads next element.
 			virtual void loadNext() = 0;
+			/// @brief Returns currently loaded element.
+			///
+			/// Valid after creation, before reaching end.
+			/// Throws exception is no valid element is selected.
 			virtual Component& current() = 0;
+			/// @brief Clones iterator.
 			virtual std::unique_ptr<IteratorBase> clone() const = 0;
 
 			virtual ~IteratorBase() = default;
 		};
 
+		/// @brief Helper base for iterators.
+		/// @tparam T Derived type.
+		/// 
+		/// Used for easy clone implementation.
 		template<typename T> class IteratorTemplate : public IteratorBase
 		{
 		public:
@@ -674,6 +677,8 @@ namespace Guider
 			}
 		};
 
+		/// @brief Wrapper for basic iterators.
+		/// @tparam IteratorT Standard iterator.
 		template<typename IteratorT> class CommonIteratorTemplate : public IteratorBase
 		{
 		public:
@@ -704,6 +709,9 @@ namespace Guider
 			const IteratorT endIt;
 		};
 
+		/// @brief Iterator access class.
+		///
+		/// Encapsulates iterator implementations and provides decent interface.
 		class Iterator
 		{
 		public:
@@ -737,6 +745,11 @@ namespace Guider
 			std::unique_ptr<IteratorBase> ptr;
 		};
 
+		/// @brief Helper function for creating iterator instance.
+		/// @tparam T Iterator type.
+		/// @tparam ...Args Constructor argument types.
+		/// @param ...args Constructor arguments.
+		/// @return Constructed iterator wrapper.
 		template<typename T, typename... Args>static Iterator createIterator(Args&&... args)
 		{
 			return Iterator((IteratorBase*)new T(std::forward<Args>(args)...));
@@ -744,18 +757,30 @@ namespace Guider
 
 		virtual void invalidateVisuals() override;
 
+		/// @brief Adds child.
+		/// @param child 
 		virtual void addChild(const Component::Type& child) = 0;
+		/// @brief Removes child.
+		/// @param child 
 		virtual void removeChild(const Component::Type& child) = 0;
+		/// @brief Clears all children.
 		virtual void clearChildren() = 0;
 
+		/// @brief Returns iterator to first element.
 		virtual Iterator firstElement() = 0;
 
 		virtual bool handleEvent(const Event& event) override;
+		/// @brief Adjust element to be passed to child component.
+		/// @param event Original event.
+		/// @param component Component to adjust to.
 		static Event adjustEventForComponent(const Event& event, Component& component);
+		/// @brief Handles events for child component.
+		/// @param event 
+		/// @param component Child component.
 		void handleEventForComponent(const Event& event, Component& component);
 	};
 
-
+	/// @brief Gui engine.
 	class Engine : public Container
 	{
 	public:
@@ -767,12 +792,16 @@ namespace Guider
 
 		virtual void onChildNeedsRedraw(Component& c) override;
 
+		/// @brief Resizes gui.
+		/// @param size 
 		void resize(const Vec2& size);
+		/// @brief Updates gui.
 		void update();
 
 		virtual void onMaskDraw(Canvas& canvas) const override;
 		virtual void onDraw(Canvas& canvas) override;
 		virtual void onRedraw(Canvas& canvas) override;
+		/// @brief Draws gui.
 		void draw();
 
 		Engine(Backend& b);
