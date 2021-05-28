@@ -1,0 +1,3 @@
+[submodule "ParseLib"]
+	path = ParseLib
+	url = https://github.com/Niikelion/ParseLib.git

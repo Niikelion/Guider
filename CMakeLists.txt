@@ -5,6 +5,7 @@ project(Guider VERSION 0.0.1 DESCRIPTION "Gui library." LANGUAGES CXX)
 option(BUILD_EXAMPLES "Build examples" true)
 option(BUILD_TOOLS "Build tools" true)
 option(BUILD_TESTS "Build tests" false)
+option(INTERNAL_PARSELIB "Use parselib from submodule" false)
 
 add_subdirectory(guider)
 if (BUILD_EXAMPLES)

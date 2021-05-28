@@ -2,8 +2,8 @@
 Guider is modular, object oriented, cross-platform gui library. It focuses on ability to create beautiful and responsive user interface while minimizing need for writing code.
 
 - [Authors](#authors)
-
 - [Install](#install)
+  - [Requirements](#requirements)
   - [Integrate in project](#integrate-in-project)
   - [Build Guider from sources](#build-guider-from-sources)
 - [Concepts](#concepts)
@@ -14,6 +14,17 @@ Guider is modular, object oriented, cross-platform gui library. It focuses on ab
 - Michał Osiński — main developer
 
 ## Install
+
+### Requirements
+
+| Target             | Requirements                                |
+| ------------------ | ------------------------------------------- |
+| Guider             | ParseLib(included as git submodule)         |
+| SFML backend       | Guider, SFML                                |
+| Guider Layout tool | Guider, SFML backend                        |
+| Examples           | Guider, SFML, git(installed as application) |
+
+
 
 ### Integrate in project
 
@@ -36,17 +47,14 @@ cmake ../
 cmake --build .
 ```
 
-Note that Guider requires ParseLib.
-
 Additional cmake options:
 
-| Option         | Description                               | Default value |
-| -------------- | ----------------------------------------- | ------------- |
-| BUILD_TESTS    | Enables building tests. Requires Catch2.  | false         |
-| BUILD_EXAMPLES | Enables building examples. Requires SFML. | true          |
-| BUILD_TOOLS    | Enables building tools. Requires SFML.    | true          |
-
-
+| Option            | Description                               | Default value |
+| ----------------- | ----------------------------------------- | ------------- |
+| BUILD_TESTS       | Enables building tests. Requires Catch2.  | false         |
+| BUILD_EXAMPLES    | Enables building examples. Requires SFML. | true          |
+| BUILD_TOOLS       | Enables building tools. Requires SFML.    | true          |
+| INTERNAL_PARSELIB | Allows using parselib from submodule      | false         |
 
 ## Concepts
 
