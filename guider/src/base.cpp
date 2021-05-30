@@ -97,7 +97,7 @@ namespace Guider
 	
 	bool Rect::contains(const Vec2& pos) const noexcept
 	{
-		return left <= pos.x && top <= pos.y && left + width >= pos.x && top + height >= pos.y;
+		return left < pos.x && top < pos.y && left + width > pos.x && top + height > pos.y;
 	}
 	
 	Rect Rect::at(const Vec2& pos) const noexcept
@@ -213,8 +213,30 @@ namespace Guider
 	void Backend::popDrawOffset()
 	{
 		offsets.pop_back();
+		Vec2 cpos = getDrawOffset();
+		setDrawOrigin(cpos.x, cpos.y);
 	}
 
+	void Backend::pushBounds(const Rect& rect)
+	{
+		Rect l = rect;
+		bounds.push_back(l);
+		setBounds(l);
+	}
+
+	void Backend::popBounds()
+	{
+		bounds.pop_back();
+		setBounds(getBounds());
+	}
+
+	Rect Backend::getBounds() const
+	{
+		if (!bounds.empty())
+			return bounds.back();
+		auto size = getSize();
+		return Rect(0, 0, size.x, size.y);
+	}
 
 	namespace Resources
 	{
@@ -690,15 +712,18 @@ namespace Guider
 	void Component::drawMask(Canvas& canvas) const
 	{
 		getBackend()->pushDrawOffset(Vec2(bounds.left, bounds.top));
+		getBackend()->pushBounds(bounds.at({ 0.f, 0.f }));
 		onMaskDraw(canvas);
+		getBackend()->popBounds();
 		getBackend()->popDrawOffset();
 	}
 	void Component::draw(Canvas& canvas)
 	{
 		toRedraw = false;
 		getBackend()->pushDrawOffset(Vec2(bounds.left, bounds.top));
-		getBackend()->setBounds(bounds.at(Vec2(0, 0)));
+		getBackend()->pushBounds(bounds.at(Vec2(0, 0)));
 		onDraw(canvas);
+		getBackend()->popBounds();
 		getBackend()->popDrawOffset();
 	}
 

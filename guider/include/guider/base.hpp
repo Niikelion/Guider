@@ -277,9 +277,9 @@ namespace Guider
 		virtual void deleteResource(Resources::Resource& resource) = 0;
 
 		void pushDrawOffset(const Vec2& offset);
-		virtual void setDrawOrigin(float x, float y) = 0;
-		Vec2 getDrawOffset() const;
 		void popDrawOffset();
+		Vec2 getDrawOffset() const;
+		virtual void setDrawOrigin(float x, float y) = 0;
 
 		virtual void clearMask() = 0;
 		virtual void setupMask() = 0;
@@ -291,12 +291,17 @@ namespace Guider
 
 		virtual std::shared_ptr<Canvas> getCanvas() = 0;
 
+		void pushBounds(const Rect& rect);
+		void popBounds();
+		Rect getBounds() const;
 		virtual void setBounds(const Rect& rect) = 0;
+
 		virtual Vec2 getSize() const noexcept = 0;
 		virtual void setSize(const Vec2& size) = 0;
 
 	private:
 		std::vector<Vec2> offsets;
+		std::vector<Rect> bounds;
 	};
 
 	/// @brief Events class.

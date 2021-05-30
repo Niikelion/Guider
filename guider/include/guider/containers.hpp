@@ -80,6 +80,9 @@ namespace Guider
 		void setBackgroundColor(const Color& color);
 		Color getBackgroundColor() const noexcept;
 
+		void setOffset(float offset);
+		float getOffset() const noexcept;
+
 		virtual void addChild(const Component::Type& child) override;
 		virtual void removeChild(const Component::Type& child) override;
 		void removeChild(unsigned n);
@@ -108,7 +111,7 @@ namespace Guider
 		{
 		public:
 			std::shared_ptr<Component> component;
-			float size, offset;
+			float size, newSize, offset;
 
 			Element(const std::shared_ptr<Component>& component, float size, float offset);
 			Element(Element&&) noexcept = default;
@@ -141,22 +144,26 @@ namespace Guider
 		};
 
 		Orientation orientation;
-		float size, offset;
+		float size, offset, newOffset;
 
 		std::list<Element> children;
 		std::unordered_set<Component*> toUpdate, toOffset;
 		std::unordered_set<Component*> toRedraw;
 
+		std::unordered_map<Component*, iterator> childMapping;
+
+		std::unordered_set<Component*> toMeasure, updated;
+
 		iterator visibleBegin;
 		iterator visibleEnd;
-		std::unordered_set<Component*> visible;
+		std::unordered_set<Component*> visible, beforeVisible;
 
 		Color backgroundColor;
 
-		mutable bool firstDraw;
+		bool firstDraw;
 
-		bool updateElementRect(Element& element, bool needsMeasure, float localOffset, const DimensionDesc& w, const DimensionDesc& h, const Rect& bounds);
-		void adjustElementRect(iterator element, float newSize);
+		void adjustVisibleElements();
+		void recalculateVisibleElements();
 	};
 
 	class ConstraintsContainer : public Container, public std::enable_shared_from_this<ConstraintsContainer>

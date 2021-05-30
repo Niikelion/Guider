@@ -59,6 +59,28 @@ int main(int argc, char* argv[])
 		app.resetTimer();
 	});
 
+	auto& sidebar = app.getManager()->getElementById("sidebar")->as<Guider::ListContainer>();
+
+	Guider::RectangleShapeComponent* rects[] = {
+		&app.getManager()->getElementById("r1")->as<Guider::RectangleShapeComponent>(),
+		&app.getManager()->getElementById("r2")->as<Guider::RectangleShapeComponent>(),
+		&app.getManager()->getElementById("r3")->as<Guider::RectangleShapeComponent>()
+	};
+
+	auto& fileButton = app.getManager()->getElementById("file_button")->as<Guider::BasicButtonComponent>();
+	
+	fileButton.setOnClickCallback([&sidebar,&rects](Guider::Component& c) {
+		//sidebar.setOffset(100);
+		rects[0]->setHeight(100);
+	});
+
+	auto& editButton = app.getManager()->getElementById("edit_button")->as<Guider::BasicButtonComponent>();
+
+	editButton.setOnClickCallback([&sidebar,&rects](Guider::Component& c) {
+		//sidebar.setOffset(0);
+		rects[0]->setHeight(20);
+	});
+
 	app.getEngine()->addChild(root);
 
 	app.showWindow(true);

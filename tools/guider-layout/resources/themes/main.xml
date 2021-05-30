@@ -26,8 +26,8 @@
 	</toolbar>
 	
 	<toolbar.Button>
-		<attr name="padding" value="6 2"/>
-		<attr name="textSize" value="12"/>
+		<attr name="padding" value="6 12"/>
+		<attr name="textSize" value="16"/>
 		<attr name="width" value="wrap_content"/>
 		<attr name="height" value="match_parent"/>
 	</toolbar.Button>

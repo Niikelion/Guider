@@ -54,6 +54,7 @@ Additional cmake options:
 | BUILD_TESTS       | Enables building tests. Requires Catch2.  | false         |
 | BUILD_EXAMPLES    | Enables building examples. Requires SFML. | true          |
 | BUILD_TOOLS       | Enables building tools. Requires SFML.    | true          |
+| DEV_BUILD         | For Guider developmnet                    | false         |
 | INTERNAL_PARSELIB | Allows using parselib from submodule      | false         |
 
 ## Concepts

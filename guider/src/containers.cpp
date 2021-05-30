@@ -178,6 +178,7 @@ namespace Guider
 		manager.registerPropertyForComponent<Orientation>(name, "orientation", [](const std::string& s) {
 			return s == "horizontal" ? Orientation::Horizontal : Orientation::Vertical;
 		});
+		manager.registerColorProperty(name, "backgroundColor");
 	}
 	
 	void ListContainer::setOrientation(Orientation orientation)
@@ -206,6 +207,17 @@ namespace Guider
 		return backgroundColor;
 	}
 	
+	void ListContainer::setOffset(float offset)
+	{
+		newOffset = offset;
+		invalidate();
+	}
+
+	float ListContainer::getOffset() const noexcept
+	{
+		return newOffset;
+	}
+
 	void ListContainer::addChild(const Component::Type& child)
 	{
 		child->setParent(*this);
@@ -249,35 +261,37 @@ namespace Guider
 		}
 
 		children.emplace_back(child, off, size);
-		toUpdate.insert(child.get());
-		toRedraw.insert(child.get());
+		children.back().size = 0;
+
+		Component* p = child.get();
+		childMapping[p] = --children.end();
+
+		toRedraw.insert(p);
+		updated.insert(p);
 
 		size += off;
 
 		invalidate();
 	}
-	
+	//TODO: do some smart trick to avoid recalculating everything when erasing elements
 	void ListContainer::removeChild(const Component::Type& child)
 	{
-		auto it = children.begin();
-		while (it != children.end())
-		{
-			if (it->component.get() == child.get())
-			{
-				auto cp = it;
-				cp++;
-				while (cp != children.end())//todo: stop after reaching end of parent frame
-				{
-					toRedraw.insert(cp->component.get());
-					toOffset.insert(cp->component.get());
-					++cp;
-				}
-				children.erase(it);
-				invalidate();
-				return;
-			}
-			++it;
-		}
+		auto it = std::find_if(children.begin(), children.end(), [&child](const Element& e) {
+			return child.get() == e.component.get();
+		});
+
+		recalculateVisibleElements();
+		
+		Component* p = it->component.get();
+
+		visible.erase(p);
+		beforeVisible.erase(p);
+		updated.erase(p);
+
+		childMapping.erase(p);
+
+		children.erase(it);
+		invalidate();
 	}
 	
 	void ListContainer::removeChild(unsigned n)
@@ -291,6 +305,15 @@ namespace Guider
 		toUpdate.clear();
 		toRedraw.clear();
 		toOffset.clear();
+
+		updated.clear();
+		visible.clear();
+		beforeVisible.clear();
+
+		childMapping.clear();
+
+		visibleBegin = children.end();
+		visibleEnd = children.end();
 	}
 	
 	size_t ListContainer::getChildrenCount() const
@@ -311,100 +334,146 @@ namespace Guider
 		}
 		else
 		{
-			for (auto i : toRedraw)
+			for (auto it = visibleBegin; it != visibleEnd; ++it)
 			{
-				i->drawMask(canvas);
+				Component* p = it->component.get();
+				if (toRedraw.count(p))
+					p->drawMask(canvas);
 			}
+
+			//draw mask for free space
 			Rect bounds = getBounds().at(Vec2(0.f, 0.f));
 			float d = 0;
+			
+			
 			if (orientation == Orientation::Horizontal)
 			{
 				d = bounds.width;
 				bounds.left += offset + size;
+				bounds.width = d - bounds.left;
 			}
 			else
 			{
 				d = bounds.height;
 				bounds.top += offset + size;
+				bounds.height = d - bounds.top;
 			}
 			if (offset + size < d)
 			{
 				getBackend()->addToMask(bounds);
 			}
+			if (offset > 0)
+			{
+				bounds = getBounds().at(Vec2(0.f, 0.f));
+				if (orientation == Orientation::Horizontal)
+				{
+					bounds.width = offset;
+				}
+				else
+				{
+					bounds.height = offset;
+				}
+				getBackend()->addToMask(bounds);
+			}
 		}
 	}
-
+	
 	void ListContainer::onDraw(Canvas& canvas)
 	{
-		onRedraw(canvas);
-		return;
-
 		if (backgroundColor.a > 0 && firstDraw)
 			canvas.drawRectangle(getBounds().at(Vec2(0.f, 0.0f)), backgroundColor);
-		for (const auto& i : children)
+		for (auto it = visibleBegin; it != visibleEnd; ++it)
 		{
-			if (backgroundColor.a > 0 || toRedraw.count(i.component.get()))
+			Component* p = it->component.get();
+			if (backgroundColor.a > 0 || toRedraw.count(p))
 			{
-				i.component->draw(canvas);
+				p->draw(canvas);
 			}
 		}
 		toRedraw.clear();
 	}
-
+	
 	void ListContainer::onRedraw(Canvas& canvas)
 	{
 		if (backgroundColor.a > 0)
 			canvas.drawRectangle(getBounds().at(Vec2(0.f, 0.0f)), backgroundColor);
-		for (const auto& i : children)
-			i.component->redraw(canvas);
+		for (auto it = visibleBegin; it != visibleEnd; ++it)
+			it->component->redraw(canvas);
 		toRedraw.clear();
 		firstDraw = false;
 	}
 
 	void ListContainer::poke()
 	{
+		Rect bounds = getBounds().at({0.f, 0.f});
 		Component::poke();
-		float off = 0;
-		bool offsetting = false;
-
-		Rect bounds = getBounds();
-		DimensionDesc w(bounds.width, DimensionMode::Max);
-		DimensionDesc h(bounds.height, DimensionMode::Max);
+		
+		DimensionDesc ww(bounds.width, DimensionMode::Max);
+		DimensionDesc hh(bounds.height, DimensionMode::Max);
 
 		if (orientation == Orientation::Horizontal)
 		{
-			w.value = 0;
-			w.mode = DimensionMode::Min;
+			ww.value = 0;
+			ww.mode = DimensionMode::Min;
 		}
 		else
 		{
-			h.value = 0;
-			h.mode = DimensionMode::Min;
+			hh.value = 0;
+			hh.mode = DimensionMode::Min;
 		}
 
-		for (auto& i : children)
+		for (auto i : toUpdate)
 		{
-			bool needsMeasureing = !i.component->isClean();
-			if (!i.component->isClean())
-				i.component->poke();
+			//measure and update size
+			auto it = childMapping.at(i);
 
-			if (offsetting)
-			{
-				updateElementRect(i, needsMeasureing, off, w, h, bounds);
-			}
-			else if (needsMeasureing)
-			{
-				updateElementRect(i, true, off, w, h, bounds);
-				offsetting = true;
-			}
-			off += i.size;
+			auto measurements = i->measure(ww, hh);
+			if (getOrientation() == Orientation::Horizontal)
+				it->newSize = std::min(measurements.first.value, bounds.width);
+			else
+				it->newSize = std::min(measurements.second.value, bounds.height);
+			if (it->newSize != it->size)
+				updated.insert(i);
 		}
-		size = off;
 		toUpdate.clear();
+		
+		adjustVisibleElements();
+		offset = newOffset;
+		for (auto i : updated)
+		{
+			Element& child = *childMapping.at(i);
+			child.size = child.newSize;
+		}
+
+		if (updated.size() > 0)
+		{
+			updated.clear();
+			for (auto it = visibleBegin; it != visibleEnd; ++it)
+			{
+				Element& child = *it;
+				if (getOrientation() == Orientation::Horizontal)
+				{
+					bounds.left = child.offset + newOffset;
+					bounds.width = child.newSize;
+				}
+				else
+				{
+					bounds.top = child.offset + newOffset;
+					bounds.height = child.newSize;
+				}
+
+				setBounds(*child.component, bounds);
+				child.component->poke();
+			}
+		}
 	}
 
 	void ListContainer::onResize(const Rect& lastBounds)
 	{
+		//TODO: smart invalidation
+		invalidateRecursive();
+
+		/*
 		Rect bounds = getBounds();
 
 		if (bounds != lastBounds)
@@ -438,6 +507,7 @@ namespace Guider
 
 			firstDraw = true;
 		}
+		*/
 	}
 
 	void ListContainer::onChildStain(Component& c)
@@ -476,24 +546,7 @@ namespace Guider
 			hh.mode = DimensionMode::Min;
 		}
 
-		for (auto& i : children)
-		{
-			bool needsMeasureing = !i.component->isClean();
-			if (!i.component->isClean())
-				i.component->poke();
-
-			if (offsetting)
-			{
-				updateElementRect(i, needsMeasureing, off, ww, hh, bounds);
-			}
-			else if (needsMeasureing)
-			{
-				updateElementRect(i, true, off, ww, hh, bounds);
-				offsetting = true;
-			}
-			off += i.size;
-		}
-		size = off;
+		recalculateVisibleElements();
 
 		std::pair<DimensionDesc, DimensionDesc> measurements = Component::measure(w, h);
 		if (getSizingModeHorizontal() == SizingMode::WrapContent && orientation == Orientation::Horizontal)
@@ -507,8 +560,10 @@ namespace Guider
 		return measurements;
 	}
 
-	ListContainer::ListContainer() : orientation(Orientation::Vertical), size(0), offset(0), backgroundColor(0, 0, 0, 0), firstDraw(true)
+	ListContainer::ListContainer() : orientation(Orientation::Vertical), size(0), offset(0), newOffset(0), backgroundColor(0, 0, 0, 0), firstDraw(true)
 	{
+		visibleBegin = children.end();
+		visibleEnd = children.end();
 	}
 
 	ListContainer::ListContainer(Manager& manager, const XML::Tag& tag, const StylingPack& pack) : ListContainer()
@@ -519,6 +574,11 @@ namespace Guider
 			auto orientation = pack.style.getAttribute("orientation");
 			if (orientation)
 				setOrientation(orientation->as<Orientation>());
+		}
+		{
+			auto background = pack.style.getAttribute("backgroundColor");
+			if (background)
+				setBackgroundColor(background->as<Color>());
 		}
 
 		for (const auto& child : tag.children)
@@ -533,97 +593,180 @@ namespace Guider
 		}
 	}
 
-	bool ListContainer::updateElementRect(Element& element, bool needsMeasure, float localOffset, const DimensionDesc& w, const DimensionDesc& h, const Rect& bounds)
+	void ListContainer::adjustVisibleElements()
 	{
-		Rect lb = element.component->getBounds();
-		Rect original = lb;
+		Rect bounds = getBounds();
+		float s = getOrientation() == Orientation::Horizontal ? bounds.width : bounds.height;
 
-		element.offset = localOffset;
-
-		if (orientation == Orientation::Horizontal)
+		if (newOffset > s || visibleBegin == children.end() || true)
 		{
-			lb.left = element.offset + offset;
-		}
-		else
-		{
-			lb.top = element.offset + offset;
+			recalculateVisibleElements();
+			return;
 		}
 
-		if (needsMeasure)
+		float diff = 0;
+		float fullDiff = 0;
+		for (auto i : updated)
 		{
-			std::pair<DimensionDesc, DimensionDesc> measurements = element.component->measure(w, h);
-
-			float width = measurements.first.value;
-			float height = measurements.second.value;
-
-			if (orientation == Orientation::Horizontal)
+			Element& child = *childMapping.at(i);
+			fullDiff += child.newSize - child.size;
+			if (beforeVisible.count(i))
 			{
-				if (height > bounds.height)
-					height = bounds.height;
-			}
-			else
-			{
-				if (width > bounds.width)
-					width = bounds.width;
-			}
-			lb.width = width;
-			lb.height = height;
-			if (orientation == Orientation::Horizontal)
-			{
-				lb.top = (bounds.height - height) / 2;
-				element.size = lb.width;
-			}
-			else
-			{
-				lb.left = (bounds.width - width) / 2;
-				element.size = lb.height;
+				diff += child.newSize - child.size;
 			}
 		}
-		if (lb != original)
+
+		float trueDiff = newOffset - offset + diff;
+
+		if (trueDiff < 0)
 		{
-			if (std::abs(lb.left - original.left) > std::numeric_limits<float>::epsilon() ||
-				std::abs(lb.top - original.top) > std::numeric_limits<float>::epsilon() ||
-				lb.width != original.width || lb.height != original.height)
+			//elements moved back, so iterate forward adjusting visible bounds
+			float off = 0;
+			for (auto it = visibleBegin; it != children.end(); ++it)
 			{
-				setBounds(*element.component, lb);
-				return true;
+				if (it == visibleBegin && it->offset + it->newSize + diff + newOffset < 0)
+				{
+					visible.erase(it->component.get());
+					beforeVisible.insert(it->component.get());
+					if (visibleEnd == visibleBegin)
+						++visibleEnd;
+					++visibleBegin;
+				}
+				else
+				{
+					if (it == visibleBegin)
+					{
+						it->offset += diff;
+						off = it->offset;
+						updated.insert(it->component.get());
+						if (visibleEnd == visibleBegin)
+							++visibleEnd;
+					}
+					else
+					{
+						it->offset = off;
+						updated.insert(it->component.get());
+					}
+					off += it->newSize;
+					//reached last visible element
+					if (off + newOffset > s)
+					{
+						visibleEnd = ++it;
+						break;
+					}
+					if (it == visibleEnd)
+					{
+						//more visible elements found
+						if (off + newOffset < s)
+						{
+							visible.insert(it->component.get());
+							++visibleEnd;
+						}
+						//end of visible elements
+						break;
+					}
+				}
 			}
 		}
-		return false;
+		else if (trueDiff > 0)
+		{
+			//elements moved forward, iterate backwards to find new visibleBegin
+			auto it = visibleBegin;
+			float off = it->offset + diff;
+			visible.clear();
+			if (off + newOffset > 0 && visibleBegin != children.begin())
+			{
+				auto prev = it;
+				--it;
+				for (it;; --it)
+				{
+					beforeVisible.erase(it->component.get());
+					off -= it->newSize;
+					if (off + newOffset < 0)
+						break;
+
+					if (it == children.begin())
+						break;
+				}
+				visibleBegin = it;
+			}
+			visibleEnd = visibleBegin;
+			//not that we have new visibleBegin, iterate forward from there adjusting offsets and find new visibleEnd
+			for (it; it != children.end(); ++it)
+			{
+				if (it == visibleEnd)
+					++visibleEnd;
+				it->offset = off;
+				updated.insert(it->component.get());
+				off += it->newSize;
+				if (off + newOffset > s)
+					break;
+			}
+		}
 	}
 
-	void ListContainer::adjustElementRect(iterator element, float newSize)
+	void ListContainer::recalculateVisibleElements()
 	{
-		float diff = newSize - element->size;
-		element->size = newSize;
-
 		Rect bounds = getBounds();
 
 		float s = getOrientation() == Orientation::Horizontal ? bounds.width : bounds.height;
 
-		if (diff < 0)
+		enum class State
 		{
-			auto it = element;
-			if (visible.count(element->component.get()))
-				it = visibleBegin;
-			for (; it != children.end(); ++it)
+			BeforeVisible,
+			Visible,
+			AfterVisible
+		};
+
+		float off = 0;
+
+		State state = State::BeforeVisible;
+		visible.clear();
+		beforeVisible.clear();
+		visibleBegin = children.end();
+		visibleEnd = children.end();
+
+		//simply calculate offsets from scratch
+		for (auto it = children.begin(); it != children.end(); ++it)
+		{
+			Element& element = *it;
+			if (state != State::AfterVisible && off + newOffset > s)
 			{
-				//element is not visible anymore
-				if (it == visibleBegin && it->offset + it->size + diff + offset < 0)
-				{
-					visible.erase(it->component.get());
-					++visibleBegin;
-				}
-				else if (it == visibleEnd && it->offset + it->size + diff + offset < s)
-				{
-					visible.insert(it->component.get());
-					++visibleEnd;
-				}
+				state = State::AfterVisible;
+				visibleEnd = it;
+			}
+
+			element.offset = off;
+			updated.insert(element.component.get());
+			off += element.newSize;
+
+			if (state == State::BeforeVisible && off + newOffset > 0)
+			{
+				state = State::Visible;
+				visibleBegin = it;
+			}
+
+			switch (state)
+			{
+			case State::BeforeVisible:
+			{
+				beforeVisible.insert(element.component.get());
+				break;
+			}
+			case State::Visible:
+			{
+				visible.insert(element.component.get());
+				break;
+			}
+			default:
+				break;
 			}
 		}
+		
+		size = off;
 	}
 
-	ListContainer::Element::Element(const std::shared_ptr<Component>& component, float size, float offset) : component(component), size(size), offset(offset)
+	ListContainer::Element::Element(const std::shared_ptr<Component>& component, float size, float offset) : component(component), size(size), newSize(size), offset(offset)
 	{
 	}
 

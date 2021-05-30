@@ -43,6 +43,7 @@
 	>
 		<containers.ListContainer
 			name="optionsList"
+			
 			width="wrap_content"
 			height="match_parent"
 			
@@ -85,7 +86,7 @@
 			name="toolsList"
 			
 			width="wrap_content"
-			height="20"
+			height="match_parent"
 			
 			orientation="horizontal"
 			
@@ -124,12 +125,12 @@
 			/>
 		</containers.ListContainer>
 	</containers.ConstraintsContainer>
-	<shapes.Rectangle
+	<containers.ListContainer
 		id="sidebar"
 	
 		width = "given_size"
-		height = "given_size"
-		fillColor = "#242629"
+		height = "40"
+		backgroundColor = "#242629"
 		
 		horizontalConstraint="regular"
 		horizontalSizing="const_offset"
@@ -142,7 +143,32 @@
 		
 		attachTopTo="toolbar bottom 8"
 		attachBottomTo="parent bottom 8"
-	/>
+	>
+		<shapes.Rectangle
+			id="r1"
+			
+			width="match_parent"
+			height="20"
+		
+			fillColor="#ff0000"
+		/>
+		<shapes.Rectangle
+			id="r2"
+		
+			width="match_parent"
+			height="20"
+		
+			fillColor="#00ff00"
+		/>
+		<shapes.Rectangle
+			id="r3"
+		
+			width="match_parent"
+			height="20"
+		
+			fillColor="#0000ff"
+		/>
+	</containers.ListContainer>
 	<containers.ConstraintsContainer
 		id="content"
 		
