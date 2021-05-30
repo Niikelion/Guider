@@ -7,6 +7,11 @@ option(BUILD_TOOLS "Build tools" true)
 option(BUILD_TESTS "Build tests" false)
 option(INTERNAL_PARSELIB "Use parselib from submodule" false)
 
+if (INTERNAL_PARSELIB)
+	add_subdirectory(ParseLib)
+	add_library(parselib::xml ALIAS xml)
+endif()
+
 add_subdirectory(guider)
 if (BUILD_EXAMPLES)
 	add_subdirectory(examples)

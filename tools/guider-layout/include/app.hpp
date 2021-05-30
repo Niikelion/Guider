@@ -44,7 +44,7 @@ public:
 		{
 			sum += i;
 		}
-		return (sum + history.size() - 1) / history.size();
+		return static_cast<int>((sum + history.size() - 1) / history.size());
 	}
 	void reset()
 	{

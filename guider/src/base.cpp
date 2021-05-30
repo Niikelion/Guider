@@ -279,17 +279,17 @@ namespace Guider
 		}
 	}
 
-	inline Event Event::createInvalidatedEvent()
+	Event Event::createInvalidatedEvent()
 	{
 		return Event(Type::Invalidated);
 	}
 
-	inline Event Event::createVisualsInvalidatedEvent()
+	Event Event::createVisualsInvalidatedEvent()
 	{
 		return Event(Type::VisualsInvalidated);
 	}
 
-	inline Event Event::createBackendConnectedEvent(Backend& backend)
+	Event Event::createBackendConnectedEvent(Backend& backend)
 	{
 		Event e(Type::BackendConnected);
 		new(&e.backendConnected) BackendConnectedEvent(backend);

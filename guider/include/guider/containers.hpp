@@ -11,6 +11,8 @@ namespace Guider
 	class AbsoluteContainer : public Container
 	{
 	public:
+		static void registerProperties(Manager& manager, const std::string& name);
+
 		virtual void addChild(const Component::Type& child) override;
 		void addChild(const Component::Type& child, float x, float y);
 		virtual void removeChild(const Component::Type& child) override;
@@ -70,9 +72,14 @@ namespace Guider
 	class ListContainer : public Container
 	{
 	public:
-		void setOrientation(bool horizontal);
+		static void registerProperties(Manager& manager, const std::string& name);
+
+		void setOrientation(Orientation orientation);
+		Orientation getOrientation() const noexcept;
 
 		void setBackgroundColor(const Color& color);
+		Color getBackgroundColor() const noexcept;
+
 		virtual void addChild(const Component::Type& child) override;
 		virtual void removeChild(const Component::Type& child) override;
 		void removeChild(unsigned n);
@@ -95,7 +102,7 @@ namespace Guider
 
 		ListContainer();
 
-		ListContainer(Manager& manager, const XML::Tag& config, const StylingPack& style);
+		ListContainer(Manager& manager, const XML::Tag& tag, const StylingPack& pack);
 	private:
 		class Element
 		{
@@ -103,7 +110,7 @@ namespace Guider
 			std::shared_ptr<Component> component;
 			float size, offset;
 
-			Element(const std::shared_ptr<Component>& c, float s, float o) : component(c), size(s), offset(o) {}
+			Element(const std::shared_ptr<Component>& component, float size, float offset);
 			Element(Element&&) noexcept = default;
 		};
 
@@ -133,18 +140,23 @@ namespace Guider
 			const iterator endIt;
 		};
 
-		bool horizontal;
+		Orientation orientation;
 		float size, offset;
 
 		std::list<Element> children;
 		std::unordered_set<Component*> toUpdate, toOffset;
-		mutable std::unordered_set<Component*> toRedraw;
+		std::unordered_set<Component*> toRedraw;
+
+		iterator visibleBegin;
+		iterator visibleEnd;
+		std::unordered_set<Component*> visible;
 
 		Color backgroundColor;
 
 		mutable bool firstDraw;
 
 		bool updateElementRect(Element& element, bool needsMeasure, float localOffset, const DimensionDesc& w, const DimensionDesc& h, const Rect& bounds);
+		void adjustElementRect(iterator element, float newSize);
 	};
 
 	class ConstraintsContainer : public Container, public std::enable_shared_from_this<ConstraintsContainer>

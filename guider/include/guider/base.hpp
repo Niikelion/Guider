@@ -128,6 +128,12 @@ namespace Guider
 		Right = End,
 		Bottom = End
 	};
+	/// @brief Defines orientation.
+	enum class Orientation
+	{
+		Horizontal,
+		Vertical
+	};
 
 	namespace Resources
 	{
@@ -293,6 +299,10 @@ namespace Guider
 		std::vector<Vec2> offsets;
 	};
 
+	/// @brief Events class.
+	///
+	/// Contains definitions for structures for every event
+	/// that guider can handle.
 	class Event
 	{
 	public:
@@ -326,28 +336,38 @@ namespace Guider
 			MouseEvent(const MouseEvent& t) = default;
 		};
 
+		/// @brief Possible event types.
 		enum Type
 		{
+			/// @brief None.
 			None,
+			/// @brief Layout invalidated.
 			Invalidated,
+			/// @brief Visuals invalidated.
 			VisualsInvalidated,
+			/// @brief Rendering backend connected.
 			BackendConnected,
+			/// @brief Mouse moved.
 			MouseMoved,
+			/// @brief Mouse button pressed.
 			MouseButtonDown,
+			/// @brief Mouse button released.
 			MouseButtonUp,
+			/// @brief Mouse left rect.
 			MouseLeft
 		};
 		Type type;
 
+		/// @brief Holds events data.
 		union
 		{
 			BackendConnectedEvent backendConnected;
 			MouseEvent mouseEvent;
 		};
 
-		static inline Event createInvalidatedEvent();
-		static inline Event createVisualsInvalidatedEvent();
-		static inline Event createBackendConnectedEvent(Backend& backend);
+		static Event createInvalidatedEvent();
+		static Event createVisualsInvalidatedEvent();
+		static Event createBackendConnectedEvent(Backend& backend);
 		static Event createMouseEvent(MouseEvent::Subtype subtype, float x, float y, uint8_t button);
 
 		void dispose();
@@ -698,7 +718,7 @@ namespace Guider
 				return *currentIt->get();
 			}
 
-			virtual std::unique_ptr<IteratorBase> clone() const
+			virtual std::unique_ptr<IteratorBase> clone() const override
 			{
 				return std::make_unique<CommonIteratorTemplate<IteratorT>>(*this);
 			}

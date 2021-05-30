@@ -1,5 +1,6 @@
-find_package(parselib REQUIRED)
-
+if (NOT INTERNAL_PARSELIB)
+	find_package(parselib CONFIG REQUIRED)
+endif()
 set(sources
 	src/base.cpp
 	src/manager.cpp

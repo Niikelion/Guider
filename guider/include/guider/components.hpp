@@ -51,6 +51,8 @@ namespace Guider
 	class EmptyComponent : public Component
 	{
 	public:
+		static void registerProperties(Manager& manager, const std::string& name);
+
 		void onDraw(Canvas& canvas) override {}
 
 		EmptyComponent() = default;

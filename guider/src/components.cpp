@@ -106,6 +106,11 @@ namespace Guider
 		}
 	}
 
+	void EmptyComponent::registerProperties(Manager& manager, const std::string& name)
+	{
+		//yeah, thats it, nothing to see there
+	}
+
 	EmptyComponent::EmptyComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack)
 	{
 	}
