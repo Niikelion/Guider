@@ -201,9 +201,11 @@ namespace Guider
 
 	void SfmlBackend::setBounds(const Rect& rect)
 	{
+		Vec2 size = getSize();
+		glEnable(GL_SCISSOR_TEST);
 		glScissor(
-			static_cast<GLint>(origin.x+rect.left),
-			static_cast<GLint>(origin.y+rect.top),
+			static_cast<GLint>(rect.left),
+			size.y - static_cast<GLint>(rect.top + rect.height),
 			static_cast<GLint>(rect.width),
 			static_cast<GLint>(rect.height)
 		);

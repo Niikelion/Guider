@@ -221,55 +221,15 @@ namespace Guider
 	void ListContainer::addChild(const Component::Type& child)
 	{
 		child->setParent(*this);
-		child->poke();
-		float off;
-		Rect bounds = getBounds();
+		child->invalidateRecursive();
 
-		DimensionDesc w(bounds.width, DimensionMode::Max);
-		DimensionDesc h(bounds.height, DimensionMode::Max);
-
-		if (orientation == Orientation::Horizontal)
-		{
-			w.value = 0;
-			w.mode = DimensionMode::Min;
-		}
-		else
-		{
-			h.value = 0;
-			h.mode = DimensionMode::Min;
-		}
-
-		std::pair<DimensionDesc, DimensionDesc> measurements = child->measure(w, h);
-
-		Rect lb;
-
-		if (orientation == Orientation::Horizontal)
-		{
-			off = measurements.first.value;
-			float height = measurements.second.value;
-			if (height > bounds.height)
-				height = bounds.height;
-			lb = Rect(size, (bounds.height - height) / 2, off, height);
-		}
-		else
-		{
-			off = measurements.second.value;
-			float width = measurements.first.value;
-			if (width > bounds.width)
-				width = bounds.width;
-			lb = Rect((bounds.width - width) / 2, size, width, off);
-		}
-
-		children.emplace_back(child, off, size);
-		children.back().size = 0;
+		children.emplace_back(child, size, 0);
 
 		Component* p = child.get();
 		childMapping[p] = --children.end();
 
 		toRedraw.insert(p);
-		updated.insert(p);
-
-		size += off;
+		toUpdate.insert(p);
 
 		invalidate();
 	}
@@ -421,9 +381,11 @@ namespace Guider
 			hh.value = 0;
 			hh.mode = DimensionMode::Min;
 		}
-
+		std::vector<Component*> toPoke;
+		toPoke.reserve(toUpdate.size());
 		for (auto i : toUpdate)
 		{
+			toPoke.emplace_back(i);
 			//measure and update size
 			auto it = childMapping.at(i);
 
@@ -463,8 +425,9 @@ namespace Guider
 				}
 
 				setBounds(*child.component, bounds);
-				child.component->poke();
 			}
+			for (auto i : toPoke)
+				i->poke();
 		}
 	}
 
@@ -472,42 +435,6 @@ namespace Guider
 	{
 		//TODO: smart invalidation
 		invalidateRecursive();
-
-		/*
-		Rect bounds = getBounds();
-
-		if (bounds != lastBounds)
-		{//TODO: remeasure only if logical width changes
-			float off = 0;
-
-			DimensionDesc w(bounds.width, DimensionMode::Max);
-			DimensionDesc h(bounds.height, DimensionMode::Max);
-
-			if (orientation == Orientation::Horizontal)
-			{
-				w.value = 0;
-				w.mode = DimensionMode::Min;
-			}
-			else
-			{
-				h.value = 0;
-				h.mode = DimensionMode::Min;
-			}
-			for (auto& i : children)
-			{
-				updateElementRect(i, true, off, w, h, bounds);
-				off += i.size;
-			}
-			size = off;
-			invalidate();
-
-			toOffset.clear();
-			for (auto& i : children)
-				i.component->invalidateVisuals();
-
-			firstDraw = true;
-		}
-		*/
 	}
 
 	void ListContainer::onChildStain(Component& c)
@@ -544,6 +471,19 @@ namespace Guider
 		{
 			hh.value = 0;
 			hh.mode = DimensionMode::Min;
+		}
+
+		for (auto& child : children)
+		{
+			auto measurements = child.component->measure(ww,hh);
+			if (orientation == Orientation::Horizontal)
+			{
+				child.newSize = measurements.first.value;
+			}
+			else
+			{
+				child.newSize = measurements.second.value;
+			}
 		}
 
 		recalculateVisibleElements();

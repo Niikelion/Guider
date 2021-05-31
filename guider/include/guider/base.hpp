@@ -70,6 +70,8 @@ namespace Guider
 		Vec2 position() const noexcept;
 		/// @brief Returns size of the rect as vector.
 		Vec2 size() const noexcept;
+		/// @brief Returns rect cropped by other rect.
+		Rect limit(const Rect& rect) const noexcept;
 
 		Rect();
 		Rect(float l, float t, float w, float h);

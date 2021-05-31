@@ -70,14 +70,13 @@ int main(int argc, char* argv[])
 	auto& fileButton = app.getManager()->getElementById("file_button")->as<Guider::BasicButtonComponent>();
 	
 	fileButton.setOnClickCallback([&sidebar,&rects](Guider::Component& c) {
-		//sidebar.setOffset(100);
-		rects[0]->setHeight(100);
+		sidebar.setOffset(-20);
 	});
 
 	auto& editButton = app.getManager()->getElementById("edit_button")->as<Guider::BasicButtonComponent>();
 
 	editButton.setOnClickCallback([&sidebar,&rects](Guider::Component& c) {
-		//sidebar.setOffset(0);
+		sidebar.setOffset(0);
 		rects[0]->setHeight(20);
 	});
 

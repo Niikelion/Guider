@@ -196,12 +196,15 @@ namespace Guider
 
 	void SfmlBackend::setBounds(const Rect& rect)
 	{
+		glScissor(0,0,0.5,0.5);
+		/*
 		glScissor(
 			static_cast<GLint>(origin.x + rect.left),
 			static_cast<GLint>(origin.y + rect.top),
 			static_cast<GLsizei>(rect.width),
 			static_cast<GLsizei>(rect.height)
 		);
+		*/
 	}
 
 	std::shared_ptr<Resources::RectangleShape> SfmlBackend::createRectangle(const Vec2& size, const Color& color)

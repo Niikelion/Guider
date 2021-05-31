@@ -115,6 +115,16 @@ namespace Guider
 		return Vec2(width, height);
 	}
 
+	Rect Rect::limit(const Rect& rect) const noexcept
+	{
+		float	l = std::max(left, rect.left),
+			t = std::max(top, rect.top),
+			r = std::min(left + width, rect.left + rect.width),
+			b = std::min(top + height, rect.top + rect.height);
+		Rect ret(l, t, r - l, b - t);
+		return ret;
+	}
+
 	Rect::Rect()
 	{
 		left = 0;
@@ -219,9 +229,8 @@ namespace Guider
 
 	void Backend::pushBounds(const Rect& rect)
 	{
-		Rect l = rect;
-		bounds.push_back(l);
-		setBounds(l);
+		bounds.push_back(rect.at(getDrawOffset()).limit(getBounds()));
+		setBounds(bounds.back());
 	}
 
 	void Backend::popBounds()
@@ -679,18 +688,22 @@ namespace Guider
 			DimensionDesc(h, DimensionDesc::Mode::Exact)
 		);
 	}
+	
 	Component* Component::getParent()
 	{
 		return parent;
 	}
+	
 	const Component* Component::getParent() const
 	{
 		return parent;
 	}
+	
 	Rect Component::getBounds() const
 	{
 		return bounds;
 	}
+	
 	Rect Component::getGlobalBounds() const
 	{
 		Rect b = getBounds();
@@ -701,14 +714,17 @@ namespace Guider
 		}
 		return b;
 	}
+	
 	void Component::onMaskDraw(Canvas& canvas) const
 	{
 		getBackend()->addToMask(bounds.at(Vec2(0.f, 0.f)));
 	}
+	
 	void Component::onRedraw(Canvas& canvas)
 	{
 		onDraw(canvas);
 	}
+	
 	void Component::drawMask(Canvas& canvas) const
 	{
 		getBackend()->pushDrawOffset(Vec2(bounds.left, bounds.top));
@@ -717,6 +733,7 @@ namespace Guider
 		getBackend()->popBounds();
 		getBackend()->popDrawOffset();
 	}
+	
 	void Component::draw(Canvas& canvas)
 	{
 		toRedraw = false;
@@ -731,8 +748,9 @@ namespace Guider
 	{
 		toRedraw = false;
 		getBackend()->pushDrawOffset(Vec2(bounds.left, bounds.top));
-		getBackend()->setBounds(bounds.at(Vec2(0, 0)));
+		getBackend()->pushBounds(bounds.at(Vec2(0, 0)));
 		onRedraw(canvas);
+		getBackend()->popBounds();
 		getBackend()->popDrawOffset();
 	}
 
@@ -778,6 +796,7 @@ namespace Guider
 	{
 		hasMouseFocus = false;
 	}
+
 
 	void Container::invalidateVisuals()
 	{
@@ -849,6 +868,7 @@ namespace Guider
 			component.handleEvent(adjustEventForComponent(copy, component));
 	}
 
+
 	void Engine::addChild(const Component::Type& child)
 	{
 		Rect bounds = getBounds();
@@ -860,6 +880,7 @@ namespace Guider
 
 		toRedraw.insert(child.get());
 	}
+	
 	void Engine::removeChild(const Component::Type& child)
 	{
 		for (auto it = elements.begin(); it != elements.end(); ++it)
@@ -871,18 +892,22 @@ namespace Guider
 			}
 		}
 	}
+	
 	void Engine::clearChildren()
 	{
 		elements.clear();
 	}
+	
 	Container::Iterator Engine::firstElement()
 	{
 		return createIterator<IteratorType>(elements.begin(), elements.end());
 	}
+	
 	void Engine::onChildNeedsRedraw(Component& c)
 	{
 		toRedraw.insert(&c);
 	}
+	
 	void Engine::resize(const Vec2& size)
 	{
 		backend.setSize(size);
@@ -891,6 +916,7 @@ namespace Guider
 		invalidateRecursive();
 		invalidateVisuals();
 	}
+	
 	void Engine::update()
 	{
 		Rect bounds = getBounds();
@@ -916,6 +942,7 @@ namespace Guider
 			}
 		}
 	}
+	
 	void Engine::onMaskDraw(Canvas& canvas) const
 	{
 		if (!toRedraw.empty())
@@ -926,6 +953,7 @@ namespace Guider
 			}
 		}
 	}
+	
 	void Engine::onDraw(Canvas& canvas)
 	{
 		for (auto element : elements)
@@ -935,11 +963,13 @@ namespace Guider
 		}
 		toRedraw.clear();
 	}
+	
 	void Engine::onRedraw(Canvas& canvas)
 	{
 		for (auto element : elements)
 			element->redraw(canvas);
 	}
+	
 	void Engine::draw()
 	{
 		if (canvas)
@@ -960,11 +990,13 @@ namespace Guider
 			backend.disableMask();
 		}
 	}
+	
 	Engine::Engine(Backend& b) : backend(b)
 	{
 		canvas = b.getCanvas();
 		setBackend(b);
 	}
+	
 	Engine::Engine(Backend& b, const std::shared_ptr<Canvas>& c) : backend(b), canvas(c)
 	{
 		setBackend(b);
