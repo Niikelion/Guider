@@ -7,10 +7,13 @@ PRIVATE
 	include/app.hpp
 )
 
-set_target_properties(guider-layout PROPERTIES LINKER_LANGUAGE CXX)
+
 target_include_directories(guider-layout PRIVATE include)
-target_link_libraries(guider-layout PRIVATE tools-backend)
+target_link_libraries(guider-layout PRIVATE sfml-backend)
 target_include_directories(guider-layout PRIVATE include ${CMAKE_CURRENT_BINARY_DIR}/include)
+
+set_target_properties(guider-layout PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(guider-layout PROPERTIES FOLDER "tools")
 set_target_properties(guider-layout PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}//$(Configuration))
 set_target_properties(guider-layout PROPERTIES CXX_STANDARD 17)
 set_target_properties(guider-layout PROPERTIES VS_JUST_MY_CODE_DEBUGGING ON)
