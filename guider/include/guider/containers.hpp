@@ -207,6 +207,7 @@ namespace Guider
 				Final
 			};
 
+			//TODO: use Guider::Orientation instead
 			enum class Orientation
 			{
 				Horizontal = 0,
@@ -282,7 +283,7 @@ namespace Guider
 		class ClusterHash
 		{
 		public:
-			std::size_t operator()(const std::list<Guider::ConstraintsContainer::Cluster>::iterator& it) const
+			std::size_t operator() (const std::list<Guider::ConstraintsContainer::Cluster>::iterator& it) const
 			{
 				return std::hash<const Guider::ConstraintsContainer::Cluster*>{}(&(*it));
 			}

@@ -106,6 +106,7 @@ namespace Guider
 		}
 	}
 
+
 	void EmptyComponent::registerProperties(Manager& manager, const std::string& name)
 	{
 		//yeah, thats it, nothing to see there
@@ -143,6 +144,7 @@ namespace Guider
 		shape->setSize(Vec2(bounds.width, bounds.height));
 		shape->draw(canvas, Rect(0, 0, bounds.width, bounds.height));
 	}
+	
 	bool RectangleShapeComponent::handleEvent(const Event& event)
 	{
 		bool r = Component::handleEvent(event);
@@ -152,18 +154,22 @@ namespace Guider
 		}
 		return r;
 	}
+	
 	RectangleShapeComponent::RectangleShapeComponent() : shape(nullptr), color(255, 255, 255, 255)
 	{
 	}
+	
 	RectangleShapeComponent::RectangleShapeComponent(SizingMode mode, const Color& c) : shape(nullptr), color(c)
 	{
 		setSizingMode(mode, mode);
 	}
+	
 	RectangleShapeComponent::RectangleShapeComponent(float w, float h, const Color& c) : Component(), shape(nullptr), color(c)
 	{
 		setSize(Vec2(w, h));
 		setSizingMode(SizingMode::OwnSize, SizingMode::OwnSize);
 	}
+	
 	RectangleShapeComponent::RectangleShapeComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack) : RectangleShapeComponent()
 	{
 		Manager::handleDefaultArguments(*this, tag, pack.style);
@@ -173,6 +179,8 @@ namespace Guider
 				setColor(color->as<Color>());
 		}
 	}
+	
+
 	void TextComponent::registerProperties(Manager& manager, const std::string& name)
 	{
 		CommonComponent::registerProperties(manager, name);
@@ -180,6 +188,7 @@ namespace Guider
 		manager.registerStringProperty(name, "text");
 		manager.registerNumericProperty(name, "textSize");
 	}
+	
 	void TextComponent::setTextSize(float textSize)
 	{
 		this->textSize = textSize;
@@ -192,6 +201,7 @@ namespace Guider
 		else
 			invalidateVisuals();
 	}
+	
 	void TextComponent::setText(const std::string& text)
 	{
 		this->text = text;
@@ -204,6 +214,7 @@ namespace Guider
 		else
 			invalidateVisuals();
 	}
+	
 	void TextComponent::setTextColor(const Color& color)
 	{
 		this->color = color;
@@ -213,6 +224,7 @@ namespace Guider
 		}
 		invalidateVisuals();
 	}
+	
 	void TextComponent::setFont(const std::string& name)
 	{
 		font = name;
@@ -224,6 +236,7 @@ namespace Guider
 		}
 		invalidate();
 	}
+	
 	void TextComponent::setTextAlignment(Gravity horizontal, Gravity vertical)
 	{
 		horizontalTextAlign = horizontal;
@@ -231,14 +244,17 @@ namespace Guider
 
 		invalidateVisuals();
 	}
+	
 	Gravity TextComponent::getHorizontalTextAlignment() const
 	{
 		return horizontalTextAlign;
 	}
+	
 	Gravity TextComponent::getVerticalTextAlignment() const
 	{
 		return verticalTextAlign;
 	}
+	
 	void TextComponent::onDraw(Canvas& canvas)
 	{
 		Rect bounds = getBounds();
@@ -248,6 +264,7 @@ namespace Guider
 
 		textRes->draw(canvas, contentRect);
 	}
+	
 	bool TextComponent::handleEvent(const Event& event)
 	{
 		bool r = Component::handleEvent(event);
@@ -261,6 +278,7 @@ namespace Guider
 		}
 		return r;
 	}
+	
 	std::pair<float, float> TextComponent::getContentSize(bool getWidth, bool getHeight)
 	{
 		float w = 0, h = 0;
@@ -276,9 +294,11 @@ namespace Guider
 
 		return std::pair<float, float>(w, h);
 	}
+	
 	TextComponent::TextComponent() : textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
 	{
 	}
+	
 	TextComponent::TextComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack) : CommonComponent(manager, tag, pack), textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
 	{
 		Manager::handleDefaultArguments(*this, tag, pack.style);
@@ -336,6 +356,8 @@ namespace Guider
 				ver = Gravity::Bottom;
 		}
 	}
+	
+
 	void ButtonBase::handleClick(const Event& event)
 	{
 		switch (event.type)
@@ -389,17 +411,22 @@ namespace Guider
 		}
 		}
 	}
+	
 	ButtonBase::ButtonState ButtonBase::getButtonState() const noexcept
 	{
 		return buttonState;
 	}
+	
 	void ButtonBase::setOnClickCallback(const std::function<void(Component&)>& callback)
 	{
 		onClickCallback = callback;
 	}
+	
 	ButtonBase::ButtonBase() : buttonState(ButtonState::Default)
 	{
 	}
+	
+
 	BasicButtonComponent::BasicButtonComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack) : TextComponent(manager, tag, pack)
 	{
 		auto backgroundP = pack.style.getAttribute("background");
@@ -412,16 +439,19 @@ namespace Guider
 		if (hoveredBackgroundP)
 			backgroundSelected = hoveredBackgroundP->as<std::shared_ptr<Resources::Drawable>>();
 	}
+	
 	Component& BasicButtonComponent::getThisComponent()
 	{
 		return *this;
 	}
+	
 	void BasicButtonComponent::registerProperties(Manager& manager, const std::string& name)
 	{
 		TextComponent::registerProperties(manager, name);
 		manager.registerDrawableProperty(name, "selectedBackground");
 		manager.registerDrawableProperty(name, "hoveredBackground");
 	}
+	
 	std::shared_ptr<Resources::Drawable> BasicButtonComponent::getBackgroundDrawable(ButtonState state) const
 	{
 		if (state == ButtonState::Clicked)
@@ -435,10 +465,12 @@ namespace Guider
 
 		return backgroundDefault;
 	}
+	
 	std::shared_ptr<Resources::Drawable> BasicButtonComponent::getCurrentBackgroundDrawable() const
 	{
 		return getBackgroundDrawable(getButtonState());
 	}
+	
 	void BasicButtonComponent::onDraw(Canvas& canvas)
 	{
 		Rect bounds = getBounds();
@@ -450,6 +482,7 @@ namespace Guider
 			shape->draw(canvas, bounds.at(Vec2(0, 0)));
 		TextComponent::onDraw(canvas);
 	}
+	
 	bool BasicButtonComponent::handleEvent(const Event& event)
 	{
 		bool r = TextComponent::handleEvent(event);

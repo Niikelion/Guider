@@ -170,6 +170,7 @@ namespace Guider
 	{
 	}
 
+
 	Rect Padding::calcContentArea(const Rect& bounds) const
 	{
 		Rect ret = Rect(bounds.left + left, bounds.top + top, bounds.width - left - right, bounds.height - top - bottom);
@@ -247,6 +248,7 @@ namespace Guider
 		return Rect(0, 0, size.x, size.y);
 	}
 
+
 	namespace Resources
 	{
 		void CompositeDrawable::draw(Canvas& canvas, const Rect& bounds)
@@ -309,6 +311,7 @@ namespace Guider
 			return Rect(r.left + pos.x, r.top + pos.y, width, height);
 		}
 	}
+
 
 	Event Event::createInvalidatedEvent()
 	{
@@ -405,11 +408,13 @@ namespace Guider
 		this->type = type;
 	}
 
+
 	Component::DimensionDesc::DimensionDesc(float value, Mode mode)
 	{
 		this->value = value;
 		this->mode = mode;
 	}
+
 
 	bool Component::isMouseOver() const
 	{

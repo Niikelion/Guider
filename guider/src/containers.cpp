@@ -804,7 +804,7 @@ namespace Guider
 		}
 	}
 	
-	ConstraintsContainer::Constraint::Constraint(Type type, Orientation o)
+	ConstraintsContainer::Constraint::Constraint(Type type, Orientation o) : flags(EdgeSecondMask)
 	{
 		flags = 0;
 		setOrientation(o);
@@ -1006,14 +1006,14 @@ namespace Guider
 
 		switch (e)
 		{
-		case Constraint::Edge::Left: return rect.left;
-			break;
-		case Constraint::Edge::Right: return rect.left + rect.width;
-			break;
-		case Constraint::Edge::Top: return rect.top;
-			break;
-		case Constraint::Edge::Bottom: return rect.top + rect.height;
-			break;
+		case Constraint::Edge::Left:
+			return rect.left;
+		case Constraint::Edge::Right:
+			return rect.left + rect.width;
+		case Constraint::Edge::Top:
+			return rect.top;
+		case Constraint::Edge::Bottom:
+			return rect.top + rect.height;
 		}
 		return 0;
 	}
