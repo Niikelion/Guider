@@ -6,7 +6,7 @@
 
 #include <parselib/XML/xml.hpp>
 
-#include <Guider/styles.hpp>
+#include <guider/styles.hpp>
 
 namespace Guider
 {
@@ -111,7 +111,7 @@ namespace Guider
 		template<typename T> void registerProperty(const std::string& name)
 		{
 			if (!propertyDefinitions.count(name))
-				propertyDefinitions.emplace(name,Style::ValueDefinition::create<T>());
+				propertyDefinitions.emplace(name,Styles::ValueDefinition::create<T>());
 		}
 
 		/// @brief Registers global text property.

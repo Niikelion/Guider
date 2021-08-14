@@ -711,7 +711,7 @@ namespace Guider
 	}
 
 	
-	ConstraintsContainer::Constraint::Orientation ConstraintsContainer::Constraint::getOrientation() const noexcept
+	Orientation ConstraintsContainer::Constraint::getOrientation() const noexcept
 	{
 		return (flags & OrientationMask) ? Orientation::Vertical : Orientation::Horizontal;
 	}
@@ -1137,7 +1137,7 @@ namespace Guider
 					size = c.regular.size;
 					s = s * (1 - c.regular.flow) + (e - size) * c.regular.flow;
 				}
-				if (c.getOrientation() == Constraint::Orientation::Horizontal)
+				if (c.getOrientation() == Orientation::Horizontal)
 				{
 					out.left = s;
 					out.width = size;
@@ -1151,7 +1151,7 @@ namespace Guider
 			}
 			case Constraint::PassType::Final:
 			{
-				if (c.getOrientation() == Constraint::Orientation::Horizontal)
+				if (c.getOrientation() == Orientation::Horizontal)
 				{
 					out.left = s * (1 - c.regular.flow) + (e - out.width) * c.regular.flow;
 				}
@@ -1196,7 +1196,7 @@ namespace Guider
 				case Constraint::PassType::Final:
 				{
 					Rect& bounds = boundaries[c.chain.targets[j].first];
-					if (c.getOrientation() == Constraint::Orientation::Horizontal)
+					if (c.getOrientation() == Orientation::Horizontal)
 					{
 						width += bounds.width;
 					}
@@ -1250,7 +1250,7 @@ namespace Guider
 					case Constraint::PassType::Final:
 					{
 						Rect& bounds = boundaries[c.chain.targets[i].first];
-						if (c.getOrientation() == Constraint::Orientation::Horizontal)
+						if (c.getOrientation() == Orientation::Horizontal)
 						{
 							size = bounds.width;
 						}
@@ -1262,7 +1262,7 @@ namespace Guider
 					}
 					}
 
-					if (c.getOrientation() == Constraint::Orientation::Horizontal)
+					if (c.getOrientation() == Orientation::Horizontal)
 					{
 						boundaries[c.chain.targets[i].first].left = sp;
 						boundaries[c.chain.targets[i].first].width = size;
@@ -1295,7 +1295,7 @@ namespace Guider
 					case Guider::ConstraintsContainer::Constraint::PassType::Final:
 					{
 						Rect& bounds = boundaries[c.chain.targets[i].first];
-						if (c.getOrientation() == Constraint::Orientation::Horizontal)
+						if (c.getOrientation() == Orientation::Horizontal)
 						{
 							size = bounds.width;
 						}
@@ -1307,7 +1307,7 @@ namespace Guider
 					}
 					}
 
-					if (c.getOrientation() == Constraint::Orientation::Horizontal)
+					if (c.getOrientation() == Orientation::Horizontal)
 					{
 						boundaries[c.chain.targets[i].first].left = sp;
 						boundaries[c.chain.targets[i].first].width = size;
@@ -1705,7 +1705,7 @@ namespace Guider
 		needsRedraw.insert(child.get());
 	}
 	
-	std::unique_ptr<ConstraintsContainer::RegularConstraintBuilder> ConstraintsContainer::addConstraint(Constraint::Orientation orientation, const Component::Type& target, bool constOffset)
+	std::unique_ptr<ConstraintsContainer::RegularConstraintBuilder> ConstraintsContainer::addConstraint(Orientation orientation, const Component::Type& target, bool constOffset)
 	{
 		if (!target)
 			return std::unique_ptr<RegularConstraintBuilder>();
@@ -1765,7 +1765,7 @@ namespace Guider
 		return std::unique_ptr<RegularConstraintBuilder>();
 	}
 	
-	std::unique_ptr<ConstraintsContainer::ChainConstraintBuilder> ConstraintsContainer::addChainConstraint(Constraint::Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset)
+	std::unique_ptr<ConstraintsContainer::ChainConstraintBuilder> ConstraintsContainer::addChainConstraint(Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset)
 	{
 		if (targets.empty())
 			return std::unique_ptr<ChainConstraintBuilder>();
@@ -2057,7 +2057,7 @@ namespace Guider
 							}
 						}
 
-						auto builder = addConstraint(Constraint::Orientation::Horizontal, childMapping[i], constOffset);
+						auto builder = addConstraint(Orientation::Horizontal, childMapping[i], constOffset);
 
 						tmp = c.getAttribute("attachLeftTo");
 						if (tmp.exists())
@@ -2264,7 +2264,7 @@ namespace Guider
 							}
 						}
 
-						auto builder = addConstraint(Constraint::Orientation::Vertical, childMapping[i], constOffset);
+						auto builder = addConstraint(Orientation::Vertical, childMapping[i], constOffset);
 
 						tmp = c.getAttribute("attachTopTo");
 						if (tmp.exists())

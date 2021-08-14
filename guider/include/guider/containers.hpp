@@ -207,13 +207,6 @@ namespace Guider
 				Final
 			};
 
-			//TODO: use Guider::Orientation instead
-			enum class Orientation
-			{
-				Horizontal = 0,
-				Vertical = 1
-			};
-
 			enum class Type
 			{
 				None = 0,
@@ -386,13 +379,13 @@ namespace Guider
 		/// @param target target,
 		/// @param constOffset if true, size of target is calculated based on offset from edges, otherwise offset is calculated based on size,
 		/// @return Returns wrapper for created constraint.
-		std::unique_ptr<RegularConstraintBuilder> addConstraint(Constraint::Orientation orientation, const Component::Type& target, bool constOffset);
+		std::unique_ptr<RegularConstraintBuilder> addConstraint(Orientation orientation, const Component::Type& target, bool constOffset);
 		/// @brief Creates chain constraint for given element.
 		/// @param orientation either Vertical or Horizontal,
 		/// @param targets targets,
 		/// @param constOffset if true, size of target is calculated based on offset from edges, otherwise offset is calculated based on size.
 		/// @return Returns wrapper for created constraint.
-		std::unique_ptr<ChainConstraintBuilder> addChainConstraint(Constraint::Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset);
+		std::unique_ptr<ChainConstraintBuilder> addChainConstraint(Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset);
 
 		virtual void onMaskDraw(Canvas& canvas) const override;
 		virtual void onDraw(Canvas& canvas) override;

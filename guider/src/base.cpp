@@ -165,6 +165,38 @@ namespace Guider
 		v >>= 8;
 		r = v & 0xFF;
 	}
+
+	Color::Color(Name name)
+	{
+		switch (name)
+		{
+		case Guider::Color::Name::Black:
+		{
+			value = Color(0, 0, 0).value;
+			break;
+		}
+		case Guider::Color::Name::White:
+		{
+			value = Color(255, 255, 255).value;
+			break;
+		}
+		case Guider::Color::Name::Red:
+		{
+			value = Color(255, 0, 0).value;
+			break;
+		}
+		case Guider::Color::Name::Green:
+		{
+			value = Color(0, 255, 0).value;
+			break;
+		}
+		case Guider::Color::Name::Blue:
+		{
+			value = Color(0, 0, 255).value;
+			break;
+		}
+		}
+	}
 	
 	Color::Color(const Color& t) : value(t.value)
 	{
@@ -964,7 +996,9 @@ namespace Guider
 		for (auto element : elements)
 		{
 			if (toRedraw.count(element.get()))
+			{
 				element->draw(canvas);
+			}
 		}
 		toRedraw.clear();
 	}

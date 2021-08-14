@@ -2,6 +2,7 @@
 #include <cstdlib>
 
 #include <app.hpp>
+#include <guider/shortcuts.hpp>
 
 #include <string>
 #include <fstream>
@@ -9,8 +10,8 @@
 using namespace sf;
 using namespace std;
 
-using Orientation = Gui::ConstraintsContainer::Constraint::Orientation;
-using SizingMode = Gui::Component::SizingMode;
+using Orientation = Gui::Orientation;
+using SizingMode = Gui::SizingMode;
 
 int main(int argc, char* argv[])
 {

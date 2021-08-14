@@ -199,6 +199,10 @@ namespace Guider
 		/// @brief Returns drawable for given state.
 		/// @param state State.
 		std::shared_ptr<Resources::Drawable> getBackgroundDrawable(ButtonState state) const;
+		/// @brief Sets drawable for given state.
+		/// @param state State.
+		/// @param drawable Drawable.
+		void setBackgroundDrawable(ButtonState state, const std::shared_ptr<Resources::Drawable>& drawable);
 		/// @brief Returns drawable for current state.
 		std::shared_ptr<Resources::Drawable> getCurrentBackgroundDrawable() const;
 

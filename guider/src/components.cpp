@@ -466,6 +466,28 @@ namespace Guider
 		return backgroundDefault;
 	}
 	
+	void BasicButtonComponent::setBackgroundDrawable(ButtonState state, const std::shared_ptr<Resources::Drawable>& drawable)
+	{
+		switch (state)
+		{
+		case Guider::ButtonBase::ButtonState::Default:
+		{
+			backgroundDefault = drawable;
+			break;
+		}
+		case Guider::ButtonBase::ButtonState::Hovered:
+		{
+			backgroundSelected = drawable;
+			break;
+		}
+		case Guider::ButtonBase::ButtonState::Clicked:
+		{
+			backgroundClicked = drawable;
+			break;
+		}
+		}
+	}
+
 	std::shared_ptr<Resources::Drawable> BasicButtonComponent::getCurrentBackgroundDrawable() const
 	{
 		return getBackgroundDrawable(getButtonState());

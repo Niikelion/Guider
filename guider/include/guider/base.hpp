@@ -82,6 +82,16 @@ namespace Guider
 	class Color
 	{
 	public:
+		enum Name
+		{
+			Black,
+			White,
+
+			Red,
+			Green,
+			Blue
+		};
+
 		union
 		{
 			uint32_t value;
@@ -101,6 +111,7 @@ namespace Guider
 		Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 0xFF);
 		/// @brief Constructs color from hex reprezentation.
 		Color(uint32_t v);
+		Color(Name name);
 		Color(const Color& t);
 	};
 	/// @brief Padding.
