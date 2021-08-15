@@ -114,6 +114,7 @@ namespace Guider
 
 	EmptyComponent::EmptyComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack)
 	{
+		//empty i guess
 	}
 
 
@@ -125,11 +126,14 @@ namespace Guider
 
 	void RectangleShapeComponent::setColor(const Color& c)
 	{
-		color = c;
-		if (shape != nullptr)
+		if (color != c)
 		{
-			shape->setColor(color);
-			invalidateVisuals();
+			color = c;
+			if (shape != nullptr)
+			{
+				shape->setColor(color);
+				invalidateVisuals();
+			}
 		}
 	}
 
@@ -157,6 +161,7 @@ namespace Guider
 	
 	RectangleShapeComponent::RectangleShapeComponent() : shape(nullptr), color(255, 255, 255, 255)
 	{
+		//empty
 	}
 	
 	RectangleShapeComponent::RectangleShapeComponent(SizingMode mode, const Color& c) : shape(nullptr), color(c)
@@ -297,6 +302,7 @@ namespace Guider
 	
 	TextComponent::TextComponent() : textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
 	{
+		//empty
 	}
 	
 	TextComponent::TextComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack) : CommonComponent(manager, tag, pack), textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
@@ -424,6 +430,7 @@ namespace Guider
 	
 	ButtonBase::ButtonBase() : buttonState(ButtonState::Default)
 	{
+		//empty
 	}
 	
 

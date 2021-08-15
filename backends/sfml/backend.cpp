@@ -269,7 +269,7 @@ namespace Guider
 
 		glScissor(
 			left,
-			size.y - bottom,
+			static_cast<GLint>(size.y) - bottom,
 			right - left,
 			bottom - top
 		);

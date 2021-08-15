@@ -1,8 +1,8 @@
-This example shows how to use Guider with SFML and create elements from code. In later examples you will learn how to use styles api and define layout of your application in separate resource files. Note, that this is not SFML tutorial. To learn more about SFML i recommend their official tutorials.
+This example shows how to use Guider with SFML and create elements from code. In later examples you will learn how to use styles api and define layout of your application in separate resource files. Note, that this is not SFML tutorial. To learn more about SFML I strongly recommend their official tutorials.
 
-To demonstrate basic elements implemented, I have decided to create simple button list with two buttons: Increase and Decrease that increase and decrease counter respectively and some text to display current counter value.
+To demonstrate basic elements implemented, I have decided to create simple button list with two buttons: Increase and Decrease that increment and decrement the counter respectively and some text to display current value.
 
-After creating SFML window we need some texture to render to. (It is not necessary to render to separate texture. Rendering directly to window should still be possible.)
+After creating SFML window we need some texture to render to. (Note that rendering directly to window is possible, but rendering to texture is preferred to avoid the need to force redrawing whole gui.)
 
 ```c++
 	// prepare ogl context settings
@@ -15,7 +15,7 @@ After creating SFML window we need some texture to render to. (It is not necessa
 	gui.setTexture(target.getTexture());
 ```
 
-Now that we have texture, we have to create bridge between SFML and Guider - rendering backend. Current SfmlBackend implementation requires any valid sf::RenderTarget to work. While we are at it, let's create Engine instance and resize it to match window dimensions too.
+Now that we have texture, we have to create bridge between SFML and Guider - rendering backend. Current `SfmlBackend` implementation requires any valid `sf::RenderTarget` to work. While we are at it, let's create `Engine` instance and resize it to match window dimensions too.
 
 ```c++
 	// create backend
@@ -28,7 +28,7 @@ Now that we have texture, we have to create bridge between SFML and Guider - ren
 	});
 ```
 
-Before we start adding some elements to draw, we need to add rendering of gui at the end of main loop
+Before we start adding some elements to draw, we need to add rendering of the gui at the end of main loop
 
 ```c++
 		//activate texture for rendering
@@ -50,7 +50,7 @@ Before we start adding some elements to draw, we need to add rendering of gui at
 		window.display();
 ```
 
-and add some event handling. Most events can be handled by SfmlBackend::handleEvent but we still need to do texture resizing.
+and add some event handling. Most events can be handled by `SfmlBackend::handleEvent` but we still need to do texture resizing.
 
 ```c++
 		//event loop
@@ -64,7 +64,7 @@ and add some event handling. Most events can be handled by SfmlBackend::handleEv
 			{
 			case sf::Event::KeyPressed:
 			{
-				//fast close, who have time to click close button with mouse?
+				//fast close, who have time to click close button with mouse anyway?
 				if (event.key.code == sf::Keyboard::Escape)
 					window.close();
 				break;
@@ -206,9 +206,9 @@ Container created, let's add some buttons!
 	buttonList->addChild(downButton);
 ```
 
-If this block of code looks scary, don't warry. You will learn easier methods to define how elements look later on.
+If this block of code looks scary, don't worry. You will learn easier methods to define how elements look later on.
 
-Before we forget, quickly add text to show counter value and attach root to our engine.
+Before we forget, "quickly" add text to show counter value and attach root to our engine.
 
 ```c++
 	// counter variable
@@ -248,4 +248,6 @@ Before we forget, quickly add text to show counter value and attach root to our 
 	engine.addChild(root);
 ```
 
-And we are finally done! To learn more about Guider features, check out other examples.
+And we are finally done! Wow, that was a lot of code for a simple 2 button, 1 text example, wasn't it? Fortunately for us, there is easier way to do this in guider - styles!
+
+To learn more about Guider features, check out other examples.

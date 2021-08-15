@@ -101,6 +101,9 @@ namespace Guider
 			};
 		};
 
+		bool operator == (const Color& color) const noexcept;
+		bool operator != (const Color& color) const noexcept;
+
 		/// @brief Returns color as number in standard format.
 		/// 
 		/// Result is in 0xrrggbbaa format for easier printing and parsing.

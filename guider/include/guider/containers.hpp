@@ -290,18 +290,21 @@ namespace Guider
 		public:
 			void setSize(float size);
 			void setFlow(float flow);
+			
 			void attachStartTo(const Component::Type& target, bool toStart, float offset);
 			void attachEndTo(const Component::Type& target, bool toStart, float offset);
+			
 			void attachLeftTo(const Component::Type& target, bool toLeft, float offset);
 			void attachRightTo(const Component::Type& target, bool toLeft, float offset);
+			
 			void attachTopTo(const Component::Type& target, bool toTop, float offset);
 			void attachBottomTo(const Component::Type& target, bool toTop, float offset);
+			
 			void attachBetween(const Component::Type& start, bool startToStart, float startOffset, const Component::Type& end, bool endToStart, float endOffset);
-			inline void attachBetween(const Component::Type& start, bool startToStart, const Component::Type& end, bool endToStart, float offset)
-			{
-				attachBetween(start, startToStart, offset, end, endToStart, offset);
-			}
-			//TODO: add notifying parent if container edge is attached to child
+			void attachBetween(const Component::Type& start, bool startToStart, const Component::Type& end, bool endToStart, float offset);
+
+			void applyChanges();
+
 			RegularConstraintBuilder(Constraint& c, std::list<Cluster>::iterator cc) : constraint(c), cluster(cc)
 			{
 				if (c.getType() != Constraint::Type::Regular)
@@ -401,7 +404,7 @@ namespace Guider
 		std::unordered_map<Component*, Rect> boundaries;
 		std::list<Constraint> constraints;
 		//TODO: move other elements to using iterators instead of pointers
-		std::unordered_map<Constraint*, std::list<Constraint>::iterator> constraintMapping;
+		//std::unordered_map<Constraint*, std::list<Constraint>::iterator> constraintMapping;
 		std::list<Cluster> clusters;
 
 		std::unordered_map<const Component*, std::list<Cluster>::iterator> clusterMapping;

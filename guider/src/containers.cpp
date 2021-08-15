@@ -170,6 +170,7 @@ namespace Guider
 
 	AbsoluteContainer::Element::Element(const Component::Type& component, float x, float y) : component(component), x(x), y(y)
 	{
+		//empty
 	}
 
 	
@@ -223,7 +224,7 @@ namespace Guider
 		child->setParent(*this);
 		child->invalidateRecursive();
 
-		children.emplace_back(child, size, 0);
+		children.emplace_back(child, size, 0.f);
 
 		Component* p = child.get();
 		childMapping[p] = --children.end();
@@ -781,7 +782,7 @@ namespace Guider
 		}
 		}
 
-		return std::move(ret);
+		return ret;
 	}
 	
 	bool ConstraintsContainer::Constraint::isFor(const Component& c) const
@@ -949,6 +950,17 @@ namespace Guider
 		attachEndTo(end, endToStart, endOffset);
 	}
 
+	void ConstraintsContainer::RegularConstraintBuilder::attachBetween(const Component::Type& start, bool startToStart, const Component::Type& end, bool endToStart, float offset)
+	{
+		attachBetween(start, startToStart, offset, end, endToStart, offset);
+	}
+
+	void ConstraintsContainer::RegularConstraintBuilder::applyChanges()
+	{
+		Component* c = constraint.regular.target;
+		c->getParent()->onChildStain(*c);
+	}
+
 
 	void ConstraintsContainer::ChainConstraintBuilder::attachStartTo(const Component::Type& target, bool toStart, float offset)
 	{
@@ -1072,7 +1084,7 @@ namespace Guider
 			q.pop();
 			ret.emplace_back(&(*front));
 			auto& clusterDependency = clusterDependencies[front];
-			for (auto it : clusterDependency)
+			for (const auto& it : clusterDependency)
 				if (--ndeps[it] == 0)
 					q.push(it);
 
@@ -1446,7 +1458,7 @@ namespace Guider
 	{
 		for (auto it = children.begin(); it != children.end(); ++it)
 		{
-			auto child = *it;
+			const auto& child = *it;
 			Component* p = child.get();
 			if (p->getBounds() != boundaries[p])
 			{
@@ -1617,7 +1629,6 @@ namespace Guider
 						{
 							//delete immidiately, regular constraints have only one target
 							constraintsToRemove.push_back(constraint);
-							constraints.erase(constraintMapping.at(constraint));
 							break;
 						}
 						case Constraint::Type::Chain:
@@ -1630,7 +1641,6 @@ namespace Guider
 							{
 								//delete empty chain constraint
 								constraintsToRemove.push_back(constraint);
-								constraints.erase(constraintMapping.at(constraint));
 							}
 							break;
 						}
@@ -1658,7 +1668,7 @@ namespace Guider
 				{
 					//otherwise remove handing dependencies
 					std::vector<Component*> dependenciesToRemove;
-					for (auto i : cit->second->dependencies)
+					for (const auto& i : cit->second->dependencies)
 						if (i.second == 0)
 							dependenciesToRemove.push_back(i.first);
 					for (auto i : dependenciesToRemove)
@@ -1682,7 +1692,6 @@ namespace Guider
 
 		//constraints & clusters
 		constraints.clear();
-		constraintMapping.clear();
 		clusters.clear();
 		clusterMapping.clear();
 		messyClusters = true;
@@ -1752,7 +1761,6 @@ namespace Guider
 				needsRedraw.insert(target.get());
 			cluster->components.insert(target.get());
 			constraints.emplace_back(std::move(c));
-			constraintMapping[&constraints.back()] = std::prev(constraints.end());
 			cluster->constraints.insert(&constraints.back());
 			clusterMapping[target.get()] = cluster;
 
@@ -1820,7 +1828,6 @@ namespace Guider
 
 			//create cluster
 			constraints.emplace_back(std::move(c));
-			constraintMapping[&constraints.back()] = std::prev(constraints.end());
 			cluster->constraints.insert(&constraints.back());
 			for (const auto& target : targets)
 			{
@@ -1838,13 +1845,13 @@ namespace Guider
 			clusters.emplace_back();
 			auto cluster = std::prev(clusters.end());
 			//steel constraints
-			for (auto clusterToMerge : clustersToMerge)
+			for (const auto& clusterToMerge : clustersToMerge)
 			{
-				for (auto constraint : clusterToMerge->constraints)
+				for (const auto& constraint : clusterToMerge->constraints)
 				{
 					cluster->constraints.insert(constraint);
 				}
-				for (auto dependency : clusterToMerge->dependencies)
+				for (const auto& dependency : clusterToMerge->dependencies)
 				{
 					cluster->dependencies.insert(dependency);
 				}

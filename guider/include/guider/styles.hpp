@@ -92,7 +92,7 @@ namespace Guider
 		private:
 			template<typename T> static void deleterFunc(void* p)
 			{
-				(*static_cast<T*>(p)).~T();
+				static_cast<T*>(p)->~T();
 			}
 			template<typename T> static void* clonerFunc(void* p, uint8_t* buffer)
 			{

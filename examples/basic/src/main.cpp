@@ -35,135 +35,133 @@ int main()
 		static_cast<float>(startWidth),
 		static_cast<float>(startHeight)
 		});
-	/*
-		// load needed resources
-		backend.loadFontFromFile((resourcePath / "fonts/Arimo-Regular.ttf").string(), "");
+	// load needed resources
+	backend.loadFontFromFile((resourcePath / "fonts/Arimo-Regular.ttf").string(), "");
 
-		// create root container
-		std::shared_ptr<Guider::ConstraintsContainer> root = std::make_shared<Guider::ConstraintsContainer>();
-		// fill window
-		root->setSizingMode(Guider::SizingMode::MatchParent, Guider::SizingMode::MatchParent);
-		// its good practice to give root element opaque background
-		root->setBackgroundColor(Guider::Color::White);
+	// create root container
+	std::shared_ptr<Guider::ConstraintsContainer> root = std::make_shared<Guider::ConstraintsContainer>();
+	// fill window
+	root->setSizingMode(Guider::SizingMode::MatchParent, Guider::SizingMode::MatchParent);
+	// its good practice to give root element opaque background
+	root->setBackgroundColor(Guider::Color::White);
 
-		// create container for buttons
-		std::shared_ptr<Guider::ListContainer> buttonList = std::make_shared<Guider::ListContainer>();
-		// 200px width and height just enough to contain child elements
-		buttonList->setSizingMode(Guider::SizingMode::OwnSize, Guider::SizingMode::WrapContent);
-		// make list vertical
-		buttonList->setOrientation(Guider::Orientation::Vertical);
-		// set width to 200
-		buttonList->setWidth(200);
+	// create container for buttons
+	std::shared_ptr<Guider::ListContainer> buttonList = std::make_shared<Guider::ListContainer>();
+	// 200px width and height just enough to contain child elements
+	buttonList->setSizingMode(Guider::SizingMode::OwnSize, Guider::SizingMode::WrapContent);
+	// make list vertical
+	buttonList->setOrientation(Guider::Orientation::Vertical);
+	// set width to 200
+	buttonList->setWidth(200);
 
-		// add list as child of root container
-		root->addChild(buttonList);
+	// add list as child of root container
+	root->addChild(buttonList);
+	{
+		// setup horizontal centering constraint
+		auto h = root->addConstraint(Guider::Orientation::Horizontal, buttonList, true);
+		h->attachBetween(root, true, root, false, 0);
+		h->setFlow(0.5);
+
+		// setup vertical centering constraint
+		auto v = root->addConstraint(Guider::Orientation::Vertical, buttonList, true);
+		v->attachBetween(root, true, root, false, 0);
+		v->setFlow(0.5);
+	}
+
+	// counter variable
+	size_t counter = 0;
+
+	// counter variable display
+	std::shared_ptr<Guider::TextComponent> text = std::make_shared<Guider::TextComponent>();
+	// tak just enough space to fit text
+	text->setSizingMode(Guider::SizingMode::WrapContent, Guider::SizingMode::WrapContent);
+	// set current counter value as text
+	text->setText(std::to_string(counter));
+	// center text
+	text->setTextAlignment(Guider::Gravity::Center, Guider::Gravity::Center);
+	// set size to 20
+	text->setTextSize(20);
+	// set font to "", our only font
+	text->setFont("");
+	// set color to black
+	text->setTextColor(Guider::Color(0, 0, 0));
+	root->addChild(text);
+	{
+		// setup horizontal centering between right edge of list and right edge of parent
+		auto h = root->addConstraint(Guider::Orientation::Horizontal, text, true);
+		h->attachBetween(buttonList, false, root, false, true);
+		h->setFlow(0.5);
+
+		// stick to the top of button list
+		auto v = root->addConstraint(Guider::Orientation::Vertical, text, true);
+		v->attachTopTo(buttonList, true, 0);
+		v->attachBottomTo(root, false, 0);
+		v->setFlow(0);
+	}
+
+	std::shared_ptr<Guider::BasicButtonComponent> upButton = std::make_shared<Guider::BasicButtonComponent>();
+	upButton->setBackgroundDrawable(
+		Guider::BasicButtonComponent::ButtonState::Default,
+		backend.createRectangle({}, Guider::Color(200, 200, 200))
+	);
+	upButton->setBackgroundDrawable(
+		Guider::BasicButtonComponent::ButtonState::Hovered,
+		backend.createRectangle({}, Guider::Color(150, 150, 150))
+	);
+	upButton->setBackgroundDrawable(
+		Guider::BasicButtonComponent::ButtonState::Clicked,
+		backend.createRectangle({}, Guider::Color(100, 100, 100))
+	);
+	upButton->setSizingMode(Guider::SizingMode::MatchParent, Guider::SizingMode::WrapContent);
+	upButton->setText("Increase");
+	upButton->setTextAlignment(Guider::Gravity::Center, Guider::Gravity::Center);
+	upButton->setTextSize(20);
+	upButton->setFont("");
+	upButton->setTextColor(Guider::Color(255, 0, 0));
+
+	upButton->setOnClickCallback([&counter, &text](auto&)
 		{
-			// setup horizontal centering constraint
-			auto h = root->addConstraint(Guider::Orientation::Horizontal, buttonList, true);
-			h->attachBetween(root, true, root, false, 0);
-			h->setFlow(0.5);
+			++counter;
+			std::cout << counter << "\n";
+			text->setText(std::to_string(counter));
+		});
 
-			// setup vertical centering constraint
-			auto v = root->addConstraint(Guider::Orientation::Vertical, buttonList, true);
-			v->attachBetween(root, true, root, false, 0);
-			v->setFlow(0.5);
-		}
+	buttonList->addChild(upButton);
 
-		// counter variable
-		size_t counter = 0;
+	std::shared_ptr<Guider::BasicButtonComponent> downButton = std::make_shared<Guider::BasicButtonComponent>();
+	downButton->setBackgroundDrawable(
+		Guider::BasicButtonComponent::ButtonState::Default,
+		backend.createRectangle({}, Guider::Color(200, 200, 200))
+	);
+	downButton->setBackgroundDrawable(
+		Guider::BasicButtonComponent::ButtonState::Hovered,
+		backend.createRectangle({}, Guider::Color(150, 150, 150))
+	);
+	downButton->setBackgroundDrawable(
+		Guider::BasicButtonComponent::ButtonState::Clicked,
+		backend.createRectangle({}, Guider::Color(100, 100, 100))
+	);
+	downButton->setSizingMode(Guider::SizingMode::MatchParent, Guider::SizingMode::WrapContent);
+	downButton->setText("Decrease");
+	downButton->setTextAlignment(Guider::Gravity::Center, Guider::Gravity::Center);
+	downButton->setTextSize(20);
+	downButton->setFont("");
+	downButton->setTextColor(Guider::Color(255, 0, 0));
 
-		// counter variable display
-		std::shared_ptr<Guider::TextComponent> text = std::make_shared<Guider::TextComponent>();
-		// tak just enough space to fit text
-		text->setSizingMode(Guider::SizingMode::WrapContent, Guider::SizingMode::WrapContent);
-		// set current counter value as text
-		text->setText(std::to_string(counter));
-		// center text
-		text->setTextAlignment(Guider::Gravity::Center, Guider::Gravity::Center);
-		// set size to 20
-		text->setTextSize(20);
-		// set font to "", our only font
-		text->setFont("");
-		// set color to black
-		text->setTextColor(Guider::Color(0, 0, 0));
-		root->addChild(text);
+	downButton->setOnClickCallback([&counter, &text](auto&)
 		{
-			// setup horizontal centering between right edge of list and right edge of parent
-			auto h = root->addConstraint(Guider::Orientation::Horizontal, text, true);
-			h->attachBetween(buttonList, false, root, false, true);
-			h->setFlow(0.5);
+			if (counter > 0)
+				--counter;
+			std::cout << counter << "\n";
+			text->setText(std::to_string(counter));
+		});
 
-			// stick to the top of button list
-			auto v = root->addConstraint(Guider::Orientation::Vertical, text, true);
-			v->attachTopTo(buttonList, true, 0);
-			v->attachBottomTo(root, false, 0);
-			v->setFlow(0);
-		}
-
-		std::shared_ptr<Guider::BasicButtonComponent> upButton = std::make_shared<Guider::BasicButtonComponent>();
-		upButton->setBackgroundDrawable(
-			Guider::BasicButtonComponent::ButtonState::Default,
-			backend.createRectangle({}, Guider::Color(200, 200, 200))
-		);
-		upButton->setBackgroundDrawable(
-			Guider::BasicButtonComponent::ButtonState::Hovered,
-			backend.createRectangle({}, Guider::Color(150, 150, 150))
-		);
-		upButton->setBackgroundDrawable(
-			Guider::BasicButtonComponent::ButtonState::Clicked,
-			backend.createRectangle({}, Guider::Color(100, 100, 100))
-		);
-		upButton->setSizingMode(Guider::SizingMode::MatchParent, Guider::SizingMode::WrapContent);
-		upButton->setText("Increase");
-		upButton->setTextAlignment(Guider::Gravity::Center, Guider::Gravity::Center);
-		upButton->setTextSize(20);
-		upButton->setFont("");
-		upButton->setTextColor(Guider::Color(255, 0, 0));
-
-		upButton->setOnClickCallback([&counter, &text](auto&)
-			{
-				++counter;
-				std::cout << counter << "\n";
-				text->setText(std::to_string(counter));
-			});
-
-		buttonList->addChild(upButton);
-
-		std::shared_ptr<Guider::BasicButtonComponent> downButton = std::make_shared<Guider::BasicButtonComponent>();
-		downButton->setBackgroundDrawable(
-			Guider::BasicButtonComponent::ButtonState::Default,
-			backend.createRectangle({}, Guider::Color(200, 200, 200))
-		);
-		downButton->setBackgroundDrawable(
-			Guider::BasicButtonComponent::ButtonState::Hovered,
-			backend.createRectangle({}, Guider::Color(150, 150, 150))
-		);
-		downButton->setBackgroundDrawable(
-			Guider::BasicButtonComponent::ButtonState::Clicked,
-			backend.createRectangle({}, Guider::Color(100, 100, 100))
-		);
-		downButton->setSizingMode(Guider::SizingMode::MatchParent, Guider::SizingMode::WrapContent);
-		downButton->setText("Decrease");
-		downButton->setTextAlignment(Guider::Gravity::Center, Guider::Gravity::Center);
-		downButton->setTextSize(20);
-		downButton->setFont("");
-		downButton->setTextColor(Guider::Color(255, 0, 0));
-
-		downButton->setOnClickCallback([&counter, &text](auto&)
-			{
-				if (counter > 0)
-					--counter;
-				std::cout << counter << "\n";
-				text->setText(std::to_string(counter));
-			});
-
-		buttonList->addChild(downButton);
+	buttonList->addChild(downButton);
 
 
-		//attach root element to engine
-		engine.addChild(root);
-		*/
-		//view for caching
+	//attach root element to engine
+	engine.addChild(root);
+	//view for caching
 	sf::View view = window.getDefaultView();
 
 	int n = 100;
@@ -182,7 +180,7 @@ int main()
 			{
 			case sf::Event::KeyPressed:
 			{
-				//fast close, who have time to click close button with mouse?
+				//fast close, who have time to click close button with mouse anyway?
 				if (event.key.code == sf::Keyboard::Escape)
 					window.close();
 				break;
@@ -193,7 +191,7 @@ int main()
 				window.close();
 				break;
 			}
-			/*
+
 			case sf::Event::Resized:
 			{
 				//default sfml backend implementation does not resize target
@@ -215,7 +213,7 @@ int main()
 				window.setView(view);
 				break;
 			}
-			*/
+
 			default:
 				break;
 			}

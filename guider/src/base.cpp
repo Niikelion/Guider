@@ -138,6 +138,16 @@ namespace Guider
 	}
 
 
+	bool Color::operator==(const Color& color) const noexcept
+	{
+		return value == color.value;
+	}
+
+	bool Color::operator!=(const Color& color) const noexcept
+	{
+		return value != color.value;
+	}
+
 	uint32_t Color::hex() const noexcept
 	{
 		return r << 24 | g << 16 | b << 8 | a;
@@ -166,7 +176,7 @@ namespace Guider
 		r = v & 0xFF;
 	}
 
-	Color::Color(Name name)
+	Color::Color(Name name): r(0), g(0), b(0), a(255)
 	{
 		switch (name)
 		{
@@ -957,7 +967,7 @@ namespace Guider
 	void Engine::update()
 	{
 		Rect bounds = getBounds();
-		for (auto element : elements)
+		for (const auto& element : elements)
 		{
 			if (!element->isClean())
 			{
@@ -984,7 +994,7 @@ namespace Guider
 	{
 		if (!toRedraw.empty())
 		{
-			for (auto element : elements)
+			for (const auto& element : elements)
 			{
 				element->drawMask(canvas);
 			}
@@ -993,7 +1003,7 @@ namespace Guider
 	
 	void Engine::onDraw(Canvas& canvas)
 	{
-		for (auto element : elements)
+		for (const auto& element : elements)
 		{
 			if (toRedraw.count(element.get()))
 			{
@@ -1005,7 +1015,7 @@ namespace Guider
 	
 	void Engine::onRedraw(Canvas& canvas)
 	{
-		for (auto element : elements)
+		for (const auto& element : elements)
 			element->redraw(canvas);
 	}
 	
