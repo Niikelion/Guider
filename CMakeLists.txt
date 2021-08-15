@@ -5,8 +5,8 @@ project(Guider VERSION 0.0.1 DESCRIPTION "Gui library." LANGUAGES CXX)
 option(BUILD_EXAMPLES "Build examples" true)
 option(BUILD_TOOLS "Build tools" true)
 option(BUILD_TESTS "Build tests" false)
-option(INTERNAL_PARSELIB "Use parselib from submodule" false)
 option(DEV_BUILD "For guider development only" false)
+option(INTERNAL_PARSELIB "Use parselib from submodule" true)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 

@@ -1,17 +1,40 @@
+<img src="assets/project-logo.png" alt="guider-logo" style="zoom:50%;" />
+
 # Guider - gui library for easier tool creation
+
 Guider is modular, object oriented, cross-platform gui library. It focuses on ability to create beautiful and responsive user interface while minimizing need for writing code.
 
 - [Authors](#authors)
+- [Features](#features)
 - [Install](#install)
   - [Requirements](#requirements)
   - [Integrate in project](#integrate-in-project)
   - [Build Guider from sources](#build-guider-from-sources)
 - [Concepts](#concepts)
 - [Examples](#examples)
+- [License](#license)
 
 ## Authors
 
 - Michał Osiński — main developer
+
+## Features
+
+- Cross-platform
+- Loading hierarchy from XML files 
+- Styling elements from XML files & code
+- Ease of embedding into application
+- Intuitive layout types
+- Optimized for(but not limited) static gui
+
+Planned features:
+
+- Animations
+- Panel utility
+- Optimized binary format and JSON support
+- Inputfield, Scrollbar and Switch implementations
+- Focus system
+- More events
 
 ## Install
 
@@ -49,13 +72,13 @@ cmake --build .
 
 Additional cmake options:
 
-| Option            | Description                               | Default value |
-| ----------------- | ----------------------------------------- | ------------- |
-| BUILD_TESTS       | Enables building tests. Requires Catch2.  | false         |
-| BUILD_EXAMPLES    | Enables building examples. Requires SFML. | true          |
-| BUILD_TOOLS       | Enables building tools. Requires SFML.    | true          |
-| DEV_BUILD         | For Guider development                    | false         |
-| INTERNAL_PARSELIB | Allows using parselib from submodule      | false         |
+| Option            | Description                                                  | Default value |
+| ----------------- | ------------------------------------------------------------ | ------------- |
+| BUILD_TESTS       | Enables building tests. Requires Catch2.                     | false         |
+| BUILD_EXAMPLES    | Enables building examples. Requires SFML.                    | true          |
+| BUILD_TOOLS       | Enables building tools. Requires SFML.                       | true          |
+| DEV_BUILD         | Used for Guider development. When enabled, guider uses resource files from source directory, instead of copying them to build directory and using them from there. | false         |
+| INTERNAL_PARSELIB | Allows using parselib from submodule.                        | true          |
 
 ## Concepts
 
@@ -72,3 +95,7 @@ List of components provided by default can be found [here](ELEMENTS.md).
 ## Examples
 
 Examples for using Guider can be found [here](examples/README.md).
+
+## License
+
+Guider is available under [MIT](LICENSE) license.
