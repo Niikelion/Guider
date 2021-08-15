@@ -1,4 +1,4 @@
-<img src="assets/project-logo.png" alt="guider-logo" width="256" height="256" />
+<p align="center"><img src="assets/project-logo.png" alt="guider-logo" width="256" height="256" /></p>
 
 # Guider - gui library for easier tool creation
 
