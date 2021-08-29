@@ -1,12 +1,18 @@
 #include <guider/containers.hpp>
-#include <queue>
+#include <guider/shortcuts.hpp>
 #include <cstdlib>
-#include <limits>
 #include <cassert>
+#include <limits>
+#include <queue>
 #include <map>
 
 namespace Guider
 {
+	void AbsoluteContainer::registerProperties(Manager& manager, const std::string& name)
+	{
+		//TODO: do
+	}
+	
 	void AbsoluteContainer::addChild(const Component::Type& child)
 	{
 		addChild(child, 0, 0);
@@ -19,9 +25,9 @@ namespace Guider
 		child->setParent(*this);
 		child->poke();
 		toUpdate.insert(child.get());
-		std::pair<Component::DimensionDesc, Component::DimensionDesc> measurements = child->measure(
-			Component::DimensionDesc(bounds.width, Component::DimensionDesc::Mode::Max),
-			Component::DimensionDesc(bounds.height, Component::DimensionDesc::Mode::Max)
+		std::pair<DimensionDesc, DimensionDesc> measurements = child->measure(
+			DimensionDesc(bounds.width, DimensionMode::Max),
+			DimensionDesc(bounds.height, DimensionMode::Max)
 		);
 		bounds.left = x;
 		bounds.top = y;
@@ -29,6 +35,7 @@ namespace Guider
 		bounds.height = measurements.second.value;
 		setBounds(*child, bounds);
 	}
+	
 	void AbsoluteContainer::removeChild(const Component::Type& child)
 	{
 		for (auto it = children.begin(); it != children.end(); ++it)
@@ -40,15 +47,18 @@ namespace Guider
 			}
 		}
 	}
+	
 	void AbsoluteContainer::clearChildren()
 	{
 		toUpdate.clear();
 		children.clear();
 	}
+	
 	Container::Iterator AbsoluteContainer::firstElement()
 	{
 		return createIterator<IteratorType>(children.begin(), children.end());
 	}
+	
 	void AbsoluteContainer::poke()
 	{
 		Component::poke();
@@ -57,8 +67,8 @@ namespace Guider
 			//TODO: move to another method
 			i.component->poke();
 			Rect bounds = getBounds();
-			std::pair<DimensionDesc, DimensionDesc> measurements = i.component->measure(DimensionDesc(bounds.width, DimensionDesc::Max),
-				DimensionDesc(bounds.height, DimensionDesc::Max)
+			std::pair<DimensionDesc, DimensionDesc> measurements = i.component->measure(DimensionDesc(bounds.width, DimensionMode::Max),
+				DimensionDesc(bounds.height, DimensionMode::Max)
 			);
 
 			bounds.left = i.x;
@@ -77,6 +87,7 @@ namespace Guider
 			}
 		}
 	}
+	
 	void AbsoluteContainer::onResize(const Rect& last)
 	{
 		if (last != getBounds())
@@ -85,6 +96,7 @@ namespace Guider
 				toUpdate.insert(i.component.get());
 		}
 	}
+	
 	void AbsoluteContainer::onChildStain(Component& c)
 	{
 		for (auto& i : children)
@@ -92,8 +104,8 @@ namespace Guider
 			if (i.component.get() == &c)
 			{
 				Rect bounds = getBounds();
-				std::pair<DimensionDesc, DimensionDesc> measurements = c.measure(DimensionDesc(bounds.width, DimensionDesc::Max),
-					DimensionDesc(bounds.height, DimensionDesc::Max)
+				std::pair<DimensionDesc, DimensionDesc> measurements = c.measure(DimensionDesc(bounds.width, DimensionMode::Max),
+					DimensionDesc(bounds.height, DimensionMode::Max)
 				);
 
 				bounds.left = i.x;
@@ -115,6 +127,7 @@ namespace Guider
 			}
 		}
 	}
+	
 	void AbsoluteContainer::onChildNeedsRedraw(Component& c)
 	{
 		toUpdate.insert(&c);
@@ -127,6 +140,7 @@ namespace Guider
 			i->drawMask(canvas);
 		}
 	}
+	
 	void AbsoluteContainer::onDraw(Canvas& canvas)
 	{
 		if (toUpdate.size() > 0)
@@ -152,77 +166,34 @@ namespace Guider
 			}
 		}
 	}
-	AbsoluteContainer::Element::Element(const Component::Type& c, float x, float y)
+	
+
+	AbsoluteContainer::Element::Element(const Component::Type& component, float x, float y) : component(component), x(x), y(y)
 	{
-		component = c;
-		this->x = x;
-		this->y = y;
+		//empty
 	}
 
-	bool ListContainer::updateElementRect(Element& element, bool needsMeasure, float localOffset, const DimensionDesc& w, const DimensionDesc& h, const Rect& bounds)
+	
+	void ListContainer::registerProperties(Manager& manager, const std::string& name)
 	{
-		Rect lb = element.component->getBounds();
-		Rect original = lb;
-
-		element.offset = localOffset;
-
-		if (horizontal)
-		{
-			lb.left = element.offset + offset;
-		}
-		else
-		{
-			lb.top = element.offset + offset;
-		}
-
-		if (needsMeasure)
-		{
-			std::pair<DimensionDesc, DimensionDesc> measurements = element.component->measure(w, h);
-
-			float width = measurements.first.value;
-			float height = measurements.second.value;
-
-			if (horizontal)
-			{
-				if (height > bounds.height)
-					height = bounds.height;
-			}
-			else
-			{
-				if (width > bounds.width)
-					width = bounds.width;
-			}
-			lb.width = width;
-			lb.height = height;
-			if (horizontal)
-			{
-				lb.top = (bounds.height - height) / 2;
-				element.size = lb.width;
-			}
-			else
-			{
-				lb.left = (bounds.width - width) / 2;
-				element.size = lb.height;
-			}
-		}
-		if (lb != original)
-		{
-			if (std::abs(lb.left - original.left) > std::numeric_limits<float>::epsilon() ||
-				std::abs(lb.top - original.top) > std::numeric_limits<float>::epsilon() ||
-				lb.width != original.width || lb.height != original.height)
-			{
-				setBounds(*element.component, lb);
-				return true;
-			}
-		}
-		return false;
+		manager.registerPropertyForComponent<Orientation>(name, "orientation", [](const std::string& s) {
+			return s == "horizontal" ? Orientation::Horizontal : Orientation::Vertical;
+		});
+		manager.registerColorProperty(name, "backgroundColor");
 	}
-	void ListContainer::setOrientation(bool horizontal)
+	
+	void ListContainer::setOrientation(Orientation orientation)
 	{
-		this->horizontal = horizontal;
+		this->orientation = orientation;
 		//TODO: recalc offsets
 		invalidate();
 	}
+	
+	Orientation ListContainer::getOrientation() const noexcept
+	{
+		return orientation;
+	}
+	
 	void ListContainer::setBackgroundColor(const Color& color)
 	{
 		backgroundColor = color;
@@ -231,97 +202,91 @@ namespace Guider
 		invalidateVisuals();
 		firstDraw = true;
 	}
+	
+	Color ListContainer::getBackgroundColor() const noexcept
+	{
+		return backgroundColor;
+	}
+	
+	void ListContainer::setOffset(float offset)
+	{
+		newOffset = offset;
+		invalidate();
+	}
+
+	float ListContainer::getOffset() const noexcept
+	{
+		return newOffset;
+	}
+
 	void ListContainer::addChild(const Component::Type& child)
 	{
 		child->setParent(*this);
-		child->poke();
-		float off;
-		Rect bounds = getBounds();
+		child->invalidateRecursive();
 
-		DimensionDesc w(bounds.width, DimensionDesc::Max);
-		DimensionDesc h(bounds.height, DimensionDesc::Max);
+		children.emplace_back(child, size, 0.f);
 
-		if (horizontal)
-		{
-			w.value = 0;
-			w.mode = DimensionDesc::Min;
-		}
-		else
-		{
-			h.value = 0;
-			h.mode = DimensionDesc::Min;
-		}
+		Component* p = child.get();
+		childMapping[p] = --children.end();
 
-		std::pair<DimensionDesc, DimensionDesc> measurements = child->measure(w, h);
-
-		Rect lb;
-
-		if (horizontal)
-		{
-			off = measurements.first.value;
-			float height = measurements.second.value;
-			if (height > bounds.height)
-				height = bounds.height;
-			lb = Rect(size, (bounds.height - height) / 2, off, height);
-		}
-		else
-		{
-			off = measurements.second.value;
-			float width = measurements.first.value;
-			if (width > bounds.width)
-				width = bounds.width;
-			lb = Rect((bounds.width - width) / 2, size, width, off);
-		}
-
-		children.emplace_back(child, off, size);
-		toUpdate.insert(child.get());
-		toRedraw.insert(child.get());
-
-		size += off;
+		toRedraw.insert(p);
+		toUpdate.insert(p);
 
 		invalidate();
 	}
+	//TODO: do some smart trick to avoid recalculating everything when erasing elements
 	void ListContainer::removeChild(const Component::Type& child)
 	{
-		auto it = children.begin();
-		while (it != children.end())
-		{
-			if (it->component.get() == child.get())
-			{
-				auto cp = it;
-				cp++;
-				while (cp != children.end())//todo: stop after reaching end of parent frame
-				{
-					toRedraw.insert(cp->component.get());
-					toOffset.insert(cp->component.get());
-					++cp;
-				}
-				children.erase(it);
-				invalidate();
-				return;
-			}
-			++it;
-		}
+		auto it = std::find_if(children.begin(), children.end(), [&child](const Element& e) {
+			return child.get() == e.component.get();
+		});
+
+		recalculateVisibleElements();
+		
+		Component* p = it->component.get();
+
+		visible.erase(p);
+		beforeVisible.erase(p);
+		updated.erase(p);
+
+		childMapping.erase(p);
+
+		children.erase(it);
+		invalidate();
 	}
+	
 	void ListContainer::removeChild(unsigned n)
 	{
 		removeChild(std::next(children.begin(), n)->component);
 	}
+	
 	void ListContainer::clearChildren()
 	{
 		children.clear();
 		toUpdate.clear();
 		toRedraw.clear();
 		toOffset.clear();
+
+		updated.clear();
+		visible.clear();
+		beforeVisible.clear();
+
+		childMapping.clear();
+
+		visibleBegin = children.end();
+		visibleEnd = children.end();
 	}
+	
 	size_t ListContainer::getChildrenCount() const
 	{
 		return children.size();
 	}
+	
 	Component::Type ListContainer::getChild(unsigned i)
 	{
 		return std::next(children.begin(), i)->component;
 	}
+	
 	void ListContainer::onMaskDraw(Canvas& canvas) const
 	{
 		if (backgroundColor.a > 0 && firstDraw)
@@ -330,133 +295,147 @@ namespace Guider
 		}
 		else
 		{
-			for (auto i : toRedraw)
+			for (auto it = visibleBegin; it != visibleEnd; ++it)
 			{
-				i->drawMask(canvas);
+				Component* p = it->component.get();
+				if (toRedraw.count(p))
+					p->drawMask(canvas);
 			}
+
+			//draw mask for free space
 			Rect bounds = getBounds().at(Vec2(0.f, 0.f));
 			float d = 0;
-			if (horizontal)
+			
+			
+			if (orientation == Orientation::Horizontal)
 			{
 				d = bounds.width;
 				bounds.left += offset + size;
+				bounds.width = d - bounds.left;
 			}
 			else
 			{
 				d = bounds.height;
 				bounds.top += offset + size;
+				bounds.height = d - bounds.top;
 			}
 			if (offset + size < d)
 			{
 				getBackend()->addToMask(bounds);
 			}
+			if (offset > 0)
+			{
+				bounds = getBounds().at(Vec2(0.f, 0.f));
+				if (orientation == Orientation::Horizontal)
+				{
+					bounds.width = offset;
+				}
+				else
+				{
+					bounds.height = offset;
+				}
+				getBackend()->addToMask(bounds);
+			}
 		}
 	}
-
+	
 	void ListContainer::onDraw(Canvas& canvas)
 	{
-		onRedraw(canvas);
-		return;
-
 		if (backgroundColor.a > 0 && firstDraw)
 			canvas.drawRectangle(getBounds().at(Vec2(0.f, 0.0f)), backgroundColor);
-		for (const auto& i : children)
+		for (auto it = visibleBegin; it != visibleEnd; ++it)
 		{
-			if (backgroundColor.a > 0 || toRedraw.count(i.component.get()))
+			Component* p = it->component.get();
+			if (backgroundColor.a > 0 || toRedraw.count(p))
 			{
-				i.component->draw(canvas);
+				p->draw(canvas);
 			}
 		}
 		toRedraw.clear();
 	}
-
+	
 	void ListContainer::onRedraw(Canvas& canvas)
 	{
 		if (backgroundColor.a > 0)
 			canvas.drawRectangle(getBounds().at(Vec2(0.f, 0.0f)), backgroundColor);
-		for (const auto& i : children)
-			i.component->redraw(canvas);
+		for (auto it = visibleBegin; it != visibleEnd; ++it)
+			it->component->redraw(canvas);
 		toRedraw.clear();
 		firstDraw = false;
 	}
 
 	void ListContainer::poke()
 	{
+		Rect bounds = getBounds().at({0.f, 0.f});
 		Component::poke();
-		float off = 0;
-		bool offsetting = false;
+		
+		DimensionDesc ww(bounds.width, DimensionMode::Max);
+		DimensionDesc hh(bounds.height, DimensionMode::Max);
 
-		Rect bounds = getBounds();
-		DimensionDesc w(bounds.width, DimensionDesc::Max);
-		DimensionDesc h(bounds.height, DimensionDesc::Max);
-
-		if (horizontal)
+		if (orientation == Orientation::Horizontal)
 		{
-			w.value = 0;
-			w.mode = DimensionDesc::Min;
+			ww.value = 0;
+			ww.mode = DimensionMode::Min;
 		}
 		else
 		{
-			h.value = 0;
-			h.mode = DimensionDesc::Min;
+			hh.value = 0;
+			hh.mode = DimensionMode::Min;
 		}
-
-		for (auto& i : children)
+		std::vector<Component*> toPoke;
+		toPoke.reserve(toUpdate.size());
+		for (auto i : toUpdate)
 		{
-			bool needsMeasureing = !i.component->isClean();
-			if (!i.component->isClean())
-				i.component->poke();
+			toPoke.emplace_back(i);
+			//measure and update size
+			auto it = childMapping.at(i);
 
-			if (offsetting)
-			{
-				updateElementRect(i, needsMeasureing, off, w, h, bounds);
-			}
-			else if (needsMeasureing)
-			{
-				updateElementRect(i, true, off, w, h, bounds);
-				offsetting = true;
-			}
-			off += i.size;
+			auto measurements = i->measure(ww, hh);
+			if (getOrientation() == Orientation::Horizontal)
+				it->newSize = std::min(measurements.first.value, bounds.width);
+			else
+				it->newSize = std::min(measurements.second.value, bounds.height);
+			if (it->newSize != it->size)
+				updated.insert(i);
 		}
-		size = off;
 		toUpdate.clear();
+		
+		adjustVisibleElements();
+		offset = newOffset;
+		for (auto i : updated)
+		{
+			Element& child = *childMapping.at(i);
+			child.size = child.newSize;
+		}
+
+		if (updated.size() > 0)
+		{
+			updated.clear();
+			for (auto it = visibleBegin; it != visibleEnd; ++it)
+			{
+				Element& child = *it;
+				if (getOrientation() == Orientation::Horizontal)
+				{
+					bounds.left = child.offset + newOffset;
+					bounds.width = child.newSize;
+				}
+				else
+				{
+					bounds.top = child.offset + newOffset;
+					bounds.height = child.newSize;
+				}
+
+				setBounds(*child.component, bounds);
+			}
+			for (auto i : toPoke)
+				i->poke();
+		}
 	}
 
 	void ListContainer::onResize(const Rect& lastBounds)
 	{
-		Rect bounds = getBounds();
-
-		if (bounds != lastBounds)
-		{//TODO: remeasure only if logical width changes
-			float off = 0;
-
-			DimensionDesc w(bounds.width, DimensionDesc::Max);
-			DimensionDesc h(bounds.height, DimensionDesc::Max);
-
-			if (horizontal)
-			{
-				w.value = 0;
-				w.mode = DimensionDesc::Min;
-			}
-			else
-			{
-				h.value = 0;
-				h.mode = DimensionDesc::Min;
-			}
-			for (auto& i : children)
-			{
-				updateElementRect(i, true, off, w, h, bounds);
-				off += i.size;
-			}
-			size = off;
-			invalidate();
-
-			toOffset.clear();
-			for (auto& i : children)
-				i.component->invalidateVisuals();
-
-			firstDraw = true;
-		}
+		//TODO: smart invalidation
+		invalidateRecursive();
 	}
 
 	void ListContainer::onChildStain(Component& c)
@@ -474,87 +453,311 @@ namespace Guider
 		return createIterator<IteratorType>(children.begin(), children.end());
 	}
 
-	std::pair<Component::DimensionDesc, Component::DimensionDesc> ListContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
+	std::pair<DimensionDesc, DimensionDesc> ListContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
 	{
 		//TODO: move to function i guess
 		float off = 0;
 		bool offsetting = false;
 
 		Rect bounds = getBounds();
-		DimensionDesc ww(bounds.width, DimensionDesc::Max);
-		DimensionDesc hh(bounds.height, DimensionDesc::Max);
+		DimensionDesc ww(bounds.width, DimensionMode::Max);
+		DimensionDesc hh(bounds.height, DimensionMode::Max);
 
-		if (horizontal)
+		if (orientation == Orientation::Horizontal)
 		{
 			ww.value = 0;
-			ww.mode = DimensionDesc::Min;
+			ww.mode = DimensionMode::Min;
 		}
 		else
 		{
 			hh.value = 0;
-			hh.mode = DimensionDesc::Min;
+			hh.mode = DimensionMode::Min;
 		}
 
-		for (auto& i : children)
+		for (auto& child : children)
 		{
-			bool needsMeasureing = !i.component->isClean();
-			if (!i.component->isClean())
-				i.component->poke();
-
-			if (offsetting)
+			auto measurements = child.component->measure(ww,hh);
+			if (orientation == Orientation::Horizontal)
 			{
-				updateElementRect(i, needsMeasureing, off, ww, hh, bounds);
+				child.newSize = measurements.first.value;
 			}
-			else if (needsMeasureing)
+			else
 			{
-				updateElementRect(i, true, off, ww, hh, bounds);
-				offsetting = true;
+				child.newSize = measurements.second.value;
 			}
-			off += i.size;
 		}
-		size = off;
+
+		recalculateVisibleElements();
 
 		std::pair<DimensionDesc, DimensionDesc> measurements = Component::measure(w, h);
-		if (getSizingModeHorizontal() == SizingMode::WrapContent && horizontal)
+		if (getSizingModeHorizontal() == SizingMode::WrapContent && orientation == Orientation::Horizontal)
 		{
-			measurements.first = DimensionDesc(size, DimensionDesc::Exact);
+			measurements.first = DimensionDesc(size, DimensionMode::Exact);
 		}
-		else if (getSizingModeVertical() == SizingMode::WrapContent && !horizontal)
+		else if (getSizingModeVertical() == SizingMode::WrapContent && orientation == Orientation::Vertical)
 		{
-			measurements.second = DimensionDesc(size, DimensionDesc::Exact);
+			measurements.second = DimensionDesc(size, DimensionMode::Exact);
 		}
 		return measurements;
 	}
 
-	ListContainer::ListContainer() : horizontal(false), size(0), offset(0), backgroundColor(0, 0, 0, 0), firstDraw(true)
+	ListContainer::ListContainer() : orientation(Orientation::Vertical), size(0), offset(0), newOffset(0), backgroundColor(0, 0, 0, 0), firstDraw(true)
 	{
+		visibleBegin = children.end();
+		visibleEnd = children.end();
 	}
 
-	ListContainer::ListContainer(Manager& manager, const XML::Tag& config, const StylingPack& style) : ListContainer()
+	ListContainer::ListContainer(Manager& manager, const XML::Tag& tag, const StylingPack& pack) : ListContainer()
 	{
-		Manager::handleDefaultArguments(*this, config, style.style);
+		Manager::handleDefaultArguments(*this, tag, pack.style);
 
-		XML::Value tmp = config.getAttribute("orientation");
-		if (tmp.exists())
 		{
-			if (tmp.val == "horizontal")
-				setOrientation(true);
-			else if (tmp.val == "vertical")
-				setOrientation(false);
+			auto orientation = pack.style.getAttribute("orientation");
+			if (orientation)
+				setOrientation(orientation->as<Orientation>());
+		}
+		{
+			auto background = pack.style.getAttribute("backgroundColor");
+			if (background)
+				setBackgroundColor(background->as<Color>());
 		}
 
-		for (const auto& child : config.children)
+		for (const auto& child : tag.children)
 		{
 			if (!child->isTextNode())
 			{
-				XML::Tag& tag = static_cast<XML::Tag&>(*child);
-				Component::Type t = manager.instantiate(tag, style.theme);
+				XML::Tag& c = static_cast<XML::Tag&>(*child);
+				Component::Type t = manager.instantiate(c, pack.theme);
 
 				addChild(t);
 			}
 		}
 	}
 
+	void ListContainer::adjustVisibleElements()
+	{
+		Rect bounds = getBounds();
+		float s = getOrientation() == Orientation::Horizontal ? bounds.width : bounds.height;
+
+		if (newOffset > s || visibleBegin == children.end() || true)
+		{
+			recalculateVisibleElements();
+			return;
+		}
+
+		float diff = 0;
+		float fullDiff = 0;
+		for (auto i : updated)
+		{
+			Element& child = *childMapping.at(i);
+			fullDiff += child.newSize - child.size;
+			if (beforeVisible.count(i))
+			{
+				diff += child.newSize - child.size;
+			}
+		}
+
+		float trueDiff = newOffset - offset + diff;
+
+		if (trueDiff < 0)
+		{
+			//elements moved back, so iterate forward adjusting visible bounds
+			float off = 0;
+			for (auto it = visibleBegin; it != children.end(); ++it)
+			{
+				if (it == visibleBegin && it->offset + it->newSize + diff + newOffset < 0)
+				{
+					visible.erase(it->component.get());
+					beforeVisible.insert(it->component.get());
+					if (visibleEnd == visibleBegin)
+						++visibleEnd;
+					++visibleBegin;
+				}
+				else
+				{
+					if (it == visibleBegin)
+					{
+						it->offset += diff;
+						off = it->offset;
+						updated.insert(it->component.get());
+						if (visibleEnd == visibleBegin)
+							++visibleEnd;
+					}
+					else
+					{
+						it->offset = off;
+						updated.insert(it->component.get());
+					}
+					off += it->newSize;
+					//reached last visible element
+					if (off + newOffset > s)
+					{
+						visibleEnd = ++it;
+						break;
+					}
+					if (it == visibleEnd)
+					{
+						//more visible elements found
+						if (off + newOffset < s)
+						{
+							visible.insert(it->component.get());
+							++visibleEnd;
+						}
+						//end of visible elements
+						break;
+					}
+				}
+			}
+		}
+		else if (trueDiff > 0)
+		{
+			//elements moved forward, iterate backwards to find new visibleBegin
+			auto it = visibleBegin;
+			float off = it->offset + diff;
+			visible.clear();
+			if (off + newOffset > 0 && visibleBegin != children.begin())
+			{
+				auto prev = it;
+				--it;
+				for (it;; --it)
+				{
+					beforeVisible.erase(it->component.get());
+					off -= it->newSize;
+					if (off + newOffset < 0)
+						break;
+
+					if (it == children.begin())
+						break;
+				}
+				visibleBegin = it;
+			}
+			visibleEnd = visibleBegin;
+			//not that we have new visibleBegin, iterate forward from there adjusting offsets and find new visibleEnd
+			for (it; it != children.end(); ++it)
+			{
+				if (it == visibleEnd)
+					++visibleEnd;
+				it->offset = off;
+				updated.insert(it->component.get());
+				off += it->newSize;
+				if (off + newOffset > s)
+					break;
+			}
+		}
+	}
+
+	void ListContainer::recalculateVisibleElements()
+	{
+		Rect bounds = getBounds();
+
+		float s = getOrientation() == Orientation::Horizontal ? bounds.width : bounds.height;
+
+		enum class State
+		{
+			BeforeVisible,
+			Visible,
+			AfterVisible
+		};
+
+		float off = 0;
+
+		State state = State::BeforeVisible;
+		visible.clear();
+		beforeVisible.clear();
+		visibleBegin = children.end();
+		visibleEnd = children.end();
+
+		//simply calculate offsets from scratch
+		for (auto it = children.begin(); it != children.end(); ++it)
+		{
+			Element& element = *it;
+			if (state != State::AfterVisible && off + newOffset > s)
+			{
+				state = State::AfterVisible;
+				visibleEnd = it;
+			}
+
+			element.offset = off;
+			updated.insert(element.component.get());
+			off += element.newSize;
+
+			if (state == State::BeforeVisible && off + newOffset > 0)
+			{
+				state = State::Visible;
+				visibleBegin = it;
+			}
+
+			switch (state)
+			{
+			case State::BeforeVisible:
+			{
+				beforeVisible.insert(element.component.get());
+				break;
+			}
+			case State::Visible:
+			{
+				visible.insert(element.component.get());
+				break;
+			}
+			default:
+				break;
+			}
+		}
+		
+		size = off;
+	}
+
+	ListContainer::Element::Element(const std::shared_ptr<Component>& component, float size, float offset) : component(component), size(size), newSize(size), offset(offset)
+	{
+	}
+
+	
+	Orientation ConstraintsContainer::Constraint::getOrientation() const noexcept
+	{
+		return (flags & OrientationMask) ? Orientation::Vertical : Orientation::Horizontal;
+	}
+	
+	ConstraintsContainer::Constraint::Type ConstraintsContainer::Constraint::getType() const noexcept
+	{
+		uint8_t v = (flags & TypeMask) >> TypeOffset;
+		switch (v)
+		{
+		case 1:
+			return Type::Regular;
+		case 2:
+			return Type::Chain;
+		default:
+			return Type::None;
+		}
+	}
+	
+	bool ConstraintsContainer::Constraint::isOffsetContant() const noexcept
+	{
+		return (flags & ConstOffsetMask) > 0;
+	}
+	
+	ConstraintsContainer::Constraint::Edge ConstraintsContainer::Constraint::getFirstEdge() const noexcept
+	{
+		bool e = flags & EdgeFirstMask;
+		return getOrientation() == Orientation::Horizontal ? (e ? Edge::Right : Edge::Left) : (e ? Edge::Bottom : Edge::Top);
+	}
+	
+	ConstraintsContainer::Constraint::Edge ConstraintsContainer::Constraint::getSecondEdge() const noexcept
+	{
+		bool e = flags & EdgeSecondMask;
+		return getOrientation() == Orientation::Horizontal ? (e ? Edge::Right : Edge::Left) : (e ? Edge::Bottom : Edge::Top);
+	}
+	
+	void ConstraintsContainer::Constraint::setFirstEdge(bool start)
+	{
+		flags = (flags & ~EdgeFirstMask) | (start ? 0 : EdgeFirstMask);
+	}
+	
+	void ConstraintsContainer::Constraint::setSecondEdge(bool start)
+	{
+		flags = (flags & ~EdgeSecondMask) | (start ? 0 : EdgeSecondMask);
+	}
+	
 	std::vector<Component*> ConstraintsContainer::Constraint::getDeps() const
 	{
 		std::vector<Component*> ret;
@@ -579,8 +782,9 @@ namespace Guider
 		}
 		}
 
-		return std::move(ret);
+		return ret;
 	}
+	
 	bool ConstraintsContainer::Constraint::isFor(const Component& c) const
 	{
 		switch (getType())
@@ -600,7 +804,8 @@ namespace Guider
 			return false;
 		}
 	}
-	ConstraintsContainer::Constraint::Constraint(Type type, Orientation o)
+	
+	ConstraintsContainer::Constraint::Constraint(Type type, Orientation o) : flags(EdgeSecondMask)
 	{
 		flags = 0;
 		setOrientation(o);
@@ -619,7 +824,7 @@ namespace Guider
 		}
 		}
 	}
-
+	
 	ConstraintsContainer::Constraint::Constraint(Constraint&& t) noexcept
 	{
 		switch (getType())
@@ -654,6 +859,7 @@ namespace Guider
 		flags = t.flags;
 		t.flags = 0;
 	}
+	
 	ConstraintsContainer::Constraint::~Constraint()
 	{
 		switch (getType())
@@ -671,16 +877,17 @@ namespace Guider
 		}
 	}
 
+	
 	void ConstraintsContainer::RegularConstraintBuilder::setSize(float size)
 	{
 		constraint.regular.size = size;
 	}
-
+	
 	void ConstraintsContainer::RegularConstraintBuilder::setFlow(float flow)
 	{
 		constraint.regular.flow = flow;
 	}
-
+	
 	void ConstraintsContainer::RegularConstraintBuilder::attachStartTo(const Component::Type& target, bool toStart, float offset)
 	{
 		constraint.regular.leftOffset = offset;
@@ -698,7 +905,7 @@ namespace Guider
 				cluster->dependencies.erase(prevLeft);
 		}
 	}
-
+	
 	void ConstraintsContainer::RegularConstraintBuilder::attachEndTo(const Component::Type& target, bool toStart, float offset)
 	{
 		constraint.regular.rightOffset = offset;
@@ -716,6 +923,44 @@ namespace Guider
 				cluster->dependencies.erase(prevRight);
 		}
 	}
+	
+	void ConstraintsContainer::RegularConstraintBuilder::attachLeftTo(const Component::Type& target, bool toLeft, float offset)
+	{
+		attachStartTo(target, toLeft, offset);
+	}
+	
+	void ConstraintsContainer::RegularConstraintBuilder::attachRightTo(const Component::Type& target, bool toLeft, float offset)
+	{
+		attachEndTo(target, toLeft, offset);
+	}
+	
+	void ConstraintsContainer::RegularConstraintBuilder::attachTopTo(const Component::Type& target, bool toTop, float offset)
+	{
+		attachStartTo(target, toTop, offset);
+	}
+	
+	void ConstraintsContainer::RegularConstraintBuilder::attachBottomTo(const Component::Type& target, bool toTop, float offset)
+	{
+		attachEndTo(target, toTop, offset);
+	}
+	
+	void ConstraintsContainer::RegularConstraintBuilder::attachBetween(const Component::Type& start, bool startToStart, float startOffset, const Component::Type& end, bool endToStart, float endOffset)
+	{
+		attachStartTo(start, startToStart, startOffset);
+		attachEndTo(end, endToStart, endOffset);
+	}
+
+	void ConstraintsContainer::RegularConstraintBuilder::attachBetween(const Component::Type& start, bool startToStart, const Component::Type& end, bool endToStart, float offset)
+	{
+		attachBetween(start, startToStart, offset, end, endToStart, offset);
+	}
+
+	void ConstraintsContainer::RegularConstraintBuilder::applyChanges()
+	{
+		Component* c = constraint.regular.target;
+		c->getParent()->onChildStain(*c);
+	}
+
 
 	void ConstraintsContainer::ChainConstraintBuilder::attachStartTo(const Component::Type& target, bool toStart, float offset)
 	{
@@ -734,7 +979,7 @@ namespace Guider
 				cluster->dependencies.erase(prevLeft);
 		}
 	}
-
+	
 	void ConstraintsContainer::ChainConstraintBuilder::attachEndTo(const Component::Type& target, bool toStart, float offset)
 	{
 		constraint.chain.rightOffset = offset;
@@ -752,6 +997,7 @@ namespace Guider
 				cluster->dependencies.erase(prevRight);
 		}
 	}
+	
 
 	float ConstraintsContainer::getEdge(Component* c, Constraint::Edge e)
 	{
@@ -772,24 +1018,26 @@ namespace Guider
 
 		switch (e)
 		{
-		case Constraint::Edge::Left: return rect.left;
-			break;
-		case Constraint::Edge::Right: return rect.left + rect.width;
-			break;
-		case Constraint::Edge::Top: return rect.top;
-			break;
-		case Constraint::Edge::Bottom: return rect.top + rect.height;
-			break;
+		case Constraint::Edge::Left:
+			return rect.left;
+		case Constraint::Edge::Right:
+			return rect.left + rect.width;
+		case Constraint::Edge::Top:
+			return rect.top;
+		case Constraint::Edge::Bottom:
+			return rect.top + rect.height;
 		}
 		return 0;
 	}
+	
 	bool ConstraintsContainer::reorderClusters()
 	{
 		updated.clear();
 		size_t n = clusters.size();
-		//number of references pointing to me
+		//number of references i have
 		std::unordered_map<std::list<Cluster>::iterator, unsigned, ClusterHash> ndeps;
 
+		//list of elements dependent on me
 		std::unordered_map<std::list<Cluster>::iterator, std::unordered_set<std::list<Cluster>::iterator, ClusterHash>, ClusterHash> clusterDependencies;
 
 		for (auto it = clusters.begin(); it != clusters.end(); ++it)
@@ -805,8 +1053,8 @@ namespace Guider
 
 				if (mapping != clusterMapping.end())
 				{
-					ndeps[mapping->second]++;
-					clusterDependencies[cluster].insert(mapping->second);
+					ndeps[cluster]++;
+					clusterDependencies[mapping->second].insert(cluster);
 				}
 				else if (dep.first != this)
 					throw std::runtime_error("Internal error");
@@ -836,7 +1084,7 @@ namespace Guider
 			q.pop();
 			ret.emplace_back(&(*front));
 			auto& clusterDependency = clusterDependencies[front];
-			for (auto it : clusterDependency)
+			for (const auto& it : clusterDependency)
 				if (--ndeps[it] == 0)
 					q.push(it);
 
@@ -863,6 +1111,7 @@ namespace Guider
 
 		return true;
 	}
+	
 	void ConstraintsContainer::solveConstraint(const Constraint& c, Constraint::PassType pass)
 	{
 		switch (c.getType())
@@ -900,7 +1149,7 @@ namespace Guider
 					size = c.regular.size;
 					s = s * (1 - c.regular.flow) + (e - size) * c.regular.flow;
 				}
-				if (c.getOrientation() == Constraint::Orientation::Horizontal)
+				if (c.getOrientation() == Orientation::Horizontal)
 				{
 					out.left = s;
 					out.width = size;
@@ -914,7 +1163,7 @@ namespace Guider
 			}
 			case Constraint::PassType::Final:
 			{
-				if (c.getOrientation() == Constraint::Orientation::Horizontal)
+				if (c.getOrientation() == Orientation::Horizontal)
 				{
 					out.left = s * (1 - c.regular.flow) + (e - out.width) * c.regular.flow;
 				}
@@ -959,7 +1208,7 @@ namespace Guider
 				case Constraint::PassType::Final:
 				{
 					Rect& bounds = boundaries[c.chain.targets[j].first];
-					if (c.getOrientation() == Constraint::Orientation::Horizontal)
+					if (c.getOrientation() == Orientation::Horizontal)
 					{
 						width += bounds.width;
 					}
@@ -1013,7 +1262,7 @@ namespace Guider
 					case Constraint::PassType::Final:
 					{
 						Rect& bounds = boundaries[c.chain.targets[i].first];
-						if (c.getOrientation() == Constraint::Orientation::Horizontal)
+						if (c.getOrientation() == Orientation::Horizontal)
 						{
 							size = bounds.width;
 						}
@@ -1025,7 +1274,7 @@ namespace Guider
 					}
 					}
 
-					if (c.getOrientation() == Constraint::Orientation::Horizontal)
+					if (c.getOrientation() == Orientation::Horizontal)
 					{
 						boundaries[c.chain.targets[i].first].left = sp;
 						boundaries[c.chain.targets[i].first].width = size;
@@ -1058,7 +1307,7 @@ namespace Guider
 					case Guider::ConstraintsContainer::Constraint::PassType::Final:
 					{
 						Rect& bounds = boundaries[c.chain.targets[i].first];
-						if (c.getOrientation() == Constraint::Orientation::Horizontal)
+						if (c.getOrientation() == Orientation::Horizontal)
 						{
 							size = bounds.width;
 						}
@@ -1070,7 +1319,7 @@ namespace Guider
 					}
 					}
 
-					if (c.getOrientation() == Constraint::Orientation::Horizontal)
+					if (c.getOrientation() == Orientation::Horizontal)
 					{
 						boundaries[c.chain.targets[i].first].left = sp;
 						boundaries[c.chain.targets[i].first].width = size;
@@ -1088,6 +1337,7 @@ namespace Guider
 		}
 		}
 	}
+	
 	void ConstraintsContainer::solveCluster(const Cluster& cluster)
 	{
 		if (cluster.constraints.size() == 0)
@@ -1102,9 +1352,9 @@ namespace Guider
 			if (i != this)
 			{
 				Rect& bounds = boundaries[i];
-				std::pair<Component::DimensionDesc, Component::DimensionDesc> measures = i->measure(
-					Component::DimensionDesc(bounds.width, Component::DimensionDesc::Mode::Max),
-					Component::DimensionDesc(bounds.height, Component::DimensionDesc::Mode::Max)
+				std::pair<DimensionDesc, DimensionDesc> measures = i->measure(
+					DimensionDesc(bounds.width, DimensionMode::Max),
+					DimensionDesc(bounds.height, DimensionMode::Max)
 				);
 				if (measures.first.value < bounds.width)
 					bounds.width = measures.first.value;
@@ -1117,11 +1367,13 @@ namespace Guider
 			solveConstraint(*constraint, Constraint::PassType::Final);
 		}
 	}
+	
 	void ConstraintsContainer::solveConstraints()
 	{
 		Rect bounds = getBounds();
-		solveConstraints(DimensionDesc(bounds.width, DimensionDesc::Exact), DimensionDesc(bounds.height, DimensionDesc::Exact));
+		solveConstraints(DimensionDesc(bounds.width, DimensionMode::Exact), DimensionDesc(bounds.height, DimensionMode::Exact));
 	}
+	
 	void ConstraintsContainer::solveConstraints(const DimensionDesc& w, const DimensionDesc& h)
 	{
 		if (messyClusters)
@@ -1176,21 +1428,21 @@ namespace Guider
 
 		switch (w.mode)
 		{
-		case DimensionDesc::Mode::Exact:
+		case DimensionMode::Exact:
 			bounds.width = w.value; break;
-		case DimensionDesc::Mode::Max:
+		case DimensionMode::Max:
 			bounds.width = bounds.width <= w.value ? bounds.width : w.value; break;
-		case DimensionDesc::Mode::Min:
+		case DimensionMode::Min:
 			bounds.width = bounds.width >= w.value ? bounds.width : w.value; break;
 		}
 
 		switch (h.mode)
 		{
-		case DimensionDesc::Mode::Exact:
+		case DimensionMode::Exact:
 			bounds.height = h.value; break;
-		case DimensionDesc::Mode::Max:
+		case DimensionMode::Max:
 			bounds.height = bounds.height <= h.value ? bounds.height : h.value; break;
-		case DimensionDesc::Mode::Min:
+		case DimensionMode::Min:
 			bounds.height = bounds.height >= h.value ? bounds.height : h.value; break;
 		}
 
@@ -1201,11 +1453,12 @@ namespace Guider
 			solveCluster(cluster);
 		}
 	}
+	
 	void ConstraintsContainer::applyConstraints()
 	{
 		for (auto it = children.begin(); it != children.end(); ++it)
 		{
-			auto child = *it;
+			const auto& child = *it;
 			Component* p = child.get();
 			if (p->getBounds() != boundaries[p])
 			{
@@ -1216,10 +1469,12 @@ namespace Guider
 		}
 		invalidLayout = false;
 	}
+	
 	void ConstraintsContainer::registerProperties(Manager& m, const std::string& name)
 	{
 		m.registerPropertyForComponent<Color>(name, "backgroundColor", (Color(*)(const std::string&))Styles::strToColor);
 	}
+	
 	void ConstraintsContainer::setBackgroundColor(const Color& color)
 	{
 		backgroundColor = color;
@@ -1228,55 +1483,69 @@ namespace Guider
 		firstDraw = true;
 		invalidateVisuals();
 	}
+	
 	void ConstraintsContainer::poke()
 	{
 		Component::poke();
-		for (auto& i : children)
-		{
-			if (!i->isClean())
-				i->poke();
-		}
+
 		if (invalidLayout)
 		{
 			solveConstraints();
 			applyConstraints();
 		}
+		for (auto& i : children)
+		{
+			if (!i->isClean())
+				i->poke();
+		}
 	}
+	
 	void ConstraintsContainer::onResize(const Rect& bounds)
 	{
 		if (getBounds() != bounds || invalidLayout)
 		{
 			firstDraw = true;
-			solveConstraints();
-			invalidLayout = false;
-			applyConstraints();
-			for (auto& i : children)
-				i->invalidateVisuals();
-			invalidateVisuals();
+			invalidLayout = true;
+			handleEvent(Event::createInvalidatedEvent());
 		}
 	}
+	
 	void ConstraintsContainer::onChildStain(Component& c)
 	{
+		Rect pbounds = getBounds().at(Vec2(0.f, 0.f));
 		Rect bounds = boundaries[&c];
-		std::pair<DimensionDesc, DimensionDesc> measurements = c.measure(DimensionDesc(bounds.width, DimensionDesc::Exact), DimensionDesc(bounds.height, DimensionDesc::Exact));
+		std::pair<DimensionDesc, DimensionDesc> measurements = c.measure(DimensionDesc(pbounds.width, DimensionMode::Max), DimensionDesc(pbounds.height, DimensionMode::Max));
 		if (measurements.first.value != bounds.width || measurements.second.value != bounds.height)
 		{
 			invalidLayout = true;
 		}
 	}
+	
 	void ConstraintsContainer::onChildNeedsRedraw(Component& c)
 	{
 		needsRedraw.insert(&c);
 	}
-
-	void ConstraintsContainer::handleEvent(const Event& event)
+	
+	bool ConstraintsContainer::handleEvent(const Event& event)
 	{
-		if (event.type == Event::Type::BackendConnected)
+		switch (event.type)
+		{
+		case Event::Type::BackendConnected:
+		{
 			invalidLayout = true;
-		Container::handleEvent(event);
+			break;
+		}
+		case Event::Type::Invalidated:
+		case Event::Type::VisualsInvalidated:
+		{
+			firstDraw = true;
+			break;
+		}
+		}
+		return Container::handleEvent(event);
 	}
-
-	std::pair<Component::DimensionDesc, Component::DimensionDesc> ConstraintsContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
+	
+	std::pair<DimensionDesc, DimensionDesc> ConstraintsContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
 	{
 		Rect bounds = boundaries[this];
 		float ws = bounds.width, hs = bounds.height;
@@ -1331,10 +1600,11 @@ namespace Guider
 			}
 		}
 		return std::make_pair<DimensionDesc, DimensionDesc>(
-			DimensionDesc(ws, DimensionDesc::Mode::Exact),
-			DimensionDesc(hs, DimensionDesc::Mode::Exact)
+			DimensionDesc(ws, DimensionMode::Exact),
+			DimensionDesc(hs, DimensionMode::Exact)
 			);
 	}
+	
 	void ConstraintsContainer::removeChild(const Component::Type& child)
 	{
 		auto it = std::find(children.begin(), children.end(), child);
@@ -1359,19 +1629,18 @@ namespace Guider
 						{
 							//delete immidiately, regular constraints have only one target
 							constraintsToRemove.push_back(constraint);
-							constraints.erase(constraintMapping.at(constraint));
 							break;
 						}
 						case Constraint::Type::Chain:
 						{
-							std::remove_if(constraint->chain.targets.begin(), constraint->chain.targets.end(), [p](const std::pair<Component*, float>& a) {
+							auto toRemove = std::remove_if(constraint->chain.targets.begin(), constraint->chain.targets.end(), [p](const std::pair<Component*, float>& a) {
 								return a.first == p;
 								});
+							constraint->chain.targets.erase(toRemove,constraint->chain.targets.end());
 							if (constraint->chain.targets.empty())
 							{
 								//delete empty chain constraint
 								constraintsToRemove.push_back(constraint);
-								constraints.erase(constraintMapping.at(constraint));
 							}
 							break;
 						}
@@ -1399,7 +1668,7 @@ namespace Guider
 				{
 					//otherwise remove handing dependencies
 					std::vector<Component*> dependenciesToRemove;
-					for (auto i : cit->second->dependencies)
+					for (const auto& i : cit->second->dependencies)
 						if (i.second == 0)
 							dependenciesToRemove.push_back(i.first);
 					for (auto i : dependenciesToRemove)
@@ -1412,6 +1681,7 @@ namespace Guider
 		}
 
 	}
+	
 	void ConstraintsContainer::clearChildren()
 	{
 		//basics
@@ -1420,9 +1690,8 @@ namespace Guider
 		boundaries.clear();
 		boundaries[this] = bounds;
 
-		//constraints&clusters
+		//constraints & clusters
 		constraints.clear();
-		constraintMapping.clear();
 		clusters.clear();
 		clusterMapping.clear();
 		messyClusters = true;
@@ -1436,6 +1705,7 @@ namespace Guider
 		firstDraw = true;
 		updated.clear();
 	}
+	
 	void ConstraintsContainer::addChild(const Component::Type& child)
 	{
 		children.emplace_back(child);
@@ -1443,7 +1713,8 @@ namespace Guider
 		child->poke();
 		needsRedraw.insert(child.get());
 	}
-	std::unique_ptr<ConstraintsContainer::RegularConstraintBuilder> ConstraintsContainer::addConstraint(Constraint::Orientation orientation, const Component::Type& target, bool constOffset)
+	
+	std::unique_ptr<ConstraintsContainer::RegularConstraintBuilder> ConstraintsContainer::addConstraint(Orientation orientation, const Component::Type& target, bool constOffset)
 	{
 		if (!target)
 			return std::unique_ptr<RegularConstraintBuilder>();
@@ -1484,27 +1755,26 @@ namespace Guider
 			cluster = std::prev(clusters.end());
 		}
 
-		if (cluster != clusters.end())//TODO: potential lack of redraw, fix needed
+		if (cluster != clusters.end())
 		{
 			if (target.get() != this)
 				needsRedraw.insert(target.get());
 			cluster->components.insert(target.get());
 			constraints.emplace_back(std::move(c));
-			constraintMapping[&constraints.back()] = std::prev(constraints.end());
 			cluster->constraints.insert(&constraints.back());
 			clusterMapping[target.get()] = cluster;
 
 			invalidLayout = true;
 			messyClusters = true;
+			invalidate();
 			return std::make_unique<RegularConstraintBuilder>(constraints.back(), cluster);
 		}
 
 		return std::unique_ptr<RegularConstraintBuilder>();
 	}
-	std::unique_ptr<ConstraintsContainer::ChainConstraintBuilder> ConstraintsContainer::addChainConstraint(Constraint::Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset)
+	
+	std::unique_ptr<ConstraintsContainer::ChainConstraintBuilder> ConstraintsContainer::addChainConstraint(Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset)
 	{
-		//TODO: potentially merge some for loops?
-
 		if (targets.empty())
 			return std::unique_ptr<ChainConstraintBuilder>();
 
@@ -1558,7 +1828,6 @@ namespace Guider
 
 			//create cluster
 			constraints.emplace_back(std::move(c));
-			constraintMapping[&constraints.back()] = std::prev(constraints.end());
 			cluster->constraints.insert(&constraints.back());
 			for (const auto& target : targets)
 			{
@@ -1576,13 +1845,13 @@ namespace Guider
 			clusters.emplace_back();
 			auto cluster = std::prev(clusters.end());
 			//steel constraints
-			for (auto clusterToMerge : clustersToMerge)
+			for (const auto& clusterToMerge : clustersToMerge)
 			{
-				for (auto constraint : clusterToMerge->constraints)
+				for (const auto& constraint : clusterToMerge->constraints)
 				{
 					cluster->constraints.insert(constraint);
 				}
-				for (auto dependency : clusterToMerge->dependencies)
+				for (const auto& dependency : clusterToMerge->dependencies)
 				{
 					cluster->dependencies.insert(dependency);
 				}
@@ -1607,7 +1876,7 @@ namespace Guider
 		return std::unique_ptr<ChainConstraintBuilder>();
 
 	}
-
+	
 	void ConstraintsContainer::onMaskDraw(Canvas& canvas) const
 	{
 		if (backgroundColor.a > 0 && firstDraw)
@@ -1624,6 +1893,7 @@ namespace Guider
 			}
 		}
 	}
+	
 	void ConstraintsContainer::onDraw(Canvas& canvas)
 	{
 		if (needsRedraw.size() > 0)
@@ -1712,6 +1982,7 @@ namespace Guider
 		}
 		firstDraw = false;
 	}
+	
 	void ConstraintsContainer::onRedraw(Canvas& canvas)
 	{
 		Rect bounds = getBounds();
@@ -1733,7 +2004,7 @@ namespace Guider
 		drawnLastFrame.clear();
 		firstDraw = false;
 	}
-
+	
 	void ConstraintsContainer::postXmlConstruction(Manager& manager, const XML::Tag& config, const StylingPack& pack)
 	{
 		std::unordered_map<std::string, Component::Type> nameMapping;
@@ -1793,7 +2064,7 @@ namespace Guider
 							}
 						}
 
-						auto builder = addConstraint(Constraint::Orientation::Horizontal, childMapping[i], constOffset);
+						auto builder = addConstraint(Orientation::Horizontal, childMapping[i], constOffset);
 
 						tmp = c.getAttribute("attachLeftTo");
 						if (tmp.exists())
@@ -2000,7 +2271,7 @@ namespace Guider
 							}
 						}
 
-						auto builder = addConstraint(Constraint::Orientation::Vertical, childMapping[i], constOffset);
+						auto builder = addConstraint(Orientation::Vertical, childMapping[i], constOffset);
 
 						tmp = c.getAttribute("attachTopTo");
 						if (tmp.exists())
@@ -2192,9 +2463,11 @@ namespace Guider
 			}
 		}
 	}
+	
 	ConstraintsContainer::ConstraintsContainer() : firstDraw(true), messyClusters(true), invalidLayout(true), canWrapW(false), canWrapH(false), backgroundColor(0)
 	{
 	}
+	
 	ConstraintsContainer::Iterator ConstraintsContainer::firstElement()
 	{
 		return createIterator<IteratorType>(children.begin(), children.end());

@@ -2,6 +2,7 @@
 #include <cstdlib>
 
 #include <app.hpp>
+#include <guider/shortcuts.hpp>
 
 #include <string>
 #include <fstream>
@@ -9,21 +10,19 @@
 using namespace sf;
 using namespace std;
 
-using Orientation = Gui::ConstraintsContainer::Constraint::Orientation;
-using SizingMode = Gui::Component::SizingMode;
+using Orientation = Gui::Orientation;
+using SizingMode = Gui::SizingMode;
 
 int main(int argc, char* argv[])
 {
-	unsigned width = 800;
-	unsigned height = 450;
+	unsigned width = 800 * 2;
+	unsigned height = 450 * 2;
 
 	App app;
 	app.createWindow(width, height, "Guider layout creator");
 	app.showWindow(false);
 
 	app.initManager();
-
-	Guider::BasicButtonComponent::registerProperties(*app.getManager(), "common.Button");
 
 	app.addDefinitions();
 	app.loadResources();
@@ -55,8 +54,32 @@ int main(int argc, char* argv[])
 
 	Guider::Component::Type root = app.getManager()->instantiate(*static_cast<Guider::XML::Tag*>(xmlRoot->children[0].get()), app.getManager()->getTheme("app.dark").theme);
 
-	std::shared_ptr<Guider::BasicButtonComponent> branchButton = static_pointer_cast<Guider::BasicButtonComponent>(app.getManager()->getElementById("branch_button"));
-	branchButton->setText("none");
+	auto& resetButton = app.getManager()->getElementById("reset_button")->as<Guider::BasicButtonComponent>();
+
+	resetButton.setOnClickCallback([&app](Guider::Component& c) {
+		app.resetTimer();
+	});
+
+	auto& sidebar = app.getManager()->getElementById("sidebar")->as<Guider::ListContainer>();
+
+	Guider::RectangleShapeComponent* rects[] = {
+		&app.getManager()->getElementById("r1")->as<Guider::RectangleShapeComponent>(),
+		&app.getManager()->getElementById("r2")->as<Guider::RectangleShapeComponent>(),
+		&app.getManager()->getElementById("r3")->as<Guider::RectangleShapeComponent>()
+	};
+
+	auto& fileButton = app.getManager()->getElementById("file_button")->as<Guider::BasicButtonComponent>();
+	
+	fileButton.setOnClickCallback([&sidebar,&rects](Guider::Component& c) {
+		sidebar.setOffset(-20);
+	});
+
+	auto& editButton = app.getManager()->getElementById("edit_button")->as<Guider::BasicButtonComponent>();
+
+	editButton.setOnClickCallback([&sidebar,&rects](Guider::Component& c) {
+		sidebar.setOffset(0);
+		rects[0]->setHeight(20);
+	});
 
 	app.getEngine()->addChild(root);
 

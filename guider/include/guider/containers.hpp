@@ -11,6 +11,8 @@ namespace Guider
 	class AbsoluteContainer : public Container
 	{
 	public:
+		static void registerProperties(Manager& manager, const std::string& name);
+
 		virtual void addChild(const Component::Type& child) override;
 		void addChild(const Component::Type& child, float x, float y);
 		virtual void removeChild(const Component::Type& child) override;
@@ -63,16 +65,24 @@ namespace Guider
 		};
 		std::vector<Element> children;
 
-		mutable std::unordered_set<Component*> toUpdate;
+		std::unordered_set<Component*> toUpdate;
 	};
 
 	//TODO: rewrite
 	class ListContainer : public Container
 	{
 	public:
-		void setOrientation(bool horizontal);
+		static void registerProperties(Manager& manager, const std::string& name);
+
+		void setOrientation(Orientation orientation);
+		Orientation getOrientation() const noexcept;
 
 		void setBackgroundColor(const Color& color);
+		Color getBackgroundColor() const noexcept;
+
+		void setOffset(float offset);
+		float getOffset() const noexcept;
+
 		virtual void addChild(const Component::Type& child) override;
 		virtual void removeChild(const Component::Type& child) override;
 		void removeChild(unsigned n);
@@ -95,15 +105,15 @@ namespace Guider
 
 		ListContainer();
 
-		ListContainer(Manager& manager, const XML::Tag& config, const StylingPack& style);
+		ListContainer(Manager& manager, const XML::Tag& tag, const StylingPack& pack);
 	private:
 		class Element
 		{
 		public:
 			std::shared_ptr<Component> component;
-			float size, offset;
+			float size, newSize, offset;
 
-			Element(const std::shared_ptr<Component>& c, float s, float o) : component(c), size(s), offset(o) {}
+			Element(const std::shared_ptr<Component>& component, float size, float offset);
 			Element(Element&&) noexcept = default;
 		};
 
@@ -133,18 +143,27 @@ namespace Guider
 			const iterator endIt;
 		};
 
-		bool horizontal;
-		float size, offset;
+		Orientation orientation;
+		float size, offset, newOffset;
 
 		std::list<Element> children;
 		std::unordered_set<Component*> toUpdate, toOffset;
-		mutable std::unordered_set<Component*> toRedraw;
+		std::unordered_set<Component*> toRedraw;
+
+		std::unordered_map<Component*, iterator> childMapping;
+
+		std::unordered_set<Component*> toMeasure, updated;
+
+		iterator visibleBegin;
+		iterator visibleEnd;
+		std::unordered_set<Component*> visible, beforeVisible;
 
 		Color backgroundColor;
 
-		mutable bool firstDraw;
+		bool firstDraw;
 
-		bool updateElementRect(Element& element, bool needsMeasure, float localOffset, const DimensionDesc& w, const DimensionDesc& h, const Rect& bounds);
+		void adjustVisibleElements();
+		void recalculateVisibleElements();
 	};
 
 	class ConstraintsContainer : public Container, public std::enable_shared_from_this<ConstraintsContainer>
@@ -173,16 +192,6 @@ namespace Guider
 		};
 		class Constraint
 		{
-		private:
-			static constexpr uint8_t OrientationMask = 1 << 1;
-			static constexpr uint8_t TypeMask = 1 << 2 | 1 << 3;
-			static constexpr uint8_t TypeOffset = 2;
-			static constexpr uint8_t EdgeFirstMask = 1 << 4;
-			static constexpr uint8_t EdgeSecondMask = 1 << 5;
-			static constexpr uint8_t ConstOffsetMask = 1 << 6;
-
-			uint8_t flags;
-
 		public:
 			enum class Edge
 			{
@@ -198,12 +207,6 @@ namespace Guider
 				Final
 			};
 
-			enum class Orientation
-			{
-				Horizontal = 0,
-				Vertical = 1
-			};
-
 			enum class Type
 			{
 				None = 0,
@@ -211,69 +214,26 @@ namespace Guider
 				Chain = 2
 			};
 
-
 			union
 			{
 				RegularConstraintData regular;
 				ChainConstraintData chain;
 			};
+
 			bool constOffset;
 
-		private:
-			inline void setOrientation(Orientation o)
-			{
-				flags = flags & (~OrientationMask) | (o == Orientation::Vertical ? OrientationMask : 0);
-			}
-			inline void setType(Type type)
-			{
-				flags = flags & (~TypeMask) | ((type == Type::Chain ? 2 : 1) << TypeOffset);
-			}
-		public:
+			Orientation getOrientation() const noexcept;
+			Type getType() const noexcept;
 
-			inline Orientation getOrientation() const noexcept
-			{
-				return (flags & OrientationMask) ? Orientation::Vertical : Orientation::Horizontal;
-			}
-			inline Type getType() const noexcept
-			{
-				uint8_t v = (flags & TypeMask) >> TypeOffset;
-				switch (v)
-				{
-				case 1:
-					return Type::Regular;
-				case 2:
-					return Type::Chain;
-				default:
-					return Type::None;
-				}
-			}
+			bool isOffsetContant() const noexcept;
 
-			inline bool isOffsetContant() const noexcept
-			{
-				return (flags & ConstOffsetMask) > 0;
-			}
+			Edge getFirstEdge() const noexcept;
 
-			inline Edge getFirstEdge() const noexcept
-			{
-				bool e = flags & EdgeFirstMask;
-				return getOrientation() == Orientation::Horizontal ? (e ? Edge::Right : Edge::Left) : (e ? Edge::Bottom : Edge::Top);
-			}
+			Edge getSecondEdge() const noexcept;
 
-			inline Edge getSecondEdge() const noexcept
-			{
-				bool e = flags & EdgeSecondMask;
-				return getOrientation() == Orientation::Horizontal ? (e ? Edge::Right : Edge::Left) : (e ? Edge::Bottom : Edge::Top);
-			}
+			void setFirstEdge(bool start);
 
-			inline void setFirstEdge(bool start)
-			{
-				flags = (flags & ~EdgeFirstMask) | (start ? 0 : EdgeFirstMask);
-			}
-
-			inline void setSecondEdge(bool start)
-			{
-				flags = (flags & ~EdgeSecondMask) | (start ? 0 : EdgeSecondMask);
-			}
+			void setSecondEdge(bool start);
 
 			std::vector<Component*> getDeps() const;
 			bool isFor(const Component& c) const;
@@ -282,6 +242,24 @@ namespace Guider
 
 			Constraint(Constraint&&) noexcept;
 			~Constraint();
+		private:
+			static constexpr uint8_t OrientationMask = 1 << 1;
+			static constexpr uint8_t TypeMask = 1 << 2 | 1 << 3;
+			static constexpr uint8_t TypeOffset = 2;
+			static constexpr uint8_t EdgeFirstMask = 1 << 4;
+			static constexpr uint8_t EdgeSecondMask = 1 << 5;
+			static constexpr uint8_t ConstOffsetMask = 1 << 6;
+
+			uint8_t flags;
+
+			inline void setOrientation(Orientation o)
+			{
+				flags = flags & (~OrientationMask) | (o == Orientation::Vertical ? OrientationMask : 0);
+			}
+			inline void setType(Type type)
+			{
+				flags = flags & (~TypeMask) | ((type == Type::Chain ? 2 : 1) << TypeOffset);
+			}
 		};
 
 		class Cluster
@@ -298,7 +276,7 @@ namespace Guider
 		class ClusterHash
 		{
 		public:
-			std::size_t operator()(const std::list<Guider::ConstraintsContainer::Cluster>::iterator& it) const
+			std::size_t operator() (const std::list<Guider::ConstraintsContainer::Cluster>::iterator& it) const
 			{
 				return std::hash<const Guider::ConstraintsContainer::Cluster*>{}(&(*it));
 			}
@@ -312,34 +290,21 @@ namespace Guider
 		public:
 			void setSize(float size);
 			void setFlow(float flow);
+			
 			void attachStartTo(const Component::Type& target, bool toStart, float offset);
-			inline void attachLeftTo(const Component::Type& target, bool toLeft, float offset)
-			{
-				attachStartTo(target, toLeft, offset);
-			}
-			inline void attachTopTo(const Component::Type& target, bool toTop, float offset)
-			{
-				attachStartTo(target, toTop, offset);
-			}
 			void attachEndTo(const Component::Type& target, bool toStart, float offset);
-			inline void attachRightTo(const Component::Type& target, bool toLeft, float offset)
-			{
-				attachEndTo(target, toLeft, offset);
-			}
-			inline void attachBottomTo(const Component::Type& target, bool toTop, float offset)
-			{
-				attachEndTo(target, toTop, offset);
-			}
-			inline void attachBetween(const Component::Type& start, bool startToStart, float startOffset, const Component::Type& end, bool endToStart, float endOffset)
-			{
-				attachStartTo(start, startToStart, startOffset);
-				attachEndTo(end, endToStart, endOffset);
-			}
-			inline void attachBetween(const Component::Type& start, bool startToStart, const Component::Type& end, bool endToStart, float offset)
-			{
-				attachBetween(start, startToStart, offset, end, endToStart, offset);
-			}
-			//TODO: add notifying parent if container edge is attached to child
+			
+			void attachLeftTo(const Component::Type& target, bool toLeft, float offset);
+			void attachRightTo(const Component::Type& target, bool toLeft, float offset);
+			
+			void attachTopTo(const Component::Type& target, bool toTop, float offset);
+			void attachBottomTo(const Component::Type& target, bool toTop, float offset);
+			
+			void attachBetween(const Component::Type& start, bool startToStart, float startOffset, const Component::Type& end, bool endToStart, float endOffset);
+			void attachBetween(const Component::Type& start, bool startToStart, const Component::Type& end, bool endToStart, float offset);
+
+			void applyChanges();
+
 			RegularConstraintBuilder(Constraint& c, std::list<Cluster>::iterator cc) : constraint(c), cluster(cc)
 			{
 				if (c.getType() != Constraint::Type::Regular)
@@ -402,13 +367,13 @@ namespace Guider
 		virtual void onChildStain(Component& c) override;
 		virtual void onChildNeedsRedraw(Component& c) override;
 
-		virtual void handleEvent(const Event& event) override;
+		virtual bool handleEvent(const Event& event) override;
 
 		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
 
 		virtual void removeChild(const Component::Type& child) override;
 		virtual void clearChildren() override;
-		virtual void addChild(const Component::Type& child);
+		virtual void addChild(const Component::Type& child) override;
 
 		virtual Iterator firstElement() override;
 
@@ -417,13 +382,13 @@ namespace Guider
 		/// @param target target,
 		/// @param constOffset if true, size of target is calculated based on offset from edges, otherwise offset is calculated based on size,
 		/// @return Returns wrapper for created constraint.
-		std::unique_ptr<RegularConstraintBuilder> addConstraint(Constraint::Orientation orientation, const Component::Type& target, bool constOffset);
+		std::unique_ptr<RegularConstraintBuilder> addConstraint(Orientation orientation, const Component::Type& target, bool constOffset);
 		/// @brief Creates chain constraint for given element.
 		/// @param orientation either Vertical or Horizontal,
 		/// @param targets targets,
 		/// @param constOffset if true, size of target is calculated based on offset from edges, otherwise offset is calculated based on size.
 		/// @return Returns wrapper for created constraint.
-		std::unique_ptr<ChainConstraintBuilder> addChainConstraint(Constraint::Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset);
+		std::unique_ptr<ChainConstraintBuilder> addChainConstraint(Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset);
 
 		virtual void onMaskDraw(Canvas& canvas) const override;
 		virtual void onDraw(Canvas& canvas) override;
@@ -433,11 +398,13 @@ namespace Guider
 
 		ConstraintsContainer();
 	private:
+		using IteratorType = CommonIteratorTemplate<std::vector < std::shared_ptr<Component> >::iterator>;
+
 		std::vector<std::shared_ptr<Component>> children;
 		std::unordered_map<Component*, Rect> boundaries;
 		std::list<Constraint> constraints;
 		//TODO: move other elements to using iterators instead of pointers
-		std::unordered_map<Constraint*, std::list<Constraint>::iterator> constraintMapping;
+		//std::unordered_map<Constraint*, std::list<Constraint>::iterator> constraintMapping;
 		std::list<Cluster> clusters;
 
 		std::unordered_map<const Component*, std::list<Cluster>::iterator> clusterMapping;
@@ -466,7 +433,5 @@ namespace Guider
 		void solveConstraints(const DimensionDesc& w, const DimensionDesc& h);
 
 		void applyConstraints();
-
-		using IteratorType = CommonIteratorTemplate<std::vector < std::shared_ptr<Component> >::iterator>;
 	};
 }

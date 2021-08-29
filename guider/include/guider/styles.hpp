@@ -1,12 +1,14 @@
-#include <string>
+#pragma once
+
+#include <Guider/base.hpp>
 #include <unordered_map>
-#include <memory>
-#include <vector>
+#include <functional>
 #include <typeindex>
 #include <stdexcept>
-#include <functional>
 #include <algorithm>
-#include <Guider/base.hpp>
+#include <string>
+#include <memory>
+#include <vector>
 
 namespace Guider
 {
@@ -72,7 +74,7 @@ namespace Guider
 				if (t.pointer != nullptr && cloner != nullptr)
 				{
 					data.resize(t.data.size());
-					pointer = cloner(t.pointer);
+					pointer = cloner(t.pointer, data.data());
 				}
 			}
 			Value(Value&& t) noexcept : deleter(t.deleter), cloner(t.cloner), data(std::move(t.data)), pointer(t.pointer), type(std::move(t.type))
@@ -90,14 +92,14 @@ namespace Guider
 		private:
 			template<typename T> static void deleterFunc(void* p)
 			{
-				(*static_cast<T*>(p)).~T();
+				static_cast<T*>(p)->~T();
 			}
-			template<typename T> static void* clonerFunc(void* p)
+			template<typename T> static void* clonerFunc(void* p, uint8_t* buffer)
 			{
-				return new T(*static_cast<T*>(p));
+				return new(buffer) T(*static_cast<T*>(p));
 			}
 			void(*deleter)(void*);
-			void* (*cloner)(void*);
+			void* (*cloner)(void*, uint8_t*);
 			std::vector<uint8_t> data;
 			void* pointer;
 			std::type_index type;

@@ -240,6 +240,28 @@ namespace Guider
 		registerPropertyForComponent<std::string>(component, name, [](const std::string& s) { return s; });
 	}
 
+	void Manager::registerNumericProperty(const std::string& name)
+	{
+		registerProperty<float>(name, [](const std::string& value) {
+			bool failed = false;
+			float ret = Styles::strToFloat(value, failed);
+			if (failed)
+				throw std::invalid_argument("invalid numeric format");
+			return ret;
+		});
+	}
+
+	void Manager::registerNumericProperty(const std::string& component, const std::string& name)
+	{
+		registerPropertyForComponent<float>(component, name, [](const std::string& value) {
+			bool failed = false;
+			float ret = Styles::strToFloat(value, failed);
+			if (failed)
+				throw std::invalid_argument("invalid numeric format");
+			return ret;
+			});
+	}
+
 	void Manager::registerDrawableProperty(const std::string& name)
 	{
 		registerProperty<std::shared_ptr<Resources::Drawable>>(name, std::bind(std::mem_fn(&Manager::getDrawableByText), this, std::placeholders::_1));
@@ -254,7 +276,7 @@ namespace Guider
 	{
 		registerProperty<Color>(name, [](const std::string& value) {
 			bool failed = false;
-			Color ret = Styles::strToColor(value);
+			Color ret = Styles::strToColor(value, failed);
 			if (failed)
 				throw std::invalid_argument("invalid color format");
 			return ret;

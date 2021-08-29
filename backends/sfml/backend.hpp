@@ -132,6 +132,8 @@ namespace Guider
 	class SfmlBackend : public Backend
 	{
 	public:
+		static bool handleEvent(Engine& engine, const sf::Event& event);
+
 		virtual void setDrawOrigin(float x, float y) override;
 
 		virtual void clearMask() override;

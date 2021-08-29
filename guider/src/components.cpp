@@ -8,9 +8,9 @@ namespace Guider
 		return paddings.calcContentArea(getBounds());
 	}
 
-	void CommonComponent::registerProperties(Manager& m, const std::string& name)
+	void CommonComponent::registerProperties(Manager& manager, const std::string& name)
 	{
-		m.registerPropertyForComponent<Padding>(name, "padding", [](const std::string& value) {
+		manager.registerPropertyForComponent<Padding>(name, "padding", [](const std::string& value) {
 			std::vector<std::string> args = Styles::splitString(value);
 			switch (args.size())
 			{
@@ -60,7 +60,7 @@ namespace Guider
 			}
 			}
 			throw std::invalid_argument("invalid padding value");
-			});
+		});
 	}
 
 	void CommonComponent::setPadding(const Padding& pad)
@@ -97,24 +97,49 @@ namespace Guider
 		return measurements;
 	}
 
-	CommonComponent::CommonComponent(Manager& m, const XML::Tag& tag, const StylingPack& pack)
+	CommonComponent::CommonComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack)
 	{
+		auto padding = pack.style.getAttribute("padding");
+		if (padding)
 		{
-			auto padding = pack.style.getAttribute("padding");
-			if (padding)
-			{
-				setPadding(padding->as<Padding>());
-			}
+			setPadding(padding->as<Padding>());
 		}
+	}
+
+
+	void EmptyComponent::registerProperties(Manager& manager, const std::string& name)
+	{
+		//yeah, thats it, nothing to see there
+	}
+
+	EmptyComponent::EmptyComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack)
+	{
+		//empty i guess
+	}
+
+
+	void RectangleShapeComponent::registerProperties(Manager& manager, const std::string& name)
+	{
+		CommonComponent::registerProperties(manager, name);
+		manager.registerColorProperty(name, "fillColor");
 	}
 
 	void RectangleShapeComponent::setColor(const Color& c)
 	{
-		color = c;
-		if (shape != nullptr)
+		if (color != c)
 		{
-			shape->setColor(color);
+			color = c;
+			if (shape != nullptr)
+			{
+				shape->setColor(color);
+				invalidateVisuals();
+			}
 		}
+	}
+
+	Color RectangleShapeComponent::getColor() const noexcept
+	{
+		return color;
 	}
 
 	void RectangleShapeComponent::onDraw(Canvas& canvas)
@@ -123,20 +148,52 @@ namespace Guider
 		shape->setSize(Vec2(bounds.width, bounds.height));
 		shape->draw(canvas, Rect(0, 0, bounds.width, bounds.height));
 	}
-	void RectangleShapeComponent::handleEvent(const Event& event)
+	
+	bool RectangleShapeComponent::handleEvent(const Event& event)
 	{
-		Component::handleEvent(event);
+		bool r = Component::handleEvent(event);
 		if (event.type == Event::BackendConnected)
 		{
 			shape = getBackend()->createRectangle(Vec2(), color);
 		}
+		return r;
 	}
-	void TextComponent::registerProperties(Manager& m, const std::string& name)
+	
+	RectangleShapeComponent::RectangleShapeComponent() : shape(nullptr), color(255, 255, 255, 255)
 	{
-		CommonComponent::registerProperties(m, name);
-		m.registerColorProperty(name, "color");
-		m.registerStringProperty(name, "text");
+		//empty
 	}
+	
+	RectangleShapeComponent::RectangleShapeComponent(SizingMode mode, const Color& c) : shape(nullptr), color(c)
+	{
+		setSizingMode(mode, mode);
+	}
+	
+	RectangleShapeComponent::RectangleShapeComponent(float w, float h, const Color& c) : Component(), shape(nullptr), color(c)
+	{
+		setSize(Vec2(w, h));
+		setSizingMode(SizingMode::OwnSize, SizingMode::OwnSize);
+	}
+	
+	RectangleShapeComponent::RectangleShapeComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack) : RectangleShapeComponent()
+	{
+		Manager::handleDefaultArguments(*this, tag, pack.style);
+		{
+			auto color = pack.style.getAttribute("fillColor");
+			if (color)
+				setColor(color->as<Color>());
+		}
+	}
+	
+
+	void TextComponent::registerProperties(Manager& manager, const std::string& name)
+	{
+		CommonComponent::registerProperties(manager, name);
+		manager.registerColorProperty(name, "color");
+		manager.registerStringProperty(name, "text");
+		manager.registerNumericProperty(name, "textSize");
+	}
+	
 	void TextComponent::setTextSize(float textSize)
 	{
 		this->textSize = textSize;
@@ -144,8 +201,12 @@ namespace Guider
 		{
 			textRes->setTextSize(textSize);
 		}
-		invalidate();
+		if (getSizingModeHorizontal() == SizingMode::WrapContent || getSizingModeVertical() == SizingMode::WrapContent)
+			invalidate();
+		else
+			invalidateVisuals();
 	}
+	
 	void TextComponent::setText(const std::string& text)
 	{
 		this->text = text;
@@ -153,8 +214,12 @@ namespace Guider
 		{
 			textRes->setText(text);
 		}
-		invalidate();
+		if (getSizingModeHorizontal() == SizingMode::WrapContent)
+			invalidate();
+		else
+			invalidateVisuals();
 	}
+	
 	void TextComponent::setTextColor(const Color& color)
 	{
 		this->color = color;
@@ -164,6 +229,7 @@ namespace Guider
 		}
 		invalidateVisuals();
 	}
+	
 	void TextComponent::setFont(const std::string& name)
 	{
 		font = name;
@@ -175,6 +241,7 @@ namespace Guider
 		}
 		invalidate();
 	}
+	
 	void TextComponent::setTextAlignment(Gravity horizontal, Gravity vertical)
 	{
 		horizontalTextAlign = horizontal;
@@ -182,10 +249,19 @@ namespace Guider
 
 		invalidateVisuals();
 	}
+	
+	Gravity TextComponent::getHorizontalTextAlignment() const
+	{
+		return horizontalTextAlign;
+	}
+	
+	Gravity TextComponent::getVerticalTextAlignment() const
+	{
+		return verticalTextAlign;
+	}
+	
 	void TextComponent::onDraw(Canvas& canvas)
 	{
-		//float xoff = 0, yoff = 0;
-
 		Rect bounds = getBounds();
 		Rect contentRect = getPading().calcContentArea(bounds.at(Vec2(0, 0)));
 		textRes->horizontalAlignment = getHorizontalTextAlignment();
@@ -193,9 +269,10 @@ namespace Guider
 
 		textRes->draw(canvas, contentRect);
 	}
-	void TextComponent::handleEvent(const Event& event)
+	
+	bool TextComponent::handleEvent(const Event& event)
 	{
-		Component::handleEvent(event);
+		bool r = Component::handleEvent(event);
 		if (event.type == Event::BackendConnected)
 		{
 			textRes = getBackend()->createText(text, *getBackend()->getFontByName(font), textSize, color);
@@ -204,7 +281,9 @@ namespace Guider
 			textRes->setColor(color);
 			textRes->setText(text);
 		}
+		return r;
 	}
+	
 	std::pair<float, float> TextComponent::getContentSize(bool getWidth, bool getHeight)
 	{
 		float w = 0, h = 0;
@@ -220,6 +299,71 @@ namespace Guider
 
 		return std::pair<float, float>(w, h);
 	}
+	
+	TextComponent::TextComponent() : textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
+	{
+		//empty
+	}
+	
+	TextComponent::TextComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack) : CommonComponent(manager, tag, pack), textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
+	{
+		Manager::handleDefaultArguments(*this, tag, pack.style);
+		setBackend(manager.getBackend());
+
+		{
+			auto color = pack.style.getAttribute("color");
+			if (color)
+				setTextColor(color->as<Color>());
+		}
+
+		{
+			auto text = pack.style.getAttribute("text");
+			if (text)
+				setText(text->as<std::string>());
+		}
+
+		{
+			auto textSize = pack.style.getAttribute("textSize");
+			if (textSize)
+				setTextSize(textSize->as<float>());
+		}
+
+		auto tmp = tag.getAttribute("font");
+		if (tmp.exists())
+		{
+			auto font = manager.getFontByName(tmp.val);
+			if (font)
+			{
+				setFont(tmp.val);
+			}
+		}
+
+		Gravity hor = Gravity::Center, ver = Gravity::Center;
+		//TODO: move to style approach
+		tmp = tag.getAttribute("textAlignmentHorizontal");
+		if (tmp.exists())
+		{
+			if (tmp.val == "left" || tmp.val == "start")
+				hor = Gravity::Left;
+			else if (tmp.val == "center" || tmp.val == "middle")
+				hor = Gravity::Center;
+			else if (tmp.val == "right" || tmp.val == "end")
+				hor = Gravity::Right;
+		}
+		//TODO: move to style approach
+		tmp = tag.getAttribute("textAlignmentVertical");
+		if (tmp.exists())
+		{
+			if (tmp.val == "top" || tmp.val == "start")
+				ver = Gravity::Top;
+			else if (tmp.val == "center" || tmp.val == "middle")
+				ver = Gravity::Center;
+			else if (tmp.val == "bottom" || tmp.val == "end")
+				ver = Gravity::Bottom;
+		}
+	}
+	
+
 	void ButtonBase::handleClick(const Event& event)
 	{
 		switch (event.type)
@@ -273,20 +417,48 @@ namespace Guider
 		}
 		}
 	}
+	
+	ButtonBase::ButtonState ButtonBase::getButtonState() const noexcept
+	{
+		return buttonState;
+	}
+	
 	void ButtonBase::setOnClickCallback(const std::function<void(Component&)>& callback)
 	{
 		onClickCallback = callback;
 	}
+	
+	ButtonBase::ButtonBase() : buttonState(ButtonState::Default)
+	{
+		//empty
+	}
+	
+
+	BasicButtonComponent::BasicButtonComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack) : TextComponent(manager, tag, pack)
+	{
+		auto backgroundP = pack.style.getAttribute("background");
+		if (backgroundP)
+			backgroundDefault = backgroundP->as<std::shared_ptr<Resources::Drawable>>();
+		auto selectedBackgroundP = pack.style.getAttribute("selectedBackground");
+		if (selectedBackgroundP)
+			backgroundClicked = selectedBackgroundP->as<std::shared_ptr<Resources::Drawable>>();
+		auto hoveredBackgroundP = pack.style.getAttribute("hoveredBackground");
+		if (hoveredBackgroundP)
+			backgroundSelected = hoveredBackgroundP->as<std::shared_ptr<Resources::Drawable>>();
+	}
+	
 	Component& BasicButtonComponent::getThisComponent()
 	{
 		return *this;
 	}
-	void BasicButtonComponent::registerProperties(Manager& m, const std::string& name)
+	
+	void BasicButtonComponent::registerProperties(Manager& manager, const std::string& name)
 	{
-		TextComponent::registerProperties(m, name);
-		m.registerDrawableProperty(name, "selectedBackground");
-		m.registerDrawableProperty(name, "hoveredBackground");
+		TextComponent::registerProperties(manager, name);
+		manager.registerDrawableProperty(name, "selectedBackground");
+		manager.registerDrawableProperty(name, "hoveredBackground");
 	}
+	
 	std::shared_ptr<Resources::Drawable> BasicButtonComponent::getBackgroundDrawable(ButtonState state) const
 	{
 		if (state == ButtonState::Clicked)
@@ -300,6 +472,34 @@ namespace Guider
 
 		return backgroundDefault;
 	}
+	
+	void BasicButtonComponent::setBackgroundDrawable(ButtonState state, const std::shared_ptr<Resources::Drawable>& drawable)
+	{
+		switch (state)
+		{
+		case Guider::ButtonBase::ButtonState::Default:
+		{
+			backgroundDefault = drawable;
+			break;
+		}
+		case Guider::ButtonBase::ButtonState::Hovered:
+		{
+			backgroundSelected = drawable;
+			break;
+		}
+		case Guider::ButtonBase::ButtonState::Clicked:
+		{
+			backgroundClicked = drawable;
+			break;
+		}
+		}
+	}
+
+	std::shared_ptr<Resources::Drawable> BasicButtonComponent::getCurrentBackgroundDrawable() const
+	{
+		return getBackgroundDrawable(getButtonState());
+	}
+	
 	void BasicButtonComponent::onDraw(Canvas& canvas)
 	{
 		Rect bounds = getBounds();
@@ -311,18 +511,16 @@ namespace Guider
 			shape->draw(canvas, bounds.at(Vec2(0, 0)));
 		TextComponent::onDraw(canvas);
 	}
-	void BasicButtonComponent::handleEvent(const Event& event)
+	
+	bool BasicButtonComponent::handleEvent(const Event& event)
 	{
+		bool r = TextComponent::handleEvent(event);
 		handleClick(event);
-		TextComponent::handleEvent(event);
-		switch (event.type)
-		{
-		case Event::Type::BackendConnected:
+		if (event.type == Event::Type::BackendConnected)
 		{
 			if (!backgroundDefault)
 				backgroundDefault = getBackend()->createRectangle(Vec2(0, 0), Color(255, 255, 255));
-			break;
 		}
-		}
+		return r;
 	}
 }

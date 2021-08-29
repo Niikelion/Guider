@@ -6,225 +6,219 @@
 
 namespace Guider
 {
+	/// @interface CommonComponent
+	/// @brief Base for common components.
 	class CommonComponent : public Component
 	{
-	private:
-		Padding paddings;
-	protected:
-		Rect getContentRect() const noexcept;
 	public:
-		static void registerProperties(Manager& m, const std::string& name);
+		/// @brief Registers basic properties, is required by Manager.
+		/// @param manager Resource manager to register properties to.
+		/// @param name Alias for type.
+		static void registerProperties(Manager& manager, const std::string& name);
 
+		/// @brief Sets padding.
 		void setPadding(const Padding& pad);
+		/// @brief Returns padding.
 		Padding getPading() const noexcept;
 
+		/// @brief Returns size of content.
+		/// 
+		/// Convenience method required for measure to be implemented.
+		/// @param getWidth True if content width is requested.
+		/// @param getHeight True if content height is requested.
+		/// @return Returns pair (width, height). Fields that are not required have undefined value.
 		virtual std::pair<float, float> getContentSize(bool getWidth, bool getHeight) = 0;
 
 		virtual std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& width, const DimensionDesc& height) override;
 
 		CommonComponent() = default;
-		CommonComponent(Manager& m, const XML::Tag& tag, const StylingPack& style);
+		/// @brief Constructs component from xml.
+		/// @param manager Resource manager.
+		/// @param tag Xml representation.
+		/// @param pack Styling information.
+		CommonComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack);
+	protected:
+		/// @brief Returns content rect.
+		/// 
+		/// Content rect includes padding.
+		Rect getContentRect() const noexcept;
+	private:
+		Padding paddings;
 	};
 
+	/// @brief Empty component.
+	/// @note EmptyComponent will try to maintain size equal to zero.
 	class EmptyComponent : public Component
 	{
 	public:
+		static void registerProperties(Manager& manager, const std::string& name);
+
 		void onDraw(Canvas& canvas) override {}
 
 		EmptyComponent() = default;
-		EmptyComponent(Manager& m, const XML::Tag& config, const StylingPack& style) {}
+		/// @brief Constructs component from xml.
+		/// @param manager Resource manager.
+		/// @param tag Xml representation.
+		/// @param pack Styling information.
+		EmptyComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack);
 	};
 
+	/// @brief Simple solid color rectangle
 	class RectangleShapeComponent : public Component
 	{
-	private:
-		std::shared_ptr<Resources::RectangleShape> shape;
-		Color color;
 	public:
+		/// @brief Registers all ractangle specific properties.
+		/// @param manager Resource manager to register properties to.
+		/// @param name Alias for type.
+		static void registerProperties(Manager& manager, const std::string& name);
+		/// @brief Sets color.
+		/// @param c Color.
 		void setColor(const Color& c);
-		inline Color getColor() const noexcept
-		{
-			return color;
-		}
+		/// @brief Returns color.
+		Color getColor() const noexcept;
 
 		virtual void onDraw(Canvas& canvas) override;
 
-		virtual void handleEvent(const Event& event) override;
+		virtual bool handleEvent(const Event& event) override;
 
-		RectangleShapeComponent() : shape(nullptr), color(255, 255, 255, 255) {}
-		RectangleShapeComponent(SizingMode mode, const Color& c) : shape(nullptr), color(c)
-		{
-			setSizingMode(mode, mode);
-		}
-		RectangleShapeComponent(float w, float h, const Color& c) : Component(), shape(nullptr), color(c)
-		{
-			setSize(Vec2(w, h));
-			setSizingMode(SizingMode::OwnSize, SizingMode::OwnSize);
-		}
-
-		RectangleShapeComponent(Manager& m, const XML::Tag& config, const StylingPack& style) : RectangleShapeComponent()
-		{
-			Manager::handleDefaultArguments(*this, config, style.style);
-			{
-				XML::Value fillColor = config.getAttribute("fillColor");
-				if (fillColor.exists())
-				{
-					color = Styles::strToColor(fillColor.val);
-				}
-			}
-		}
+		RectangleShapeComponent();
+		/// @brief Constructs rectangle from sizing modes and color.
+		/// @param mode Sizing modes.
+		/// @param c Fill color.
+		RectangleShapeComponent(SizingMode mode, const Color& c);
+		/// @brief Constructs rectangle from size and color.
+		/// @param w Width.
+		/// @param h Height.
+		/// @param c Fill color.
+		RectangleShapeComponent(float w, float h, const Color& c);
+		/// @brief Constructs rectangle from xml.
+		/// @param manager Resource manager.
+		/// @param tag Xml representation.
+		/// @param pack Styling information.
+		RectangleShapeComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack);
+	private:
+		std::shared_ptr<Resources::RectangleShape> shape;
+		Color color;
 	};
 
+	/// @brief Simple text component.
 	class TextComponent : public CommonComponent
 	{
+	public:
+		/// @brief Registers all text specific properties.
+		/// @param manager Resources manager.
+		/// @param name Alias for type.
+		static void registerProperties(Manager& manager, const std::string& name);
+
+		/// @brief Sets text size.
+		/// @param textSize Text size.
+		void setTextSize(float textSize);
+		/// @brief Sets text.
+		/// @param text Text.
+		void setText(const std::string& text);
+		/// @brief Sets text color.
+		/// @param color Color.
+		void setTextColor(const Color& color);
+		/// @brief Sets font.
+		/// @param name Font.
+		void setFont(const std::string& name);
+
+		/// @brief Sets text alignment.
+		/// @param horizontal Horizontal alignment.
+		/// @param vertical Vertical alignment.
+		void setTextAlignment(Gravity horizontal, Gravity vertical);
+		/// @brief Returns horizontal text alignment.
+		Gravity getHorizontalTextAlignment() const;
+		/// @brief Returns vertical text alignment.
+		Gravity getVerticalTextAlignment() const;
+
+		virtual void onDraw(Canvas& canvas) override;
+
+		virtual bool handleEvent(const Event& event) override;
+
+		virtual std::pair<float, float> getContentSize(bool getWidth, bool getHeight) override;
+
+		TextComponent();
+		/// @brief Constructs text from xml.
+		/// @param manager Resource manager.
+		/// @param tag Xml representation.
+		/// @param pack Styling information.
+		TextComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack);
 	private:
 		std::shared_ptr<Resources::TextResource> textRes;
 		std::string text, font;
 		float textSize;
 		Color color;
 		Gravity horizontalTextAlign, verticalTextAlign;
-	public:
-		static void registerProperties(Manager& m, const std::string& name);
-
-		void setTextSize(float textSize);
-		void setText(const std::string& text);
-		void setTextColor(const Color& color);
-		void setFont(const std::string& name);
-
-		void setTextAlignment(Gravity horizontal, Gravity vertical);
-		inline Gravity getHorizontalTextAlignment() const
-		{
-			return horizontalTextAlign;
-		}
-		inline Gravity getVerticalTextAlignment() const
-		{
-			return verticalTextAlign;
-		}
-
-		virtual void onDraw(Canvas& canvas) override;
-
-		virtual void handleEvent(const Event& event) override;
-
-		virtual std::pair<float, float> getContentSize(bool getWidth, bool getHeight) override;
-
-		TextComponent() : textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center) {}
-
-		TextComponent(Manager& manager, const XML::Tag& config, const StylingPack& pack) : CommonComponent(manager, config, pack), textRes(nullptr), textSize(10), color(0xff), horizontalTextAlign(Gravity::Start), verticalTextAlign(Gravity::Center)
-		{
-			Manager::handleDefaultArguments(*this, config, pack.style);
-			setBackend(manager.getBackend());
-
-			{
-				auto color = pack.style.getAttribute("color");
-				if (color)
-					setTextColor(color->as<Color>());
-			}
-
-			{
-				auto text = pack.style.getAttribute("text");
-				if (text)
-					setText(text->as<std::string>());
-			}
-			auto tmp = config.getAttribute("textSize");
-			if (tmp.exists())
-			{
-				bool failed = false;
-				float v = Styles::strToFloat(tmp.val, failed);
-				if (!failed)
-					setTextSize(v);
-			}
-
-			tmp = config.getAttribute("font");
-			if (tmp.exists())
-			{
-				auto font = manager.getFontByName(tmp.val);
-				if (font)
-				{
-					setFont(tmp.val);
-				}
-			}
-
-			Gravity hor = Gravity::Center, ver = Gravity::Center;
-			tmp = config.getAttribute("textAlignmentHorizontal");
-			if (tmp.exists())
-			{
-				if (tmp.val == "left" || tmp.val == "start")
-					hor = Gravity::Left;
-				else if (tmp.val == "center" || tmp.val == "middle")
-					hor = Gravity::Center;
-				else if (tmp.val == "right" || tmp.val == "end")
-					hor = Gravity::Right;
-			}
-			tmp = config.getAttribute("textAlignmentVertical");
-			if (tmp.exists())
-			{
-				if (tmp.val == "top" || tmp.val == "start")
-					ver = Gravity::Top;
-				else if (tmp.val == "center" || tmp.val == "middle")
-					ver = Gravity::Center;
-				else if (tmp.val == "bottom" || tmp.val == "end")
-					ver = Gravity::Bottom;
-			}
-		}
 	};
 
+	/// @interface ButtonBase
+	/// @brief Base for button components.
 	class ButtonBase
 	{
 	public:
+		/// @brief State of button.
 		enum class ButtonState
 		{
 			Default,
 			Hovered,
 			Clicked
 		};
+
+		/// @brief Returns button state.
+		ButtonState getButtonState() const noexcept;
+		/// @brief Sets callback for click.
+		/// @param callback Callback function.
+		void setOnClickCallback(const std::function<void(Component&)>& callback);
+
+		ButtonBase();
+	protected:
+		/// @brief Event handling callback.
+		/// @note Should be called by every derived class when handling event.
+		/// @param event Event.
+		void handleClick(const Event& event);
+		/// @brief Returns this component.
+		/// 
+		/// Required by handleClick.
+		/// @return *this
+		virtual Component& getThisComponent() = 0;
 	private:
 		std::function<void(Component&)> onClickCallback;
 		ButtonState buttonState;
-	protected:
-		void handleClick(const Event& event);
-		virtual Component& getThisComponent() = 0;
-	public:
-		inline ButtonState getButtonState() const noexcept
-		{
-			return buttonState;
-		}
-		void setOnClickCallback(const std::function<void(Component&)>& callback);
-
-		ButtonBase() : buttonState(ButtonState::Default) {}
 	};
 
+	/// @brief Simple button implementation.
 	class BasicButtonComponent : public TextComponent, public ButtonBase
 	{
-	private:
-		std::shared_ptr<Resources::Drawable> backgroundDefault, backgroundSelected, backgroundClicked;
-	protected:
-		Component& getThisComponent() override;
 	public:
-		static void registerProperties(Manager& m, const std::string& name);
+		/// @brief Registers all button specific properties.
+		/// @param manager Resources manager.
+		/// @param name Alias for type.
+		static void registerProperties(Manager& manager, const std::string& name);
 
+		/// @brief Returns drawable for given state.
+		/// @param state State.
 		std::shared_ptr<Resources::Drawable> getBackgroundDrawable(ButtonState state) const;
-		inline std::shared_ptr<Resources::Drawable> getCurrentBackgroundDrawable() const
-		{
-			return getBackgroundDrawable(getButtonState());
-		}
+		/// @brief Sets drawable for given state.
+		/// @param state State.
+		/// @param drawable Drawable.
+		void setBackgroundDrawable(ButtonState state, const std::shared_ptr<Resources::Drawable>& drawable);
+		/// @brief Returns drawable for current state.
+		std::shared_ptr<Resources::Drawable> getCurrentBackgroundDrawable() const;
 
-		void onDraw(Canvas& canvas) override;
+		virtual void onDraw(Canvas& canvas) override;
 
-		void handleEvent(const Event& event) override;
+		virtual bool handleEvent(const Event& event) override;
 
 		BasicButtonComponent() = default;
-
-		BasicButtonComponent(Manager& manager, const XML::Tag& config, const StylingPack& style) : TextComponent(manager, config, style)
-		{
-			auto backgroundP = style.style.getAttribute("background");
-			if (backgroundP)
-				backgroundDefault = backgroundP->as<std::shared_ptr<Resources::Drawable>>();
-			auto selectedBackgroundP = style.style.getAttribute("selectedBackground");
-			if (selectedBackgroundP)
-				backgroundClicked = selectedBackgroundP->as<std::shared_ptr<Resources::Drawable>>();
-			auto hoveredBackgroundP = style.style.getAttribute("hoveredBackground");
-			if (hoveredBackgroundP)
-				backgroundSelected = hoveredBackgroundP->as<std::shared_ptr<Resources::Drawable>>();
-		}
+		/// @brief Constructs button from xml.
+		/// @param manager Resource manager.
+		/// @param tag Xml representation.
+		/// @param pack Styling information.
+		BasicButtonComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack);
+	protected:
+		virtual Component& getThisComponent() override;
+	private:
+		std::shared_ptr<Resources::Drawable> backgroundDefault, backgroundSelected, backgroundClicked;
 	};
 }

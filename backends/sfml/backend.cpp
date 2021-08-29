@@ -81,7 +81,7 @@ namespace Guider
 			t.setCharacterSize(p.first);
 			t.setString(text);
 			t.setFont(font);
-			return t.getLocalBounds().width * p.second;
+			return (t.getLocalBounds().width+2) * p.second;
 		}
 		void TextResource::draw(Canvas& canvas, const Rect& bounds)
 		{
@@ -129,6 +129,63 @@ namespace Guider
 			}
 			return 0;
 		}
+	}
+
+	bool SfmlBackend::handleEvent(Engine& engine, const sf::Event& event)
+	{
+		switch (event.type)
+		{
+		case sf::Event::MouseEntered:
+		case sf::Event::MouseMoved:
+		{
+			engine.handleEvent(
+				Guider::Event::createMouseEvent(
+					Guider::Event::MouseEvent::Subtype::Moved,
+					static_cast<float>(event.mouseMove.x),
+					static_cast<float>(event.mouseMove.y),
+					0
+				)
+			);
+			return true;
+		}
+		case sf::Event::MouseButtonPressed:
+		{
+			engine.handleEvent(
+				Guider::Event::createMouseEvent(
+					Guider::Event::MouseEvent::Subtype::ButtonDown,
+					static_cast<float>(event.mouseButton.x),
+					static_cast<float>(event.mouseButton.y),
+					event.mouseButton.button
+				)
+			);
+			return true;
+		}
+		case sf::Event::MouseButtonReleased:
+		{
+			engine.handleEvent(
+				Guider::Event::createMouseEvent(
+					Guider::Event::MouseEvent::Subtype::ButtonUp,
+					static_cast<float>(event.mouseButton.x),
+					static_cast<float>(event.mouseButton.y),
+					event.mouseButton.button
+				)
+			);
+			return true;
+		}
+		case sf::Event::Resized:
+		{
+			sf::Vector2f size(
+				static_cast<float>(event.size.width),
+				static_cast<float>(event.size.height)
+			);
+
+			engine.resize({ size.x, size.y });
+			break;
+		}
+		default:
+			break;
+		}
+		return false;
 	}
 
 	void SfmlBackend::setDrawOrigin(float x, float y)
@@ -201,11 +258,20 @@ namespace Guider
 
 	void SfmlBackend::setBounds(const Rect& rect)
 	{
+		Vec2 size = getSize();
+		glEnable(GL_SCISSOR_TEST);
+
+		GLint left = static_cast<GLint>(rect.left);
+		GLint top = static_cast<GLint>(round(rect.top));
+
+		GLint right = static_cast<GLint>(round(rect.left + rect.width));
+		GLint bottom = static_cast<GLint>(rect.top + rect.height);
+
 		glScissor(
-			static_cast<GLint>(origin.x+rect.left),
-			static_cast<GLint>(origin.y+rect.top),
-			static_cast<GLint>(rect.width),
-			static_cast<GLint>(rect.height)
+			left,
+			static_cast<GLint>(size.y) - bottom,
+			right - left,
+			bottom - top
 		);
 	}
 

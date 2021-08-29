@@ -1,6 +1,6 @@
 <Themes>
 	<app>
-		<var name="font" value="@fonts:Arimo-Regular"/>
+		<var name="font" value="Arimo-Regular"/>
 		
 		<var name="primaryColor" value="#7cb342"/>
 		<var name="primaryColorDark" value="#4b830d"/>
@@ -12,19 +12,23 @@
 	</app>
 	
 	<app.dark extends="app">
+		<var name="primaryColor" value="#282a2e"/>
+		<var name="primaryColorDark" value="#242629"/>
+		<var name="primaryColorLight" value="#3e3f43"/>
+		
+		<var name="accentColor" value="#7cb342"/>
+		<var name="accentColorDark" value="#4b830d"/>
+		<var name="accentColorLight" value="#aee571"/>
 	</app.dark>
 	
 	<toolbar>
-		<attr name="background" value="?primaryColor"/>
+		<attr name="backgroundColor" value="?accentColor"/>
 	</toolbar>
 	
 	<toolbar.Button>
-		<attr name="background" value="?accentColorDark"/>
-		<attr name="hoveredBackground" value="?accentColor"/>
-		<attr name="selectedBackground" value="?accentColorLight"/>
-		
-		<attr name="padding" value="6 0"/>
-		<attr name="textSize" value="12"/>
-		<attr name="color" value="#a8a8a8"/>
+		<attr name="padding" value="6 12"/>
+		<attr name="textSize" value="16"/>
+		<attr name="width" value="wrap_content"/>
+		<attr name="height" value="match_parent"/>
 	</toolbar.Button>
 </Themes>

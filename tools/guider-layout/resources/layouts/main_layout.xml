@@ -1,16 +1,32 @@
 <containers.ConstraintsContainer
 	width="match_parent"
 	height="match_parent"
+	backgroundColor="?primaryColor"
 >
+	<common.Guide
+		name="h_guide"
+	
+		horizontalConstraint="regular"
+		horizontalSizing="const_size"
+		horizontalFlow="0"
+		
+		attachLeftTo="parent left 240"
+		attachRightTo="parent right"
+		
+		verticalConstraint="regular"
+		verticalSizing="const_size"
+		verticalFlow="0"
+		
+		attachTopTo="parent top"
+		attachBottomTo="parent bottom"
+	/>
 	<containers.ConstraintsContainer
 		theme="toolbar"
 		id="toolbar"
 		name="toolbar"
 	
-		backgroundColor="?primaryColor"
-	
 		width = "match_parent"
-		height = "32"
+		height = "20"
 		
 		horizontalConstraint="regular"
 		horizontalSizing="const_offset"
@@ -27,8 +43,9 @@
 	>
 		<containers.ListContainer
 			name="optionsList"
+			
 			width="wrap_content"
-			height="20"
+			height="match_parent"
 			
 			orientation="horizontal"
 			
@@ -36,7 +53,7 @@
 			horizontalSizing="const_offset"
 			horizontalFlow="0"
 			
-			attachLeftTo="parent left 6"
+			attachLeftTo="parent left"
 			attachRightTo="parent right"
 			
 			verticalConstraint="regular"
@@ -49,29 +66,27 @@
 			<common.Button
 				theme="toolbar.Button"
 				
-				id="repo_button"
-			
-				width="wrap_content"
-				height="match_parent"
-				
-				text="Repo"
+				id="file_button"
+				text="File"
 			/>
 			<common.Button
 				theme="toolbar.Button"
 			
-				id="branch_button"
-			
-				width="wrap_content"
-				height="match_parent"
+				id="edit_button"
+				text="Edit"
+			/>
+			<common.Button
+				theme="toolbar.Button"
 				
-				text="branch"
+				id="reset_button"
+				text="Reset"
 			/>
 		</containers.ListContainer>
 		<containers.ListContainer
 			name="toolsList"
 			
 			width="wrap_content"
-			height="20"
+			height="match_parent"
 			
 			orientation="horizontal"
 			
@@ -80,7 +95,7 @@
 			horizontalFlow="1"
 			
 			attachLeftTo="parent left"
-			attachRightTo="parent right 6"
+			attachRightTo="parent right"
 			
 			verticalConstraint="regular"
 			verticaSizing="const_size"
@@ -89,32 +104,88 @@
 			attachTopTo="parent top"
 			attachBottomTo="parent bottom"
 		>
-			<common.Button
-				theme="toolbar.Button"
+			<common.Text
+				id="time"
+				width="60"
+				height="wrap_content"
+				text="0"
+				textSize="15"
+				color="#000000"
 				
-				width="wrap_content"
-				height="match_parent"
+				horizontalConstraint="regular"
+				horizontalSizing="const_size"
 				
-				text="Menu"
+				attachLeftTo="parent right"
+				
+				verticalConstraint="regular"
+				verticalSizing="const_size"
+				
+				attachTopTo="toolbar bottom"
+				attachBottomTo="parent bottom"
 			/>
 		</containers.ListContainer>
 	</containers.ConstraintsContainer>
-	<shapes.Rectangle
-		name="sidebar"
+	<containers.ListContainer
+		id="sidebar"
 	
-		width = "240"
-		height = "given_size"
-		fillColor = "#282a2e"
+		width = "given_size"
+		height = "40"
+		backgroundColor = "#242629"
 		
 		horizontalConstraint="regular"
-		horizontalSizing="const_size"
+		horizontalSizing="const_offset"
 		
-		attachLeftTo="parent left"
+		attachLeftTo="parent left 8"
+		attachRightTo="h_guide left 8"
 		
 		verticalConstraint="regular"
 		verticalSizing="const_offset"
 		
-		attachTopTo="toolbar bottom"
-		attachBottomTo="parent bottom"
+		attachTopTo="toolbar bottom 8"
+		attachBottomTo="parent bottom 8"
+	>
+		<shapes.Rectangle
+			id="r1"
+			
+			width="match_parent"
+			height="20"
+		
+			fillColor="#ff0000"
+		/>
+		<shapes.Rectangle
+			id="r2"
+		
+			width="match_parent"
+			height="20"
+		
+			fillColor="#00ff00"
+		/>
+		<shapes.Rectangle
+			id="r3"
+		
+			width="match_parent"
+			height="20"
+		
+			fillColor="#0000ff"
+		/>
+	</containers.ListContainer>
+	<containers.ConstraintsContainer
+		id="content"
+		
+		width="given_size"
+		height="given_size"
+		backgroundColor = "#242629"
+		
+		horizontalConstraint="regular"
+		horizontalSizing="const_offset"
+		
+		attachLeftTo="h_guide right"
+		attachRightTo="parent right 8"
+		
+		verticalConstraint="regular"
+		verticalSizing="const_offset"
+		
+		attachTopTo="toolbar bottom 8"
+		attachBottomTo="parent bottom 8"
 	/>
 </containers.ConstraintsContainer>
