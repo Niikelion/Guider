@@ -1,6 +1,5 @@
 #include <guider/components.hpp>
 #include <guider/containers.hpp>
-#include <guider/base.hpp>
 #include <guider/shortcuts.hpp>
 
 #include <SFML/Graphics.hpp>
@@ -163,8 +162,6 @@ int main()
 	engine.addChild(root);
 	//view for caching
 	sf::View view = window.getDefaultView();
-
-	int n = 100;
 
 	//main loop
 	while (window.isOpen())
