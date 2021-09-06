@@ -6,6 +6,7 @@
 
 namespace Guider
 {
+	//TODO: add ResourceManagerConnected event and default handling for it
 	/// @interface CommonComponent
 	/// @brief Base for common components.
 	class CommonComponent : public Component
@@ -63,13 +64,13 @@ namespace Guider
 		EmptyComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack);
 	};
 
-	/// @brief Simple solid color rectangle
+	/// @brief Simple solid color rectangle.
 	class RectangleShapeComponent : public Component
 	{
 	public:
-		/// @brief Registers all ractangle specific properties.
-		/// @param manager Resource manager to register properties to.
-		/// @param name Alias for type.
+		/// @brief Registers all component specific properties.
+		/// @param manager Resource manager.
+		/// @param name Alias for the type.
 		static void registerProperties(Manager& manager, const std::string& name);
 		/// @brief Sets color.
 		/// @param c Color.
@@ -101,13 +102,47 @@ namespace Guider
 		Color color;
 	};
 
+	/// @brief Simple image component.
+	class ImageComponent : public CommonComponent
+	{
+		/// @brief Registers all component specific properties.
+		/// @param manager Resources manager.
+		/// @param name Alias for the type.
+		static void registerProperties(Manager& manager, const std::string& name);
+		/// @brief Sets image.
+		/// @param i Image.
+		void setImage(const std::shared_ptr<Resources::Drawable>& i);
+		/// @brief Returns current image.
+		std::shared_ptr<Resources::Drawable> getImage() const noexcept;
+
+		virtual void onDraw(Canvas& canvas) override;
+
+		ImageComponent();
+		/// @brief Constructs image from sizing modes and image.
+		/// @param mode Sizing modes.
+		/// @param i Image.
+		ImageComponent(SizingMode mode, const std::shared_ptr<Resources::Drawable>& i);
+		/// @brief Constructs image from size and image.
+		/// @param w Width.
+		/// @param h Height.
+		/// @param i Image.
+		ImageComponent(float w, float h, const std::shared_ptr<Resources::Drawable>& i);
+		/// @brief Constructs image from xml.
+		/// @param manager Resource manager.
+		/// @param tag Xml representation.
+		/// @param pack Styling information.
+		ImageComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack);
+	private:
+		std::shared_ptr<Resources::Drawable> image;
+	};
+
 	/// @brief Simple text component.
 	class TextComponent : public CommonComponent
 	{
 	public:
-		/// @brief Registers all text specific properties.
+		/// @brief Registers all component specific properties.
 		/// @param manager Resources manager.
-		/// @param name Alias for type.
+		/// @param name Alias for the type.
 		static void registerProperties(Manager& manager, const std::string& name);
 
 		/// @brief Sets text size.

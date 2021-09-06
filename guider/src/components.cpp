@@ -186,6 +186,56 @@ namespace Guider
 	}
 	
 
+	void ImageComponent::registerProperties(Manager& manager, const std::string& name)
+	{
+		CommonComponent::registerProperties(manager, name);
+		manager.registerDrawableProperty(name, "src");
+	}
+
+	void ImageComponent::setImage(const std::shared_ptr<Resources::Drawable>& i)
+	{
+		image = i;
+	}
+
+	std::shared_ptr<Resources::Drawable> ImageComponent::getImage() const noexcept
+	{
+		return image;
+	}
+
+	void ImageComponent::onDraw(Canvas& canvas)
+	{
+		if (image)
+		{
+			Rect bounds = getPading().calcContentArea(getBounds());
+			image->draw(canvas, bounds);
+		}
+	}
+
+	ImageComponent::ImageComponent() : image(nullptr)
+	{
+		//empty
+	}
+
+	ImageComponent::ImageComponent(SizingMode mode, const std::shared_ptr<Resources::Drawable>& i) : image(i)
+	{
+		setSizingMode(mode, mode);
+	}
+
+	ImageComponent::ImageComponent(float w, float h, const std::shared_ptr<Resources::Drawable>& i) : image(i)
+	{
+		setSize(w, h);
+		setSizingMode(SizingMode::OwnSize, SizingMode::OwnSize);
+	}
+
+	ImageComponent::ImageComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack) : CommonComponent(manager, tag, pack)
+	{
+		{
+			auto src = pack.style.getAttribute("src");
+			if (src)
+				image = src->as<std::shared_ptr<Resources::ImageResource>>();
+		}
+	}
+
 	void TextComponent::registerProperties(Manager& manager, const std::string& name)
 	{
 		CommonComponent::registerProperties(manager, name);
