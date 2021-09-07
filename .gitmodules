@@ -1,3 +1,6 @@
 [submodule "ParseLib"]
 	path = ParseLib
 	url = https://github.com/Niikelion/ParseLib.git
+[submodule "doc/doxygen-awesome-css"]
+	path = doc/doxygen-awesome-css
+	url = https://github.com/jothepro/doxygen-awesome-css.git
