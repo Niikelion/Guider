@@ -8,7 +8,7 @@
 
 namespace Guider
 {
-	void AbsoluteContainer::registerProperties(Manager& manager, const std::string& name)
+	void AbsoluteContainer::registerProperties(Manager& manager, const String& name)
 	{
 		//TODO: do
 	}
@@ -146,7 +146,7 @@ namespace Guider
 		if (toUpdate.size() > 0)
 		{
 			Rect bounds = getGlobalBounds();
-			std::vector<Rect> base;
+			Vector<Rect> base;
 			base.reserve(toUpdate.size());
 			for (auto i : toUpdate)
 			{
@@ -174,9 +174,9 @@ namespace Guider
 	}
 
 	
-	void ListContainer::registerProperties(Manager& manager, const std::string& name)
+	void ListContainer::registerProperties(Manager& manager, const String& name)
 	{
-		manager.registerPropertyForComponent<Orientation>(name, "orientation", [](const std::string& s) {
+		manager.registerPropertyForComponent<Orientation>(name, "orientation", [](const String& s) {
 			return s == "horizontal" ? Orientation::Horizontal : Orientation::Vertical;
 		});
 		manager.registerColorProperty(name, "backgroundColor");
@@ -707,7 +707,7 @@ namespace Guider
 		size = off;
 	}
 
-	ListContainer::Element::Element(const std::shared_ptr<Component>& component, float size, float offset) : component(component), size(size), newSize(size), offset(offset)
+	ListContainer::Element::Element(const Component::Type& component, float size, float offset) : component(component), size(size), newSize(size), offset(offset)
 	{
 	}
 
@@ -760,7 +760,7 @@ namespace Guider
 	
 	std::vector<Component*> ConstraintsContainer::Constraint::getDeps() const
 	{
-		std::vector<Component*> ret;
+		Vector<Component*> ret;
 
 		switch (getType())
 		{
@@ -1074,7 +1074,7 @@ namespace Guider
 		unsigned cnt = 0;
 
 		std::unordered_set<std::list<Cluster>::iterator, ClusterHash> visited;
-		std::vector<Cluster*> ret;
+		Vector<Cluster*> ret;
 
 		ret.reserve(n);
 
@@ -1470,9 +1470,9 @@ namespace Guider
 		invalidLayout = false;
 	}
 	
-	void ConstraintsContainer::registerProperties(Manager& m, const std::string& name)
+	void ConstraintsContainer::registerProperties(Manager& m, const String& name)
 	{
-		m.registerPropertyForComponent<Color>(name, "backgroundColor", (Color(*)(const std::string&))Styles::strToColor);
+		m.registerPropertyForComponent<Color>(name, "backgroundColor", (Color(*)(const String&))Styles::strToColor);
 	}
 	
 	void ConstraintsContainer::setBackgroundColor(const Color& color)
@@ -1911,8 +1911,8 @@ namespace Guider
 			{
 				std::unordered_set<Component*> forceRedraw;
 
-				std::vector<std::pair<Rect, Component*>> base;
-				std::vector<std::pair<Rect, Component*>> lastBase;
+				Vector<std::pair<Rect, Component*>> base;
+				Vector<std::pair<Rect, Component*>> lastBase;
 				base.reserve(needsRedraw.size());
 				for (auto i : needsRedraw)
 				{
@@ -2007,10 +2007,10 @@ namespace Guider
 	
 	void ConstraintsContainer::postXmlConstruction(Manager& manager, const XML::Tag& config, const StylingPack& pack)
 	{
-		std::unordered_map<std::string, Component::Type> nameMapping;
+		std::unordered_map<String, Component::Type> nameMapping;
 		Manager::handleDefaultArguments(*this, config, pack.style);
 
-		std::vector<Component::Type> childMapping;
+		Vector<Component::Type> childMapping;
 
 		XML::Value tmp;
 		{
@@ -2075,7 +2075,7 @@ namespace Guider
 
 							if (tmp.val.find(" ") != tmp.val.npos)
 							{
-								std::vector<std::string> options = Styles::splitString(tmp.val);
+								Vector<String> options = Styles::splitString(tmp.val);
 								if (options.size() > 0)
 								{
 									if (options[0] == "parent")
@@ -2153,7 +2153,7 @@ namespace Guider
 
 							if (tmp.val.find(" ") != tmp.val.npos)
 							{
-								std::vector<std::string> options = Styles::splitString(tmp.val);
+								Vector<String> options = Styles::splitString(tmp.val);
 								if (options.size() > 0)
 								{
 									if (options[0] == "parent")
@@ -2282,7 +2282,7 @@ namespace Guider
 
 							if (tmp.val.find(" ") != tmp.val.npos)
 							{
-								std::vector<std::string> options = Styles::splitString(tmp.val);
+								Vector<String> options = Styles::splitString(tmp.val);
 								if (options.size() > 0)
 								{
 									if (options[0] == "parent")
@@ -2360,7 +2360,7 @@ namespace Guider
 
 							if (tmp.val.find(" ") != tmp.val.npos)
 							{
-								std::vector<std::string> options = Styles::splitString(tmp.val);
+								Vector<String> options = Styles::splitString(tmp.val);
 								if (options.size() > 0)
 								{
 									if (options[0] == "parent")

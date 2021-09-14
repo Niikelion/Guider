@@ -14,7 +14,7 @@ namespace Guider
 		/// @brief Registers basic properties, is required by Manager.
 		/// @param manager Resource manager to register properties to.
 		/// @param name Alias for type.
-		static void registerProperties(Manager& manager, const std::string& name);
+		static void registerProperties(Manager& manager, const String& name);
 
 		/// @brief Sets padding.
 		void setPadding(const Padding& pad);
@@ -51,7 +51,7 @@ namespace Guider
 	class EmptyComponent : public Component
 	{
 	public:
-		static void registerProperties(Manager& manager, const std::string& name);
+		static void registerProperties(Manager& manager, const String& name);
 
 		void onDraw(Canvas& canvas) override {}
 
@@ -70,7 +70,7 @@ namespace Guider
 		/// @brief Registers all ractangle specific properties.
 		/// @param manager Resource manager to register properties to.
 		/// @param name Alias for type.
-		static void registerProperties(Manager& manager, const std::string& name);
+		static void registerProperties(Manager& manager, const String& name);
 		/// @brief Sets color.
 		/// @param c Color.
 		void setColor(const Color& c);
@@ -108,7 +108,7 @@ namespace Guider
 		/// @brief Registers all text specific properties.
 		/// @param manager Resources manager.
 		/// @param name Alias for type.
-		static void registerProperties(Manager& manager, const std::string& name);
+		static void registerProperties(Manager& manager, const String& name);
 
 		/// @brief Sets text size.
 		/// @param textSize Text size.
@@ -146,7 +146,7 @@ namespace Guider
 		TextComponent(Manager& manager, const XML::Tag& tag, const StylingPack& pack);
 	private:
 		std::shared_ptr<Resources::TextResource> textRes;
-		std::string text, font;
+		String text, font;
 		float textSize;
 		Color color;
 		Gravity horizontalTextAlign, verticalTextAlign;
@@ -194,7 +194,7 @@ namespace Guider
 		/// @brief Registers all button specific properties.
 		/// @param manager Resources manager.
 		/// @param name Alias for type.
-		static void registerProperties(Manager& manager, const std::string& name);
+		static void registerProperties(Manager& manager, const String& name);
 
 		/// @brief Returns drawable for given state.
 		/// @param state State.

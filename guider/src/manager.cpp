@@ -3,12 +3,12 @@
 
 namespace Guider
 {
-	void ComponentBindings::registerElement(const std::string name, const Component::Type& component)
+	void ComponentBindings::registerElement(const String name, const Component::Type& component)
 	{
 		idMapping.emplace(name, component);
 	}
 
-	Component::Type ComponentBindings::getElementById(const std::string& name)
+	Component::Type ComponentBindings::getElementById(const String& name)
 	{
 		auto it = idMapping.find(name);
 		if (it != idMapping.end())
@@ -26,7 +26,7 @@ namespace Guider
 		return std::shared_ptr<Resources::Drawable>();
 	}
 
-	std::shared_ptr<Resources::Drawable> Manager::getDrawableByName(const std::string& name)
+	std::shared_ptr<Resources::Drawable> Manager::getDrawableByName(const String& name)
 	{
 		auto it = drawableNameToIdMapping.find(name);
 		if (it != drawableNameToIdMapping.end())
@@ -36,9 +36,9 @@ namespace Guider
 		return std::shared_ptr<Resources::Drawable>();
 	}
 
-	std::shared_ptr<Resources::Drawable> Manager::getDrawableByText(const std::string& text)
+	std::shared_ptr<Resources::Drawable> Manager::getDrawableByText(const String& text)
 	{
-		std::string t = Styles::trim(text);
+		String t = Styles::trim(text);
 
 		if (!t.empty())
 		{
@@ -59,7 +59,7 @@ namespace Guider
 		return std::shared_ptr<Resources::Drawable>();
 	}
 
-	std::shared_ptr<Resources::FontResource> Manager::getFontByName(const std::string& name)
+	std::shared_ptr<Resources::FontResource> Manager::getFontByName(const String& name)
 	{
 		auto it = fontsByNames.find(name);
 		if (it != fontsByNames.end())
@@ -67,7 +67,7 @@ namespace Guider
 		return std::shared_ptr<Resources::FontResource>();
 	}
 
-	void Manager::registerDrawable(const std::shared_ptr<Resources::Drawable>& drawable, uint64_t id, const std::string& name)
+	void Manager::registerDrawable(const std::shared_ptr<Resources::Drawable>& drawable, uint64_t id, const String& name)
 	{
 		drawablesById.emplace(id, drawable);
 		if (!name.empty())
@@ -76,16 +76,16 @@ namespace Guider
 		}
 	}
 
-	void Manager::loadDrawable(const std::string& filename, uint64_t id, const std::string& name)
+	void Manager::loadDrawable(const String& filename, uint64_t id, const String& name)
 	{
 		//TODO: deduce drawable type from file extension
 		std::shared_ptr<Resources::Drawable> image = backend.loadImageFromFile(filename);
 		registerDrawable(image, id, name);
 	}
 
-	void Manager::loadDrawable(const std::string& filename, const std::string& name)
+	void Manager::loadDrawable(const String& filename, const String& name)
 	{
-		uint64_t id = std::hash<std::string>()(name);
+		uint64_t id = std::hash<String>()(name);
 		if (drawablesById.count(id))
 		{
 			//TODO:resolve collision
@@ -94,7 +94,7 @@ namespace Guider
 		loadDrawable(filename, id, name);
 	}
 
-	void Manager::loadFont(const std::string& filename, const std::string& name)
+	void Manager::loadFont(const String& filename, const String& name)
 	{
 		fontsByNames.emplace(name, backend.loadFontFromFile(filename, name));
 	}
@@ -115,7 +115,7 @@ namespace Guider
 		auto t = config.getAttribute("theme");
 		if (t.exists())
 		{
-			std::string v = Styles::trim(t.val);
+			String v = Styles::trim(t.val);
 			if (v.find('?') == 0)
 				throw std::runtime_error("theme attribute cannot be a reference");
 			auto it = themes.find(v);
@@ -134,7 +134,7 @@ namespace Guider
 			}
 		}
 
-		std::unordered_set<std::string> propertiesToRemove;
+		std::unordered_set<String> propertiesToRemove;
 
 		for (auto& attr : s.attributes)
 		{
@@ -176,7 +176,7 @@ namespace Guider
 
 		for (const auto& i : config.attributes)
 		{
-			std::string v = Styles::trim(i.second.val);
+			String v = Styles::trim(i.second.val);
 			if (!v.empty() && v[0] == '?')
 			{
 				v.erase(0, 1);
@@ -225,24 +225,24 @@ namespace Guider
 		c.setSizingMode(w.second, h.second);
 	}
 
-	void Manager::registerTypeCreator(const std::function<Component::Type(Manager&, const XML::Tag&, ComponentBindings&, const StylingPack&)>& f, const std::string& name)
+	void Manager::registerTypeCreator(const std::function<Component::Type(Manager&, const XML::Tag&, ComponentBindings&, const StylingPack&)>& f, const String& name)
 	{
 		creators.emplace(name, f);
 	}
 
-	void Manager::registerStringProperty(const std::string& name)
+	void Manager::registerStringProperty(const String& name)
 	{
-		registerProperty<std::string>(name, [](const std::string& s) { return s; });
+		registerProperty<String>(name, [](const String& s) { return s; });
 	}
 
-	void Manager::registerStringProperty(const std::string& component, const std::string& name)
+	void Manager::registerStringProperty(const String& component, const String& name)
 	{
-		registerPropertyForComponent<std::string>(component, name, [](const std::string& s) { return s; });
+		registerPropertyForComponent<String>(component, name, [](const String& s) { return s; });
 	}
 
-	void Manager::registerNumericProperty(const std::string& name)
+	void Manager::registerNumericProperty(const String& name)
 	{
-		registerProperty<float>(name, [](const std::string& value) {
+		registerProperty<float>(name, [](const String& value) {
 			bool failed = false;
 			float ret = Styles::strToFloat(value, failed);
 			if (failed)
@@ -251,9 +251,9 @@ namespace Guider
 		});
 	}
 
-	void Manager::registerNumericProperty(const std::string& component, const std::string& name)
+	void Manager::registerNumericProperty(const String& component, const String& name)
 	{
-		registerPropertyForComponent<float>(component, name, [](const std::string& value) {
+		registerPropertyForComponent<float>(component, name, [](const String& value) {
 			bool failed = false;
 			float ret = Styles::strToFloat(value, failed);
 			if (failed)
@@ -262,19 +262,19 @@ namespace Guider
 			});
 	}
 
-	void Manager::registerDrawableProperty(const std::string& name)
+	void Manager::registerDrawableProperty(const String& name)
 	{
 		registerProperty<std::shared_ptr<Resources::Drawable>>(name, std::bind(std::mem_fn(&Manager::getDrawableByText), this, std::placeholders::_1));
 	}
 
-	void Manager::registerDrawableProperty(const std::string& component, const std::string& name)
+	void Manager::registerDrawableProperty(const String& component, const String& name)
 	{
 		registerPropertyForComponent<std::shared_ptr<Resources::Drawable>>(component, name, std::bind(std::mem_fn(&Manager::getDrawableByText), this, std::placeholders::_1));
 	}
 
-	void Manager::registerColorProperty(const std::string& name)
+	void Manager::registerColorProperty(const String& name)
 	{
-		registerProperty<Color>(name, [](const std::string& value) {
+		registerProperty<Color>(name, [](const String& value) {
 			bool failed = false;
 			Color ret = Styles::strToColor(value, failed);
 			if (failed)
@@ -283,9 +283,9 @@ namespace Guider
 			});
 	}
 
-	void Manager::registerColorProperty(const std::string& component, const std::string& name)
+	void Manager::registerColorProperty(const String& component, const String& name)
 	{
-		registerPropertyForComponent<Color>(component, name, [](const std::string& value) {
+		registerPropertyForComponent<Color>(component, name, [](const String& value) {
 			bool failed = false;
 			Color ret = Styles::strToColor(value);
 			if (failed)
@@ -294,7 +294,7 @@ namespace Guider
 			});
 	}
 
-	void Manager::setDefaultStyle(const std::string& component, const Style& style)
+	void Manager::setDefaultStyle(const String& component, const Style& style)
 	{
 		defaultStyles[component] = style;
 	}
@@ -316,7 +316,7 @@ namespace Guider
 
 					if (name.exists() && value.exists())
 					{
-						std::string v = Styles::trim(value.val);
+						String v = Styles::trim(value.val);
 
 						if (!v.empty() && v[0] == '?')
 						{
@@ -342,9 +342,9 @@ namespace Guider
 		setDefaultStyle(xml.name, style);
 	}
 
-	void Manager::loadStylesFromXmlFile(const std::string& filename)
+	void Manager::loadStylesFromXmlFile(const String& filename)
 	{
-		std::string content;
+		String content;
 		{
 			std::ifstream t(filename);
 
@@ -380,7 +380,7 @@ namespace Guider
 		}
 	}
 
-	Style Manager::getDefaultStyleFor(const std::string& component)
+	Style Manager::getDefaultStyleFor(const String& component)
 	{
 		auto it = defaultStyles.find(component);
 		if (it != defaultStyles.end())
@@ -388,12 +388,12 @@ namespace Guider
 		return Style();
 	}
 
-	void Manager::registerTheme(const std::string& name, const Theme& theme)
+	void Manager::registerTheme(const String& name, const Theme& theme)
 	{
 		themes[name] = { Style(), theme };
 	}
 
-	void Manager::registerTheme(const std::string& name, const StylingPack& theme)
+	void Manager::registerTheme(const String& name, const StylingPack& theme)
 	{
 		themes[name] = theme;
 	}
@@ -420,7 +420,7 @@ namespace Guider
 				auto value = tag->getAttribute("value");
 				if (tag->name == "var" && name.exists() && value.exists())
 				{
-					std::string v = Styles::trim(value.val);
+					String v = Styles::trim(value.val);
 					bool reference = v.find('?') == 0;
 					if (reference)
 						v.erase(0, 1);
@@ -428,7 +428,7 @@ namespace Guider
 				}
 				else if (tag->name == "attr" && name.exists() && value.exists())
 				{
-					std::string v = Styles::trim(value.val);
+					String v = Styles::trim(value.val);
 
 					if (!v.empty() && v[0] == '?')
 					{
@@ -453,9 +453,9 @@ namespace Guider
 		themes.emplace(xml.name, pack);
 	}
 
-	void Manager::loadThemesFromXmlFile(const std::string& filename)
+	void Manager::loadThemesFromXmlFile(const String& filename)
 	{
-		std::string content;
+		String content;
 		{
 			std::ifstream t(filename);
 
@@ -491,7 +491,7 @@ namespace Guider
 		}
 	}
 
-	StylingPack Manager::getTheme(const std::string& theme)
+	StylingPack Manager::getTheme(const String& theme)
 	{
 		auto it = themes.find(theme);
 		if (it != themes.end())
@@ -513,7 +513,7 @@ namespace Guider
 		return Component::Type(it->second(*this, xml, bindings, style));
 	}
 
-	std::pair<float, Component::SizingMode> strToMeasure(const std::string& str)
+	std::pair<float, Component::SizingMode> strToMeasure(const String& str)
 	{
 		Component::SizingMode mode = Component::SizingMode::GivenSize;
 		float value = 0;
@@ -545,9 +545,9 @@ namespace Guider
 		registerProperty<std::pair<float, Component::SizingMode>>("width", strToMeasure);
 		registerProperty<std::pair<float, Component::SizingMode>>("height", strToMeasure);
 	}
-	std::shared_ptr<Styles::Value> Manager::createValueForProperty(const std::string& component, const std::string& name, const std::string& value)
+	std::shared_ptr<Styles::Value> Manager::createValueForProperty(const String& component, const String& name, const String& value)
 	{
-		std::string val = Styles::trim(value);
+		String val = Styles::trim(value);
 		if (!val.empty() && val[0] == '?')
 		{
 			return Styles::Value::ofType<Styles::VariableReference>(val.substr(1));

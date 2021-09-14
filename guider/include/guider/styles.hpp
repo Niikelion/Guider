@@ -100,7 +100,7 @@ namespace Guider
 			}
 			void(*deleter)(void*);
 			void* (*cloner)(void*, uint8_t*);
-			std::vector<uint8_t> data;
+			Vector<uint8_t> data;
 			void* pointer;
 			std::type_index type;
 		};
@@ -117,23 +117,23 @@ namespace Guider
 				return ValueDefinition(genericCreatorFunc<T>);
 			}
 
-			Value value(const std::string& str)
+			Value value(const String& str)
 			{
 				if (creator)
 					return creator(str);
 				throw std::logic_error("Creator not specified");
 			}
-			ValueDefinition(const std::function<Value(const std::string&)>& f) : creator(f) {}
+			ValueDefinition(const std::function<Value(const String&)>& f) : creator(f) {}
 			ValueDefinition(const ValueDefinition&) = default;
 			ValueDefinition(ValueDefinition&&) noexcept = default;
 		private:
-			std::function<Value(const std::string&)> creator;
+			std::function<Value(const String&)> creator;
 
-			template<typename T> static Value creatorFunc(const std::string&)
+			template<typename T> static Value creatorFunc(const String&)
 			{
 				return Value(tag<T>{});
 			}
-			template<typename T> static Value genericCreatorFunc(const std::string&)
+			template<typename T> static Value genericCreatorFunc(const String&)
 			{
 				return Value(typeid(T), sizeof(T));
 			}
@@ -144,12 +144,12 @@ namespace Guider
 		public:
 			bool isReference() const;
 
-			std::string getValue() const;
+			String getValue() const;
 
-			Variable(const std::string& value, bool reference);
+			Variable(const String& value, bool reference);
 		private:
 			bool reference;
-			std::string value;
+			String value;
 		};
 
 		class VariableReference
@@ -158,56 +158,56 @@ namespace Guider
 			bool detached() const noexcept;
 			void attach(const std::shared_ptr<Value>& value);
 
-			std::string getName() const;
+			String getName() const;
 			std::shared_ptr<Value> getValue() const;
 
 			VariableReference() : name() {}
-			VariableReference(const std::string& n) : name(n) {}
-			VariableReference(const std::string& n, const std::shared_ptr<Value>& c) : name(n), cache(c) {};
+			VariableReference(const String& n) : name(n) {}
+			VariableReference(const String& n, const std::shared_ptr<Value>& c) : name(n), cache(c) {};
 			VariableReference(const VariableReference&) = default;
 			VariableReference(VariableReference&&) noexcept = default;
 		private:
-			std::string name;
+			String name;
 			std::shared_ptr<Value> cache;
 		};
 
 		class UnresolvedValue
 		{
 		public:
-			std::string getValue();
+			String getValue();
 
-			UnresolvedValue(const std::string& value);
+			UnresolvedValue(const String& value);
 		private:
-			std::string value;
+			String value;
 		};
 
 		static bool isDigitInBase(char c, unsigned base);
 		static unsigned digitFromChar(char c);
 
-		std::string trim(const std::string& s);
+		String trim(const String& s);
 
-		std::vector<std::string> splitString(const std::string& str);
+		Vector<String> splitString(const String& str);
 
-		uint64_t strToInt(const std::string& str, bool& failed, unsigned base = 10);
-		inline uint64_t strToInt(const std::string& str, unsigned base = 10)
+		uint64_t strToInt(const String& str, bool& failed, unsigned base = 10);
+		inline uint64_t strToInt(const String& str, unsigned base = 10)
 		{
 			bool a;
 			return strToInt(str, a, base);
 		}
-		float strToFloat(const std::string& str, bool& failed);
-		inline float strToFloat(const std::string& str)
+		float strToFloat(const String& str, bool& failed);
+		inline float strToFloat(const String& str)
 		{
 			bool failed = false;
 			return strToFloat(str, failed);
 		}
-		bool strToBool(const std::string& str, bool& failed);
-		inline bool strToBool(const std::string& str)
+		bool strToBool(const String& str, bool& failed);
+		inline bool strToBool(const String& str)
 		{
 			bool failed = false;
 			return strToBool(str, failed);
 		}
-		Color strToColor(const std::string& str, bool& failed);
-		inline Color strToColor(const std::string& str)
+		Color strToColor(const String& str, bool& failed);
+		inline Color strToColor(const String& str)
 		{
 			bool failed = false;
 			return strToColor(str, failed);
@@ -219,27 +219,27 @@ namespace Guider
 	public:
 		void inheritAttributes(const Style& parentStyle);
 
-		std::shared_ptr<Styles::Value> getAttribute(const std::string& name) const;
+		std::shared_ptr<Styles::Value> getAttribute(const String& name) const;
 
-		void setAttribute(const std::string& name, const std::shared_ptr<Styles::Value>& value);
-		void setAttribute(const std::string& name, const std::string& variable);
-		void removeAttribute(const std::string& name);
+		void setAttribute(const String& name, const std::shared_ptr<Styles::Value>& value);
+		void setAttribute(const String& name, const String& variable);
+		void removeAttribute(const String& name);
 
-		std::unordered_map<std::string, std::shared_ptr<Styles::Value>> attributes;
+		std::unordered_map<String, std::shared_ptr<Styles::Value>> attributes;
 	private:
 	};
 
 	class Theme
 	{
 	public:
-		void setVariable(const std::string& name, const std::shared_ptr<Styles::Variable>& value);
-		std::shared_ptr<Styles::Variable> getVariable(const std::string& name) const;
+		void setVariable(const String& name, const std::shared_ptr<Styles::Variable>& value);
+		std::shared_ptr<Styles::Variable> getVariable(const String& name) const;
 
-		std::shared_ptr<Styles::Variable> dereferenceVariable(const std::string& name) const;
+		std::shared_ptr<Styles::Variable> dereferenceVariable(const String& name) const;
 
 		void inheritVariables(const Theme& parentTheme);
 	private:
-		std::unordered_map<std::string, std::shared_ptr<Styles::Variable>> variables;
+		std::unordered_map<String, std::shared_ptr<Styles::Variable>> variables;
 	};
 
 	struct StylingPack

@@ -16,6 +16,7 @@
 namespace Guider
 {
 	using String = std::string;
+	template<typename T, typename Allocator = std::allocator<T>> using Vector = std::vector<T, Allocator>;
 
 	/// @brief Basic class representing 2d point/vector.
 	class Vec2
@@ -235,7 +236,7 @@ namespace Guider
 		{
 		public:
 			virtual float getLineHeight(float textSize) const = 0;
-			virtual float getLineWidth(float textSize, const std::string& text) const = 0;
+			virtual float getLineWidth(float textSize, const String& text) const = 0;
 		};
 
 		class TextResource : public Drawable
@@ -243,7 +244,7 @@ namespace Guider
 		public:
 			Gravity verticalAlignment, horizontalAlignment;
 
-			virtual void setText(const std::string& text) = 0;
+			virtual void setText(const String& text) = 0;
 			virtual void setTextSize(float size) = 0;
 			virtual void setFont(const FontResource& font) = 0;
 			virtual void setColor(const Color& color) = 0;
@@ -267,11 +268,11 @@ namespace Guider
 				std::shared_ptr<Drawable> drawable;
 			};
 		private:
-			std::vector<ElementData> elements;
+			Vector<ElementData> elements;
 		public:
 			virtual void draw(Canvas& canvas, const Rect& bounds);
 
-			CompositeDrawable(uint64_t id, const std::vector<ElementData>& drawables) : elements(drawables) {}
+			CompositeDrawable(uint64_t id, const Vector<ElementData>& drawables) : elements(drawables) {}
 			CompositeDrawable(const CompositeDrawable&) = default;
 		};
 	}
@@ -282,11 +283,11 @@ namespace Guider
 	{
 	public:
 		virtual std::shared_ptr<Resources::RectangleShape> createRectangle(const Vec2& size, const Color& color) = 0;
-		virtual std::shared_ptr<Resources::TextResource> createText(const std::string& text, const Resources::FontResource& font, float size, const Color& color) = 0;
+		virtual std::shared_ptr<Resources::TextResource> createText(const String& text, const Resources::FontResource& font, float size, const Color& color) = 0;
 
-		virtual std::shared_ptr<Resources::FontResource> getFontByName(const std::string& name) = 0;
-		virtual std::shared_ptr<Resources::FontResource> loadFontFromFile(const std::string& filename, const std::string& name) = 0;
-		virtual std::shared_ptr<Resources::ImageResource> loadImageFromFile(const std::string& filename) = 0;
+		virtual std::shared_ptr<Resources::FontResource> getFontByName(const String& name) = 0;
+		virtual std::shared_ptr<Resources::FontResource> loadFontFromFile(const String& filename, const String& name) = 0;
+		virtual std::shared_ptr<Resources::ImageResource> loadImageFromFile(const String& filename) = 0;
 
 		virtual std::shared_ptr<Resources::ImageCanvas> createImage(const Vec2& size) = 0;
 
@@ -316,8 +317,8 @@ namespace Guider
 		virtual void setSize(const Vec2& size) = 0;
 
 	private:
-		std::vector<Vec2> offsets;
-		std::vector<Rect> bounds;
+		Vector<Vec2> offsets;
+		Vector<Rect> bounds;
 	};
 
 	/// @brief Events class.
@@ -854,6 +855,6 @@ namespace Guider
 		Backend& backend;
 		std::unordered_set<Component*> toRedraw;
 		std::shared_ptr<Canvas> canvas;
-		std::vector<Component::Type> elements;
+		Vector<Component::Type> elements;
 	};
 }

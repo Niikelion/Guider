@@ -8,10 +8,10 @@ namespace Guider
 		return paddings.calcContentArea(getBounds());
 	}
 
-	void CommonComponent::registerProperties(Manager& manager, const std::string& name)
+	void CommonComponent::registerProperties(Manager& manager, const String& name)
 	{
-		manager.registerPropertyForComponent<Padding>(name, "padding", [](const std::string& value) {
-			std::vector<std::string> args = Styles::splitString(value);
+		manager.registerPropertyForComponent<Padding>(name, "padding", [](const String& value) {
+			Vector<String> args = Styles::splitString(value);
 			switch (args.size())
 			{
 			case 1:
@@ -107,7 +107,7 @@ namespace Guider
 	}
 
 
-	void EmptyComponent::registerProperties(Manager& manager, const std::string& name)
+	void EmptyComponent::registerProperties(Manager& manager, const String& name)
 	{
 		//yeah, thats it, nothing to see there
 	}
@@ -118,7 +118,7 @@ namespace Guider
 	}
 
 
-	void RectangleShapeComponent::registerProperties(Manager& manager, const std::string& name)
+	void RectangleShapeComponent::registerProperties(Manager& manager, const String& name)
 	{
 		CommonComponent::registerProperties(manager, name);
 		manager.registerColorProperty(name, "fillColor");
@@ -186,7 +186,7 @@ namespace Guider
 	}
 	
 
-	void TextComponent::registerProperties(Manager& manager, const std::string& name)
+	void TextComponent::registerProperties(Manager& manager, const String& name)
 	{
 		CommonComponent::registerProperties(manager, name);
 		manager.registerColorProperty(name, "color");
@@ -207,7 +207,7 @@ namespace Guider
 			invalidateVisuals();
 	}
 	
-	void TextComponent::setText(const std::string& text)
+	void TextComponent::setText(const String& text)
 	{
 		this->text = text;
 		if (textRes != nullptr)
@@ -230,7 +230,7 @@ namespace Guider
 		invalidateVisuals();
 	}
 	
-	void TextComponent::setFont(const std::string& name)
+	void TextComponent::setFont(const String& name)
 	{
 		font = name;
 		if (textRes != nullptr)
@@ -452,7 +452,7 @@ namespace Guider
 		return *this;
 	}
 	
-	void BasicButtonComponent::registerProperties(Manager& manager, const std::string& name)
+	void BasicButtonComponent::registerProperties(Manager& manager, const String& name)
 	{
 		TextComponent::registerProperties(manager, name);
 		manager.registerDrawableProperty(name, "selectedBackground");

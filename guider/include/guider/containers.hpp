@@ -11,7 +11,7 @@ namespace Guider
 	class AbsoluteContainer : public Container
 	{
 	public:
-		static void registerProperties(Manager& manager, const std::string& name);
+		static void registerProperties(Manager& manager, const String& name);
 
 		virtual void addChild(const Component::Type& child) override;
 		void addChild(const Component::Type& child, float x, float y);
@@ -38,7 +38,7 @@ namespace Guider
 			Element(const Element&) = default;
 		};
 
-		using iterator = std::vector<Element>::iterator;
+		using iterator = Vector<Element>::iterator;
 
 		class IteratorType : public IteratorTemplate<IteratorType>
 		{
@@ -63,7 +63,7 @@ namespace Guider
 			iterator currentIt;
 			const iterator endIt;
 		};
-		std::vector<Element> children;
+		Vector<Element> children;
 
 		std::unordered_set<Component*> toUpdate;
 	};
@@ -72,7 +72,7 @@ namespace Guider
 	class ListContainer : public Container
 	{
 	public:
-		static void registerProperties(Manager& manager, const std::string& name);
+		static void registerProperties(Manager& manager, const String& name);
 
 		void setOrientation(Orientation orientation);
 		Orientation getOrientation() const noexcept;
@@ -110,10 +110,10 @@ namespace Guider
 		class Element
 		{
 		public:
-			std::shared_ptr<Component> component;
+			Component::Type component;
 			float size, newSize, offset;
 
-			Element(const std::shared_ptr<Component>& component, float size, float offset);
+			Element(const Component::Type& component, float size, float offset);
 			Element(Element&&) noexcept = default;
 		};
 
@@ -235,7 +235,7 @@ namespace Guider
 
 			void setSecondEdge(bool start);
 
-			std::vector<Component*> getDeps() const;
+			Vector<Component*> getDeps() const;
 			bool isFor(const Component& c) const;
 
 			Constraint(Type type, Orientation o);
@@ -398,13 +398,11 @@ namespace Guider
 
 		ConstraintsContainer();
 	private:
-		using IteratorType = CommonIteratorTemplate<std::vector < std::shared_ptr<Component> >::iterator>;
+		using IteratorType = CommonIteratorTemplate<Vector < std::shared_ptr<Component> >::iterator>;
 
-		std::vector<std::shared_ptr<Component>> children;
+		std::vector<Component::Type> children;
 		std::unordered_map<Component*, Rect> boundaries;
 		std::list<Constraint> constraints;
-		//TODO: move other elements to using iterators instead of pointers
-		//std::unordered_map<Constraint*, std::list<Constraint>::iterator> constraintMapping;
 		std::list<Cluster> clusters;
 
 		std::unordered_map<const Component*, std::list<Cluster>::iterator> clusterMapping;

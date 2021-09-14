@@ -12,12 +12,12 @@ namespace Guider
 			return reference;
 		}
 
-		std::string Variable::getValue() const
+		String Variable::getValue() const
 		{
 			return value;
 		}
 
-		Variable::Variable(const std::string& value, bool reference) : reference(reference), value(value)
+		Variable::Variable(const String& value, bool reference) : reference(reference), value(value)
 		{
 		}
 
@@ -31,7 +31,7 @@ namespace Guider
 			cache = value;
 		}
 
-		std::string VariableReference::getName() const
+		String VariableReference::getName() const
 		{
 			return name;
 		}
@@ -49,16 +49,16 @@ namespace Guider
 		{
 			return (c >= '0' && c <= '9') ? (c - '0') : ((c >= 'a' && c <= 'z') ? (c - 'a' + 10) : ((c >= 'A' && c <= 'Z') ? (c - 'A' + 10) : 0));
 		}
-		std::string trim(const std::string& s)
+		String trim(const String& s)
 		{
-			std::string t = s;
+			String t = s;
 			t.erase(0, t.find_first_not_of("\t\n\v\f\r "));
 			size_t p = t.find_last_not_of("\t\n\v\f\r ");
-			if (p != std::string::npos && p < t.size() - 1)
+			if (p != String::npos && p < t.size() - 1)
 				t.erase(p + 1);
 			return t;
 		}
-		uint64_t strToInt(const std::string& str, bool& failed, unsigned base)
+		uint64_t strToInt(const String& str, bool& failed, unsigned base)
 		{
 			unsigned offset = 0;
 			uint64_t value = 0;
@@ -92,7 +92,7 @@ namespace Guider
 			failed = false;
 			return value;
 		}
-		float strToFloat(const std::string& str, bool& failed)
+		float strToFloat(const String& str, bool& failed)
 		{
 			failed = true;
 			char* end = nullptr;
@@ -105,7 +105,7 @@ namespace Guider
 			failed = false;
 			return ret;
 		}
-		bool strToBool(const std::string& str, bool& failed)
+		bool strToBool(const String& str, bool& failed)
 		{
 			failed = false;
 			if (str == "true" || str == "TRUE")
@@ -119,7 +119,7 @@ namespace Guider
 			failed = true;
 			return false;
 		}
-		Color strToColor(const std::string& str, bool& failed)
+		Color strToColor(const String& str, bool& failed)
 		{
 			if (str.empty())
 				return Color(255,255,255);
@@ -163,21 +163,21 @@ namespace Guider
 			return Color(255, 255, 255);
 		}
 
-		std::vector<std::string> splitString(const std::string& str)
+		Vector<String> splitString(const String& str)
 		{
 			std::stringstream ss(str);
-			std::istream_iterator<std::string> begin(ss);
-			std::istream_iterator<std::string> end;
+			std::istream_iterator<String> begin(ss);
+			std::istream_iterator<String> end;
 
-			return std::vector<std::string>(begin, end);
+			return Vector<String>(begin, end);
 		}
 		
-		std::string UnresolvedValue::getValue()
+		String UnresolvedValue::getValue()
 		{
 			return value;
 		}
 
-		UnresolvedValue::UnresolvedValue(const std::string& value) : value(value)
+		UnresolvedValue::UnresolvedValue(const String& value) : value(value)
 		{
 		}
 }
@@ -192,7 +192,7 @@ namespace Guider
 		}
 	}
 	
-	std::shared_ptr<Styles::Value> Style::getAttribute(const std::string& name) const
+	std::shared_ptr<Styles::Value> Style::getAttribute(const String& name) const
 	{
 		auto attr = attributes.find(name);
 		if (attr != attributes.end())
@@ -201,29 +201,29 @@ namespace Guider
 	}
 	
 	
-	void Style::setAttribute(const std::string& name, const std::shared_ptr<Styles::Value>& value)
+	void Style::setAttribute(const String& name, const std::shared_ptr<Styles::Value>& value)
 	{
 		attributes[name] = value;
 	}
-	void Style::setAttribute(const std::string& name, const std::string& variable)
+	void Style::setAttribute(const String& name, const String& variable)
 	{
 		auto it = attributes.find(name);
 		attributes[name] = Styles::Value::ofType<Styles::VariableReference>(variable);
 	}
 
-	void Style::removeAttribute(const std::string& name)
+	void Style::removeAttribute(const String& name)
 	{
 		attributes.erase(name);
 	}
 
-	std::shared_ptr<Styles::Variable> Theme::getVariable(const std::string& name) const
+	std::shared_ptr<Styles::Variable> Theme::getVariable(const String& name) const
 	{
 		auto it = variables.find(name);
 		if (it != variables.end())
 			return it->second;
 		return std::shared_ptr<Styles::Variable>();
 	}
-	std::shared_ptr<Styles::Variable> Theme::dereferenceVariable(const std::string& name) const
+	std::shared_ptr<Styles::Variable> Theme::dereferenceVariable(const String& name) const
 	{
 		auto var = getVariable(name);
 		std::unordered_set<Styles::Variable*> visited;
@@ -234,7 +234,7 @@ namespace Guider
 		}
 		return var;
 	}
-	void Theme::setVariable(const std::string& name, const std::shared_ptr<Styles::Variable>& value)
+	void Theme::setVariable(const String& name, const std::shared_ptr<Styles::Variable>& value)
 	{
 		variables[name] = value;
 	}
