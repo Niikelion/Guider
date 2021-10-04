@@ -916,7 +916,7 @@ namespace Guider
 	}
 
 
-	void Engine::addChild(const Component::Type& child)
+	void Engine::addChild(const Component::Ptr& child)
 	{
 		Rect bounds = getBounds();
 		elements.emplace_back(child);
@@ -928,7 +928,7 @@ namespace Guider
 		toRedraw.insert(child.get());
 	}
 	
-	void Engine::removeChild(const Component::Type& child)
+	void Engine::removeChild(const Component::Ptr& child)
 	{
 		for (auto it = elements.begin(); it != elements.end(); ++it)
 		{

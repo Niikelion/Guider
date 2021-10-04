@@ -19,10 +19,10 @@ namespace Guider
 	class ComponentBindings
 	{
 	public:
-		void registerElement(const String name, const Component::Type& component);
-		Component::Type getElementById(const String& name);
+		void registerElement(const String name, const Component::Ptr& component);
+		Component::Ptr getElementById(const String& name);
 	private:
-		std::unordered_map<String, Component::Type> idMapping;
+		std::unordered_map<String, Component::Ptr> idMapping;
 	};
 
 	/// @brief Resource manager.
@@ -83,7 +83,7 @@ namespace Guider
 		/// @brief Registers creator for given type.
 		/// @param f Factory function.
 		/// @param name Alias for type.
-		void registerTypeCreator(const std::function<Component::Type (Manager&, const XML::Tag&,ComponentBindings&,const StylingPack&)>& f, const String& name);
+		void registerTypeCreator(const std::function<Component::Ptr (Manager&, const XML::Tag&,ComponentBindings&,const StylingPack&)>& f, const String& name);
 
 		/// @brief Registers properties for type.
 		/// 
@@ -213,12 +213,12 @@ namespace Guider
 		/// @param bindings Bindings to capture ids.
 		/// @param parentTheme Parent styling info.
 		/// @return Root element of created structure.
-		Component::Type instantiate(const XML::Tag& xml,ComponentBindings& bindings, const Theme& parentTheme = Theme());
+		Component::Ptr instantiate(const XML::Tag& xml,ComponentBindings& bindings, const Theme& parentTheme = Theme());
 		/// @brief Instatiates gui structure.
 		/// @param xml Xml source.
 		/// @param parentStyle Parent styling info.
 		/// @return Root element of created structure.
-		inline Component::Type instantiate(const XML::Tag& xml, const Theme& parentStyle = Theme())
+		inline Component::Ptr instantiate(const XML::Tag& xml, const Theme& parentStyle = Theme())
 		{
 			return instantiate(xml, *this, parentStyle);
 		}
@@ -235,11 +235,11 @@ namespace Guider
 		}
 	private:
 		Backend& backend;
-		std::unordered_map<String, std::function<Component::Type(Manager&, const XML::Tag&, ComponentBindings&,const StylingPack&)>> creators;
+		std::unordered_map<String, std::function<Component::Ptr(Manager&, const XML::Tag&, ComponentBindings&,const StylingPack&)>> creators;
 
-		template<typename T> static Component::Type creator(Manager& m, const XML::Tag& config, ComponentBindings& bindings, const StylingPack& style)
+		template<typename T> static Component::Ptr creator(Manager& m, const XML::Tag& config, ComponentBindings& bindings, const StylingPack& style)
 		{
-			Component::Type ret = std::make_shared<T>(m, config, style);
+			Component::Ptr ret = std::make_shared<T>(m, config, style);
 			XML::Value tmp = config.getAttribute("id");
 			if (tmp.exists())
 			{
@@ -247,7 +247,7 @@ namespace Guider
 			}
 			return ret;
 		}
-		std::unordered_map<String, Component::Type> idMapping;
+		std::unordered_map<String, Component::Ptr> idMapping;
 
 		std::unordered_map<uint64_t, std::shared_ptr<Resources::Drawable>> drawablesById;
 		std::unordered_map<String, uint64_t> drawableNameToIdMapping;

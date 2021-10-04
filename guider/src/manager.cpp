@@ -3,17 +3,17 @@
 
 namespace Guider
 {
-	void ComponentBindings::registerElement(const String name, const Component::Type& component)
+	void ComponentBindings::registerElement(const String name, const Component::Ptr& component)
 	{
 		idMapping.emplace(name, component);
 	}
 
-	Component::Type ComponentBindings::getElementById(const String& name)
+	Component::Ptr ComponentBindings::getElementById(const String& name)
 	{
 		auto it = idMapping.find(name);
 		if (it != idMapping.end())
 			return it->second;
-		return Component::Type();
+		return Component::Ptr();
 	}
 
 	std::shared_ptr<Resources::Drawable> Manager::getDrawableById(uint64_t id)
@@ -225,7 +225,7 @@ namespace Guider
 		c.setSizingMode(w.second, h.second);
 	}
 
-	void Manager::registerTypeCreator(const std::function<Component::Type(Manager&, const XML::Tag&, ComponentBindings&, const StylingPack&)>& f, const String& name)
+	void Manager::registerTypeCreator(const std::function<Component::Ptr(Manager&, const XML::Tag&, ComponentBindings&, const StylingPack&)>& f, const String& name)
 	{
 		creators.emplace(name, f);
 	}
@@ -499,18 +499,18 @@ namespace Guider
 		return StylingPack();
 	}
 
-	Component::Type Manager::instantiate(const XML::Tag& xml, ComponentBindings& bindings, const Theme& parentTheme)
+	Component::Ptr Manager::instantiate(const XML::Tag& xml, ComponentBindings& bindings, const Theme& parentTheme)
 	{
 		auto it = creators.find(xml.name);
 		if (it == creators.end())
 		{
 			throw std::logic_error("Component not supported");
-			return Component::Type();
+			return Component::Ptr();
 		}
 
 		StylingPack style = generateStyleInfo(xml, parentTheme);
 
-		return Component::Type(it->second(*this, xml, bindings, style));
+		return Component::Ptr(it->second(*this, xml, bindings, style));
 	}
 
 	std::pair<float, Component::SizingMode> strToMeasure(const String& str)

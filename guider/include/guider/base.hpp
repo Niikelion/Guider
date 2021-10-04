@@ -439,7 +439,7 @@ namespace Guider
 		};
 
 		/// @brief Shortcut for defining type to store component.
-		using Type = std::shared_ptr<Component>;
+		using Ptr = std::shared_ptr<Component>;
 
 		/// @brief Checks if mouse is currently over component
 		/// @return True when mouse is inside bounding rect, false otherwise.
@@ -801,10 +801,10 @@ namespace Guider
 
 		/// @brief Adds child.
 		/// @param child 
-		virtual void addChild(const Component::Type& child) = 0;
+		virtual void addChild(const Component::Ptr& child) = 0;
 		/// @brief Removes child.
 		/// @param child 
-		virtual void removeChild(const Component::Type& child) = 0;
+		virtual void removeChild(const Component::Ptr& child) = 0;
 		/// @brief Clears all children.
 		virtual void clearChildren() = 0;
 
@@ -826,8 +826,8 @@ namespace Guider
 	class Engine : public Container
 	{
 	public:
-		virtual void addChild(const Component::Type& child) override;
-		virtual void removeChild(const Component::Type& child) override;
+		virtual void addChild(const Component::Ptr& child) override;
+		virtual void removeChild(const Component::Ptr& child) override;
 		virtual void clearChildren() override;
 
 		virtual Iterator firstElement() override;
@@ -851,10 +851,10 @@ namespace Guider
 		Engine(Backend& b, const std::shared_ptr<Canvas>& c);
 
 	private:
-		using IteratorType = CommonIteratorTemplate<std::vector<Component::Type>::iterator>;
+		using IteratorType = CommonIteratorTemplate<std::vector<Component::Ptr>::iterator>;
 		Backend& backend;
 		std::unordered_set<Component*> toRedraw;
 		std::shared_ptr<Canvas> canvas;
-		Vector<Component::Type> elements;
+		Vector<Component::Ptr> elements;
 	};
 }

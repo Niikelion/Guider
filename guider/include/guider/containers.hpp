@@ -13,9 +13,9 @@ namespace Guider
 	public:
 		static void registerProperties(Manager& manager, const String& name);
 
-		virtual void addChild(const Component::Type& child) override;
-		void addChild(const Component::Type& child, float x, float y);
-		virtual void removeChild(const Component::Type& child) override;
+		virtual void addChild(const Component::Ptr& child) override;
+		void addChild(const Component::Ptr& child, float x, float y);
+		virtual void removeChild(const Component::Ptr& child) override;
 		virtual void clearChildren() override;
 
 		virtual Iterator firstElement() override;
@@ -31,10 +31,10 @@ namespace Guider
 	private:
 		struct Element
 		{
-			Component::Type component;
+			Component::Ptr component;
 			float x, y;
 
-			Element(const Component::Type& c, float x, float y);
+			Element(const Component::Ptr& c, float x, float y);
 			Element(const Element&) = default;
 		};
 
@@ -83,12 +83,12 @@ namespace Guider
 		void setOffset(float offset);
 		float getOffset() const noexcept;
 
-		virtual void addChild(const Component::Type& child) override;
-		virtual void removeChild(const Component::Type& child) override;
+		virtual void addChild(const Component::Ptr& child) override;
+		virtual void removeChild(const Component::Ptr& child) override;
 		void removeChild(unsigned n);
 		virtual void clearChildren() override;
 		size_t getChildrenCount() const;
-		Component::Type getChild(unsigned i);
+		Component::Ptr getChild(unsigned i);
 
 		virtual void onMaskDraw(Canvas& canvas) const override;
 		virtual void onDraw(Canvas& canvas) override;
@@ -110,10 +110,10 @@ namespace Guider
 		class Element
 		{
 		public:
-			Component::Type component;
+			Component::Ptr component;
 			float size, newSize, offset;
 
-			Element(const Component::Type& component, float size, float offset);
+			Element(const Component::Ptr& component, float size, float offset);
 			Element(Element&&) noexcept = default;
 		};
 
@@ -291,17 +291,17 @@ namespace Guider
 			void setSize(float size);
 			void setFlow(float flow);
 			
-			void attachStartTo(const Component::Type& target, bool toStart, float offset);
-			void attachEndTo(const Component::Type& target, bool toStart, float offset);
+			void attachStartTo(const Component::Ptr& target, bool toStart, float offset);
+			void attachEndTo(const Component::Ptr& target, bool toStart, float offset);
 			
-			void attachLeftTo(const Component::Type& target, bool toLeft, float offset);
-			void attachRightTo(const Component::Type& target, bool toLeft, float offset);
+			void attachLeftTo(const Component::Ptr& target, bool toLeft, float offset);
+			void attachRightTo(const Component::Ptr& target, bool toLeft, float offset);
 			
-			void attachTopTo(const Component::Type& target, bool toTop, float offset);
-			void attachBottomTo(const Component::Type& target, bool toTop, float offset);
+			void attachTopTo(const Component::Ptr& target, bool toTop, float offset);
+			void attachBottomTo(const Component::Ptr& target, bool toTop, float offset);
 			
-			void attachBetween(const Component::Type& start, bool startToStart, float startOffset, const Component::Type& end, bool endToStart, float endOffset);
-			void attachBetween(const Component::Type& start, bool startToStart, const Component::Type& end, bool endToStart, float offset);
+			void attachBetween(const Component::Ptr& start, bool startToStart, float startOffset, const Component::Ptr& end, bool endToStart, float endOffset);
+			void attachBetween(const Component::Ptr& start, bool startToStart, const Component::Ptr& end, bool endToStart, float offset);
 
 			void applyChanges();
 
@@ -319,30 +319,30 @@ namespace Guider
 		public:
 			//TODO: add methods for element sizing/flow
 
-			void attachStartTo(const Component::Type& target, bool toStart, float offset);
-			inline void attachLeftTo(const Component::Type& target, bool toLeft, float offset)
+			void attachStartTo(const Component::Ptr& target, bool toStart, float offset);
+			inline void attachLeftTo(const Component::Ptr& target, bool toLeft, float offset)
 			{
 				attachStartTo(target, toLeft, offset);
 			}
-			inline void attachTopTo(const Component::Type& target, bool toTop, float offset)
+			inline void attachTopTo(const Component::Ptr& target, bool toTop, float offset)
 			{
 				attachStartTo(target, toTop, offset);
 			}
-			void attachEndTo(const Component::Type& target, bool toStart, float offset);
-			inline void attachRightTo(const Component::Type& target, bool toLeft, float offset)
+			void attachEndTo(const Component::Ptr& target, bool toStart, float offset);
+			inline void attachRightTo(const Component::Ptr& target, bool toLeft, float offset)
 			{
 				attachEndTo(target, toLeft, offset);
 			}
-			inline void attachBottomTo(const Component::Type& target, bool toTop, float offset)
+			inline void attachBottomTo(const Component::Ptr& target, bool toTop, float offset)
 			{
 				attachEndTo(target, toTop, offset);
 			}
-			inline void attachBetween(const Component::Type& start, bool startToStart, float startOffset, const Component::Type& end, bool endToStart, float endOffset)
+			inline void attachBetween(const Component::Ptr& start, bool startToStart, float startOffset, const Component::Ptr& end, bool endToStart, float endOffset)
 			{
 				attachStartTo(start, startToStart, startOffset);
 				attachEndTo(end, endToStart, endOffset);
 			}
-			inline void attachBetween(const Component::Type& start, bool startToStart, const Component::Type& end, bool endToStart, float offset)
+			inline void attachBetween(const Component::Ptr& start, bool startToStart, const Component::Ptr& end, bool endToStart, float offset)
 			{
 				attachBetween(start, startToStart, offset, end, endToStart, offset);
 			}
@@ -371,9 +371,9 @@ namespace Guider
 
 		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
 
-		virtual void removeChild(const Component::Type& child) override;
+		virtual void removeChild(const Component::Ptr& child) override;
 		virtual void clearChildren() override;
-		virtual void addChild(const Component::Type& child) override;
+		virtual void addChild(const Component::Ptr& child) override;
 
 		virtual Iterator firstElement() override;
 
@@ -382,13 +382,13 @@ namespace Guider
 		/// @param target target,
 		/// @param constOffset if true, size of target is calculated based on offset from edges, otherwise offset is calculated based on size,
 		/// @return Returns wrapper for created constraint.
-		std::unique_ptr<RegularConstraintBuilder> addConstraint(Orientation orientation, const Component::Type& target, bool constOffset);
+		std::unique_ptr<RegularConstraintBuilder> addConstraint(Orientation orientation, const Component::Ptr& target, bool constOffset);
 		/// @brief Creates chain constraint for given element.
 		/// @param orientation either Vertical or Horizontal,
 		/// @param targets targets,
 		/// @param constOffset if true, size of target is calculated based on offset from edges, otherwise offset is calculated based on size.
 		/// @return Returns wrapper for created constraint.
-		std::unique_ptr<ChainConstraintBuilder> addChainConstraint(Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset);
+		std::unique_ptr<ChainConstraintBuilder> addChainConstraint(Orientation orientation, const std::vector<Component::Ptr>& targets, bool constOffset);
 
 		virtual void onMaskDraw(Canvas& canvas) const override;
 		virtual void onDraw(Canvas& canvas) override;
@@ -400,7 +400,7 @@ namespace Guider
 	private:
 		using IteratorType = CommonIteratorTemplate<Vector < std::shared_ptr<Component> >::iterator>;
 
-		std::vector<Component::Type> children;
+		std::vector<Component::Ptr> children;
 		std::unordered_map<Component*, Rect> boundaries;
 		std::list<Constraint> constraints;
 		std::list<Cluster> clusters;

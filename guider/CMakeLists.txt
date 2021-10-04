@@ -5,6 +5,7 @@ set(sources
 	src/base.cpp
 	src/manager.cpp
 	src/styles.cpp
+	src/parsing.cpp
 	src/components.cpp
 	src/containers.cpp
 )
@@ -12,6 +13,7 @@ set(sources
 set(headers
 	include/guider/base.hpp
 	include/guider/manager.hpp
+	include/guider/parsing.hpp
 	include/guider/components.hpp
 	include/guider/containers.hpp
 	include/guider/styles.hpp
@@ -22,4 +24,5 @@ set(headers
 add_library(guider STATIC ${sources} ${headers})
 target_include_directories(guider PUBLIC include)
 target_link_libraries(guider PUBLIC parselib::xml)
+set_target_properties(guider PROPERTIES CXX_STANDARD 17)
 set_target_properties(guider PROPERTIES VS_JUST_MY_CODE_DEBUGGING ON)

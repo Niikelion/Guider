@@ -13,12 +13,12 @@ namespace Guider
 		//TODO: do
 	}
 	
-	void AbsoluteContainer::addChild(const Component::Type& child)
+	void AbsoluteContainer::addChild(const Component::Ptr& child)
 	{
 		addChild(child, 0, 0);
 	}
 
-	void AbsoluteContainer::addChild(const Component::Type& child, float x, float y)
+	void AbsoluteContainer::addChild(const Component::Ptr& child, float x, float y)
 	{
 		Rect bounds = getBounds();
 		children.emplace_back(child, x, y);
@@ -36,7 +36,7 @@ namespace Guider
 		setBounds(*child, bounds);
 	}
 	
-	void AbsoluteContainer::removeChild(const Component::Type& child)
+	void AbsoluteContainer::removeChild(const Component::Ptr& child)
 	{
 		for (auto it = children.begin(); it != children.end(); ++it)
 		{
@@ -168,7 +168,7 @@ namespace Guider
 	}
 	
 
-	AbsoluteContainer::Element::Element(const Component::Type& component, float x, float y) : component(component), x(x), y(y)
+	AbsoluteContainer::Element::Element(const Component::Ptr& component, float x, float y) : component(component), x(x), y(y)
 	{
 		//empty
 	}
@@ -219,7 +219,7 @@ namespace Guider
 		return newOffset;
 	}
 
-	void ListContainer::addChild(const Component::Type& child)
+	void ListContainer::addChild(const Component::Ptr& child)
 	{
 		child->setParent(*this);
 		child->invalidateRecursive();
@@ -235,7 +235,7 @@ namespace Guider
 		invalidate();
 	}
 	//TODO: do some smart trick to avoid recalculating everything when erasing elements
-	void ListContainer::removeChild(const Component::Type& child)
+	void ListContainer::removeChild(const Component::Ptr& child)
 	{
 		auto it = std::find_if(children.begin(), children.end(), [&child](const Element& e) {
 			return child.get() == e.component.get();
@@ -282,7 +282,7 @@ namespace Guider
 		return children.size();
 	}
 	
-	Component::Type ListContainer::getChild(unsigned i)
+	Component::Ptr ListContainer::getChild(unsigned i)
 	{
 		return std::next(children.begin(), i)->component;
 	}
@@ -527,7 +527,7 @@ namespace Guider
 			if (!child->isTextNode())
 			{
 				XML::Tag& c = static_cast<XML::Tag&>(*child);
-				Component::Type t = manager.instantiate(c, pack.theme);
+				Component::Ptr t = manager.instantiate(c, pack.theme);
 
 				addChild(t);
 			}
@@ -707,7 +707,7 @@ namespace Guider
 		size = off;
 	}
 
-	ListContainer::Element::Element(const Component::Type& component, float size, float offset) : component(component), size(size), newSize(size), offset(offset)
+	ListContainer::Element::Element(const Component::Ptr& component, float size, float offset) : component(component), size(size), newSize(size), offset(offset)
 	{
 	}
 
@@ -888,7 +888,7 @@ namespace Guider
 		constraint.regular.flow = flow;
 	}
 	
-	void ConstraintsContainer::RegularConstraintBuilder::attachStartTo(const Component::Type& target, bool toStart, float offset)
+	void ConstraintsContainer::RegularConstraintBuilder::attachStartTo(const Component::Ptr& target, bool toStart, float offset)
 	{
 		constraint.regular.leftOffset = offset;
 		constraint.setFirstEdge(toStart);
@@ -906,7 +906,7 @@ namespace Guider
 		}
 	}
 	
-	void ConstraintsContainer::RegularConstraintBuilder::attachEndTo(const Component::Type& target, bool toStart, float offset)
+	void ConstraintsContainer::RegularConstraintBuilder::attachEndTo(const Component::Ptr& target, bool toStart, float offset)
 	{
 		constraint.regular.rightOffset = offset;
 		constraint.setSecondEdge(toStart);
@@ -924,33 +924,33 @@ namespace Guider
 		}
 	}
 	
-	void ConstraintsContainer::RegularConstraintBuilder::attachLeftTo(const Component::Type& target, bool toLeft, float offset)
+	void ConstraintsContainer::RegularConstraintBuilder::attachLeftTo(const Component::Ptr& target, bool toLeft, float offset)
 	{
 		attachStartTo(target, toLeft, offset);
 	}
 	
-	void ConstraintsContainer::RegularConstraintBuilder::attachRightTo(const Component::Type& target, bool toLeft, float offset)
+	void ConstraintsContainer::RegularConstraintBuilder::attachRightTo(const Component::Ptr& target, bool toLeft, float offset)
 	{
 		attachEndTo(target, toLeft, offset);
 	}
 	
-	void ConstraintsContainer::RegularConstraintBuilder::attachTopTo(const Component::Type& target, bool toTop, float offset)
+	void ConstraintsContainer::RegularConstraintBuilder::attachTopTo(const Component::Ptr& target, bool toTop, float offset)
 	{
 		attachStartTo(target, toTop, offset);
 	}
 	
-	void ConstraintsContainer::RegularConstraintBuilder::attachBottomTo(const Component::Type& target, bool toTop, float offset)
+	void ConstraintsContainer::RegularConstraintBuilder::attachBottomTo(const Component::Ptr& target, bool toTop, float offset)
 	{
 		attachEndTo(target, toTop, offset);
 	}
 	
-	void ConstraintsContainer::RegularConstraintBuilder::attachBetween(const Component::Type& start, bool startToStart, float startOffset, const Component::Type& end, bool endToStart, float endOffset)
+	void ConstraintsContainer::RegularConstraintBuilder::attachBetween(const Component::Ptr& start, bool startToStart, float startOffset, const Component::Ptr& end, bool endToStart, float endOffset)
 	{
 		attachStartTo(start, startToStart, startOffset);
 		attachEndTo(end, endToStart, endOffset);
 	}
 
-	void ConstraintsContainer::RegularConstraintBuilder::attachBetween(const Component::Type& start, bool startToStart, const Component::Type& end, bool endToStart, float offset)
+	void ConstraintsContainer::RegularConstraintBuilder::attachBetween(const Component::Ptr& start, bool startToStart, const Component::Ptr& end, bool endToStart, float offset)
 	{
 		attachBetween(start, startToStart, offset, end, endToStart, offset);
 	}
@@ -962,7 +962,7 @@ namespace Guider
 	}
 
 
-	void ConstraintsContainer::ChainConstraintBuilder::attachStartTo(const Component::Type& target, bool toStart, float offset)
+	void ConstraintsContainer::ChainConstraintBuilder::attachStartTo(const Component::Ptr& target, bool toStart, float offset)
 	{
 		constraint.chain.leftOffset = offset;
 		constraint.setFirstEdge(toStart);
@@ -980,7 +980,7 @@ namespace Guider
 		}
 	}
 	
-	void ConstraintsContainer::ChainConstraintBuilder::attachEndTo(const Component::Type& target, bool toStart, float offset)
+	void ConstraintsContainer::ChainConstraintBuilder::attachEndTo(const Component::Ptr& target, bool toStart, float offset)
 	{
 		constraint.chain.rightOffset = offset;
 		constraint.setSecondEdge(toStart);
@@ -1605,7 +1605,7 @@ namespace Guider
 			);
 	}
 	
-	void ConstraintsContainer::removeChild(const Component::Type& child)
+	void ConstraintsContainer::removeChild(const Component::Ptr& child)
 	{
 		auto it = std::find(children.begin(), children.end(), child);
 		Component* p = child.get();
@@ -1706,7 +1706,7 @@ namespace Guider
 		updated.clear();
 	}
 	
-	void ConstraintsContainer::addChild(const Component::Type& child)
+	void ConstraintsContainer::addChild(const Component::Ptr& child)
 	{
 		children.emplace_back(child);
 		child->setParent(*this);
@@ -1714,7 +1714,7 @@ namespace Guider
 		needsRedraw.insert(child.get());
 	}
 	
-	std::unique_ptr<ConstraintsContainer::RegularConstraintBuilder> ConstraintsContainer::addConstraint(Orientation orientation, const Component::Type& target, bool constOffset)
+	std::unique_ptr<ConstraintsContainer::RegularConstraintBuilder> ConstraintsContainer::addConstraint(Orientation orientation, const Component::Ptr& target, bool constOffset)
 	{
 		if (!target)
 			return std::unique_ptr<RegularConstraintBuilder>();
@@ -1773,7 +1773,7 @@ namespace Guider
 		return std::unique_ptr<RegularConstraintBuilder>();
 	}
 	
-	std::unique_ptr<ConstraintsContainer::ChainConstraintBuilder> ConstraintsContainer::addChainConstraint(Orientation orientation, const std::vector<Component::Type>& targets, bool constOffset)
+	std::unique_ptr<ConstraintsContainer::ChainConstraintBuilder> ConstraintsContainer::addChainConstraint(Orientation orientation, const std::vector<Component::Ptr>& targets, bool constOffset)
 	{
 		if (targets.empty())
 			return std::unique_ptr<ChainConstraintBuilder>();
@@ -2007,10 +2007,10 @@ namespace Guider
 	
 	void ConstraintsContainer::postXmlConstruction(Manager& manager, const XML::Tag& config, const StylingPack& pack)
 	{
-		std::unordered_map<String, Component::Type> nameMapping;
+		std::unordered_map<String, Component::Ptr> nameMapping;
 		Manager::handleDefaultArguments(*this, config, pack.style);
 
-		Vector<Component::Type> childMapping;
+		Vector<Component::Ptr> childMapping;
 
 		XML::Value tmp;
 		{
@@ -2026,7 +2026,7 @@ namespace Guider
 			if (!child->isTextNode())
 			{
 				XML::Tag& tag = static_cast<XML::Tag&>(*child);
-				Component::Type t = manager.instantiate(tag, pack.theme);
+				Component::Ptr t = manager.instantiate(tag, pack.theme);
 				auto it = tag.attributes.find("name");
 				if (it != tag.attributes.end())
 				{
@@ -2071,7 +2071,7 @@ namespace Guider
 						{
 							bool toLeft = false;
 							float offset = 0;
-							Component::Type target;
+							Component::Ptr target;
 
 							if (tmp.val.find(" ") != tmp.val.npos)
 							{
@@ -2149,7 +2149,7 @@ namespace Guider
 						{
 							bool toLeft = false;
 							float offset = 0;
-							Component::Type target;
+							Component::Ptr target;
 
 							if (tmp.val.find(" ") != tmp.val.npos)
 							{
@@ -2278,7 +2278,7 @@ namespace Guider
 						{
 							bool toTop = false;
 							float offset = 0;
-							Component::Type target;
+							Component::Ptr target;
 
 							if (tmp.val.find(" ") != tmp.val.npos)
 							{
@@ -2356,7 +2356,7 @@ namespace Guider
 						{
 							bool toTop = false;
 							float offset = 0;
-							Component::Type target;
+							Component::Ptr target;
 
 							if (tmp.val.find(" ") != tmp.val.npos)
 							{

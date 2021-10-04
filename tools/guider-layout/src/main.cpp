@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
 
 	auto xmlRoot = Guider::XML::parse(mainLayout);
 
-	Guider::Component::Type root = app.getManager()->instantiate(*static_cast<Guider::XML::Tag*>(xmlRoot->children[0].get()), app.getManager()->getTheme("app.dark").theme);
+	auto root = app.getManager()->instantiate(*static_cast<Guider::XML::Tag*>(xmlRoot->children[0].get()), app.getManager()->getTheme("app.dark").theme);
 
 	auto& resetButton = app.getManager()->getElementById("reset_button")->as<Guider::BasicButtonComponent>();
 
