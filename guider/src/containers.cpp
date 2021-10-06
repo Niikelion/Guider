@@ -53,10 +53,15 @@ namespace Guider
 		toUpdate.clear();
 		children.clear();
 	}
-	
-	Container::Iterator AbsoluteContainer::firstElement()
+
+	Container::Iterator AbsoluteContainer::begin()
 	{
 		return createIterator<IteratorType>(children.begin(), children.end());
+	}
+	
+	Container::Iterator AbsoluteContainer::end()
+	{
+		return createIterator<IteratorType>(children.end(), children.end());
 	}
 	
 	void AbsoluteContainer::poke()
@@ -448,9 +453,14 @@ namespace Guider
 		toRedraw.insert(&c);
 	}
 
-	ListContainer::Iterator ListContainer::firstElement()
+	Container::Iterator ListContainer::begin()
 	{
 		return createIterator<IteratorType>(children.begin(), children.end());
+	}
+
+	ListContainer::Iterator ListContainer::end()
+	{
+		return createIterator<IteratorType>(children.end(), children.end());
 	}
 
 	std::pair<DimensionDesc, DimensionDesc> ListContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
@@ -1714,6 +1724,17 @@ namespace Guider
 		needsRedraw.insert(child.get());
 	}
 	
+
+	Container::Iterator ConstraintsContainer::begin()
+	{
+		return createIterator<IteratorType>(children.begin(), children.end());
+	}
+
+	Container::Iterator ConstraintsContainer::end()
+	{
+		return createIterator<IteratorType>(children.end(), children.end());
+	}
+
 	std::unique_ptr<ConstraintsContainer::RegularConstraintBuilder> ConstraintsContainer::addConstraint(Orientation orientation, const Component::Ptr& target, bool constOffset)
 	{
 		if (!target)
@@ -2466,10 +2487,5 @@ namespace Guider
 	
 	ConstraintsContainer::ConstraintsContainer() : firstDraw(true), messyClusters(true), invalidLayout(true), canWrapW(false), canWrapH(false), backgroundColor(0)
 	{
-	}
-	
-	ConstraintsContainer::Iterator ConstraintsContainer::firstElement()
-	{
-		return createIterator<IteratorType>(children.begin(), children.end());
 	}
 }

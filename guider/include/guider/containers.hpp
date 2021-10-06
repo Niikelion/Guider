@@ -18,7 +18,8 @@ namespace Guider
 		virtual void removeChild(const Component::Ptr& child) override;
 		virtual void clearChildren() override;
 
-		virtual Iterator firstElement() override;
+		virtual Iterator begin() override;
+		virtual Iterator end() override;
 
 		virtual void poke() override;
 
@@ -40,28 +41,14 @@ namespace Guider
 
 		using iterator = Vector<Element>::iterator;
 
-		class IteratorType : public IteratorTemplate<IteratorType>
+		struct IteratorType : public PackedIteratorTemplate<IteratorType, iterator>
 		{
-		public:
-			virtual bool end() const override
+			virtual Component& unpack(const iterator& i) const override
 			{
-				return endIt == currentIt;
-			}
-			virtual void loadNext() override
-			{
-				if (!end())
-					++currentIt;
-			}
-			virtual Component& current() override
-			{
-				return *currentIt->component;
+				return *i->component;
 			}
 
-			IteratorType(const iterator& begin, const iterator& end) : currentIt(begin), endIt(end) {}
-			IteratorType(const IteratorType&) = default;
-		private:
-			iterator currentIt;
-			const iterator endIt;
+			using PackedIteratorTemplate::PackedIteratorTemplate;
 		};
 		Vector<Element> children;
 
@@ -99,7 +86,8 @@ namespace Guider
 		virtual void onChildStain(Component& c) override;
 		virtual void onChildNeedsRedraw(Component& c) override;
 
-		virtual Iterator firstElement() override;
+		virtual Iterator begin() override;
+		virtual Iterator end() override;
 
 		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
 
@@ -119,28 +107,14 @@ namespace Guider
 
 		using iterator = std::list<Element>::iterator;
 
-		class IteratorType : public IteratorTemplate<IteratorType>
+		struct IteratorType : public PackedIteratorTemplate<IteratorType, iterator>
 		{
-		public:
-			virtual bool end() const override
+			virtual Component& unpack(const iterator& i) const override
 			{
-				return endIt == currentIt;
-			}
-			virtual void loadNext() override
-			{
-				if (!end())
-					++currentIt;
-			}
-			virtual Component& current() override
-			{
-				return *currentIt->component;
+				return *i->component;
 			}
 
-			IteratorType(const iterator& begin, const iterator& end) : currentIt(begin), endIt(end) {}
-			IteratorType(const IteratorType&) = default;
-		private:
-			iterator currentIt;
-			const iterator endIt;
+			using PackedIteratorTemplate::PackedIteratorTemplate;
 		};
 
 		Orientation orientation;
@@ -375,7 +349,8 @@ namespace Guider
 		virtual void clearChildren() override;
 		virtual void addChild(const Component::Ptr& child) override;
 
-		virtual Iterator firstElement() override;
+		virtual Iterator begin() override;
+		virtual Iterator end() override;
 
 		/// @brief Creates regural constraint for given element.
 		/// @param orientation either Vertical or Horizontal,

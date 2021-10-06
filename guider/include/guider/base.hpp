@@ -11,6 +11,7 @@
 #include <memory>
 #include <functional>
 #include <algorithm>
+#include <iterator>
 
 
 namespace Guider
@@ -699,7 +700,9 @@ namespace Guider
 			///
 			/// Valid after creation, before reaching end.
 			/// Throws exception is no valid element is selected.
-			virtual Component& current() = 0;
+			virtual Component& current() const = 0;
+			/// @brief Compares two iterators.
+			virtual bool equals(const IteratorBase& other) const = 0;
 			/// @brief Clones iterator.
 			virtual std::unique_ptr<IteratorBase> clone() const = 0;
 
@@ -735,9 +738,14 @@ namespace Guider
 					++currentIt;
 			}
 
-			virtual Component& current() override
+			virtual Component& current() const override
 			{
 				return *currentIt->get();
+			}
+
+			virtual bool equals(const IteratorBase& other) const override
+			{
+				return static_cast<const CommonIteratorTemplate<IteratorT>&>(other).currentIt == currentIt;
 			}
 
 			virtual std::unique_ptr<IteratorBase> clone() const override
@@ -746,7 +754,48 @@ namespace Guider
 			}
 
 			CommonIteratorTemplate(const IteratorT& begin, const IteratorT& end) : currentIt(begin), endIt(end) {}
-		private:
+		protected:
+			IteratorT currentIt;
+			const IteratorT endIt;
+		};
+
+		/// @brief Wrapper for basic iterators.
+		/// Can be used if IteratorT is not Component iterator.
+		/// @tparam T Derived type.
+		/// @tparam IteratorT Standard iterator.
+		template<typename T, typename IteratorT> class PackedIteratorTemplate : public IteratorBase
+		{
+		public:
+			virtual bool end() const override
+			{
+				return endIt == currentIt;
+			}
+
+			virtual void loadNext() override
+			{
+				if (!end())
+					++currentIt;
+			}
+
+			virtual Component& unpack(const IteratorT&) const = 0;
+
+			virtual Component& current() const override
+			{
+				return unpack(currentIt);
+			}
+
+			virtual std::unique_ptr<IteratorBase> clone() const override
+			{
+				return std::make_unique<T>(*static_cast<const T*>(this));
+			}
+
+			virtual bool equals(const IteratorBase& other) const override
+			{
+				return static_cast<const PackedIteratorTemplate<T, IteratorT>&>(other).currentIt == currentIt;
+			}
+
+			PackedIteratorTemplate(const IteratorT& begin, const IteratorT& end) : currentIt(begin), endIt(end) {}
+		protected:
 			IteratorT currentIt;
 			const IteratorT endIt;
 		};
@@ -754,30 +803,52 @@ namespace Guider
 		/// @brief Iterator access class.
 		///
 		/// Encapsulates iterator implementations and provides decent interface.
-		class Iterator
+		class Iterator : std::forward_iterator_tag
 		{
 		public:
-			inline bool end()
+			bool end() const
 			{
 				return ptr->end();
 			}
 
-			inline void loadNext()
+			void loadNext()
 			{
 				ptr->loadNext();
 			}
 
-			inline Component& current()
+			Component& current() const
 			{
 				if (end())
 					throw std::logic_error("Iterator out of bounds");
 				return ptr->current();
 			}
 
-			Iterator& operator ++ (int)
+			Component& operator * () const
+			{
+				return current();
+			}
+
+			Iterator operator ++ (int)
+			{
+				auto c = Iterator(*this);
+				ptr->loadNext();
+				return c;
+			}
+
+			Iterator& operator ++ ()
 			{
 				ptr->loadNext();
 				return *this;
+			}
+
+			bool operator == (const Iterator& other) const
+			{
+				return ptr->equals(*other.ptr);
+			}
+
+			bool operator != (const Iterator& other) const
+			{
+				return !ptr->equals(*other.ptr);
 			}
 
 			Iterator(IteratorBase* p) : ptr(p) {}
@@ -797,8 +868,6 @@ namespace Guider
 			return Iterator((IteratorBase*)new T(std::forward<Args>(args)...));
 		}
 
-		virtual void invalidateVisuals() override;
-
 		/// @brief Adds child.
 		/// @param child 
 		virtual void addChild(const Component::Ptr& child) = 0;
@@ -809,7 +878,12 @@ namespace Guider
 		virtual void clearChildren() = 0;
 
 		/// @brief Returns iterator to first element.
-		virtual Iterator firstElement() = 0;
+		Iterator firstElement();
+
+		/// @brief Returns iterator to first element.
+		virtual Iterator begin() = 0;
+		/// @brief Returns iterator after last element.
+		virtual Iterator end() = 0;
 
 		virtual bool handleEvent(const Event& event) override;
 		/// @brief Adjust element to be passed to child component.
@@ -830,7 +904,8 @@ namespace Guider
 		virtual void removeChild(const Component::Ptr& child) override;
 		virtual void clearChildren() override;
 
-		virtual Iterator firstElement() override;
+		virtual Iterator begin() override;
+		virtual Iterator end() override;
 
 		virtual void onChildNeedsRedraw(Component& c) override;
 

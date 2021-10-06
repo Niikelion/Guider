@@ -844,23 +844,16 @@ namespace Guider
 		hasMouseFocus = false;
 	}
 
-
-	void Container::invalidateVisuals()
+	Container::Iterator Container::firstElement()
 	{
-		Component::invalidateVisuals();
-		auto it = firstElement();
-		while (!it.end())
-		{
-			it.current().invalidateVisuals();
-			it.loadNext();
-		}
+		return std::move(begin());
 	}
 
 	bool Container::handleEvent(const Event& event)
 	{
 		bool r = Component::handleEvent(event);
-		for (Iterator it = firstElement(); !it.end(); it.loadNext())
-			handleEventForComponent(event, it.current());
+		for (auto& c : *this)
+			handleEventForComponent(event, c);
 		return r;
 	}
 
@@ -945,11 +938,15 @@ namespace Guider
 		elements.clear();
 	}
 	
-	Container::Iterator Engine::firstElement()
+	Container::Iterator Engine::begin()
 	{
 		return createIterator<IteratorType>(elements.begin(), elements.end());
 	}
 	
+	Container::Iterator Guider::Engine::end()
+	{
+		return createIterator<IteratorType>(elements.end(), elements.end());
+	}
 	void Engine::onChildNeedsRedraw(Component& c)
 	{
 		toRedraw.insert(&c);
