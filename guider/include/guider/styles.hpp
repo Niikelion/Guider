@@ -1,14 +1,12 @@
 #pragma once
 
-#include <Guider/base.hpp>
-#include <unordered_map>
+#include <guider/definitions.hpp>
+
 #include <functional>
 #include <typeindex>
 #include <stdexcept>
 #include <algorithm>
-#include <string>
 #include <memory>
-#include <vector>
 
 namespace Guider
 {
@@ -16,17 +14,19 @@ namespace Guider
 	{
 		namespace
 		{
-			template<class...>struct types { using type = types; };
-			template<class T>struct tag { using type = T; };
-			template<class Tag>using type_t = typename Tag::type;
+			template<class...> struct types { using type = types; };
+			template<class T> struct tag { using type = T; };
+			template<class Tag> using type_t = typename Tag::type;
 		}
 
 		class Value
 		{
 		public:
-			template<typename T, typename ...Args> static std::shared_ptr<Value> ofType(Args&&... args)
+			using Ptr = std::shared_ptr<Value>;
+
+			template<typename T, typename ...Args> static Value::Ptr ofType(Args&&... args)
 			{
-				std::shared_ptr<Value> ret = std::make_shared<Value>(typeid(T), sizeof(T));
+				Value::Ptr ret = std::make_shared<Value>(typeid(T), sizeof(T));
 				ret->prepare<T>(std::forward<Args>(args)...);
 				return ret;
 			}
@@ -156,19 +156,19 @@ namespace Guider
 		{
 		public:
 			bool detached() const noexcept;
-			void attach(const std::shared_ptr<Value>& value);
+			void attach(const Value::Ptr& value);
 
 			String getName() const;
 			std::shared_ptr<Value> getValue() const;
 
 			VariableReference() : name() {}
 			VariableReference(const String& n) : name(n) {}
-			VariableReference(const String& n, const std::shared_ptr<Value>& c) : name(n), cache(c) {};
+			VariableReference(const String& n, const Value::Ptr& c) : name(n), cache(c) {};
 			VariableReference(const VariableReference&) = default;
 			VariableReference(VariableReference&&) noexcept = default;
 		private:
 			String name;
-			std::shared_ptr<Value> cache;
+			Value::Ptr cache;
 		};
 
 		class UnresolvedValue
@@ -219,13 +219,13 @@ namespace Guider
 	public:
 		void inheritAttributes(const Style& parentStyle);
 
-		std::shared_ptr<Styles::Value> getAttribute(const String& name) const;
+		Styles::Value::Ptr getAttribute(const String& name) const;
 
-		void setAttribute(const String& name, const std::shared_ptr<Styles::Value>& value);
+		void setAttribute(const String& name, const Styles::Value::Ptr& value);
 		void setAttribute(const String& name, const String& variable);
 		void removeAttribute(const String& name);
 
-		std::unordered_map<String, std::shared_ptr<Styles::Value>> attributes;
+		HashMap<String, Styles::Value::Ptr> attributes;
 	private:
 	};
 
@@ -239,7 +239,7 @@ namespace Guider
 
 		void inheritVariables(const Theme& parentTheme);
 	private:
-		std::unordered_map<String, std::shared_ptr<Styles::Variable>> variables;
+		HashMap<String, std::shared_ptr<Styles::Variable>> variables;
 	};
 
 	struct StylingPack

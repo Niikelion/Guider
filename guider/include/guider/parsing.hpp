@@ -20,13 +20,72 @@ namespace Guider::Parsing
 	class DataObject
 	{
 	public:
-		//TODO: change getting size & alements at index to iterators
-		virtual std::string getType() const abstract;
-		virtual size_t getChildCount() const abstract;
-		virtual std::shared_ptr<DataObject> getChild(size_t i) const abstract;
-		virtual size_t getAttributesCount() const abstract;
-		virtual std::pair<std::string, std::string> getAttribute(size_t i) const abstract;
-		virtual std::string getAttribute(const std::string& key) const abstract;
+		template<typename T> class IteratorBase
+		{
+		public:
+			virtual T current() const abstract;
+			virtual void next() abstract;
+			virtual bool equals(const IteratorBase<T>&) const abstract;
+			virtual std::unique_ptr<IteratorBase<T>> clone() const abstract;
+
+			virtual ~IteratorBase() = default;
+		};
+
+		template<typename T> class Iterator : std::forward_iterator_tag
+		{
+		public:
+			T operator * () const
+			{
+				return iterator->current();
+			}
+
+			Iterator<T>& operator ++ ()
+			{
+				iterator->next();
+				return *this;
+			}
+			bool operator == (const Iterator<T>& t) const
+			{
+				return iterator->equals(*t.iterator);
+			}
+
+			bool operator != (const Iterator<T>& t) const
+			{
+				return !iterator->equals(*t.iterator);
+			}
+
+			Iterator(std::unique_ptr<IteratorBase<T>>&& i) : iterator(std::move(i)) {}
+			Iterator(const Iterator<T>& t) : iterator(t.iterator ? t.iterator->clone() : nullptr) { }
+			Iterator(Iterator<T>&& t) noexcept : iterator(std::move(t.iterator)) {}
+		private:
+			std::unique_ptr<IteratorBase<T>> iterator;
+		};
+
+		template<typename T> class Iterable
+		{
+		public:
+			Iterator<T> begin()
+			{
+				return b;
+			}
+			Iterator<T> end()
+			{
+				return e;
+			}
+
+			Iterable(const Iterator<T>& bb, const Iterator<T>& ee) : b(bb), e(ee) {}
+			Iterable(const Iterable& t) : b(t.b), e(t.e) {}
+			~Iterable() {}
+		private:
+			Iterator<T> b, e;
+		};
+
+		virtual std::string_view getType() const abstract;
+
+		virtual Iterable<std::shared_ptr<DataObject>> childrenIt() abstract;
+		virtual Iterable<std::pair<const std::string_view, std::string_view>> attributesIt() abstract;
+
+		virtual std::string_view getAttribute(const std::string_view& key) const abstract;
 	};
 
 	class ParseException : std::exception
@@ -42,40 +101,108 @@ namespace Guider::Parsing
 	class MutableObject : public DataObject
 	{
 	public:
-		//TODO: implement
-		virtual std::string getType() const override;
-		virtual size_t getChildCount() const override;
-		virtual std::shared_ptr<DataObject> getChild(size_t i) const override;
-		virtual size_t getAttributesCount() const override;
-		virtual std::pair<std::string, std::string> getAttribute(size_t i) const override;
-		virtual std::string getAttribute(const std::string& key) const override;
+		virtual std::string_view getType() const override;
 
-		std::vector<std::shared_ptr<MutableObject>>& getChildren() const;
+		virtual Iterable<std::shared_ptr<DataObject>> childrenIt() override;
+		virtual Iterable<std::pair<const std::string_view, std::string_view>> attributesIt() override;
 
+		virtual std::string_view getAttribute(const std::string_view& key) const override;
+
+		void setType(const std::string& s);
+		std::vector<std::shared_ptr<MutableObject>>& getChildren();
+		std::unordered_map<std::string, std::string>& getProperties();
+
+		void serialize(std::string& ret) const;
+		std::string serialize() const;
 	private:
-		std::vector<std::shared_ptr<MutableObject>> children;
-		std::unordered_map<std::string, std::string> properties;
+		using Vector = std::vector<std::shared_ptr<MutableObject>>;
+		using VectorIterator = Vector::iterator;
+
+		using Map = std::unordered_map<std::string, std::string>;
+		using MapIterator = Map::iterator;
+
+		class VectorIteratorImpl : public IteratorBase<std::shared_ptr<DataObject>>
+		{
+		public:
+			virtual std::shared_ptr<DataObject> current() const override;
+			virtual void next() override;
+			virtual bool equals(const IteratorBase<std::shared_ptr<DataObject>>&) const override;
+			virtual std::unique_ptr<IteratorBase<std::shared_ptr<DataObject>>> clone() const override;
+
+			VectorIteratorImpl(VectorIterator iterator) : iterator(iterator) {}
+		private:
+			VectorIterator iterator;
+		};
+
+		class MapIteratorImpl : public IteratorBase<std::pair<const std::string_view, std::string_view>>
+		{
+		public:
+			virtual std::pair<const std::string_view, std::string_view> current() const override;
+			virtual void next() override;
+			virtual bool equals(const IteratorBase<std::pair<const std::string_view, std::string_view>>&) const override;
+			virtual std::unique_ptr<IteratorBase<std::pair<const std::string_view, std::string_view>>> clone() const override;
+
+			MapIteratorImpl(MapIterator iterator) : iterator(iterator) {}
+		private:
+			MapIterator iterator;
+		};
+
+		std::string type;
+		Vector children;
+		Map properties;
 	};
 
 	class ObjectView : public DataObject
 	{
 	public:
-		virtual std::string getType() const override;
-		virtual size_t getChildCount() const override;
-		virtual std::shared_ptr<DataObject> getChild(size_t i) const override;
-		virtual size_t getAttributesCount() const override;
-		virtual std::pair<std::string, std::string> getAttribute(size_t i) const override;
-		virtual std::string getAttribute(const std::string& key) const override;
+		virtual std::string_view getType() const override;
+
+		virtual Iterable<std::shared_ptr<DataObject>> childrenIt() override;
+		virtual Iterable<std::pair<const std::string_view, std::string_view>> attributesIt() override;
+
+		virtual std::string_view getAttribute(const std::string_view& key) const override;
 
 		std::string_view getSourceView() const noexcept;
-		const std::vector<std::shared_ptr<ObjectView>>& getChildren() const noexcept;
 
 		ObjectView(const std::string& source);
 		ObjectView(const std::string_view& source);
-		ObjectView(ObjectView&&) noexcept;
+		ObjectView(ObjectView&&) noexcept = delete;
 
 		~ObjectView();
 	private:
+		using ViewMap = std::unordered_map<std::string_view, std::string_view>;
+		using ViewMapIterator = ViewMap::iterator;
+
+		class ViewMapIteratorImpl : public IteratorBase<std::pair<const std::string_view, std::string_view>>
+		{
+		public:
+			virtual std::pair<const std::string_view, std::string_view> current() const override;
+			virtual void next() override;
+			virtual bool equals(const IteratorBase<std::pair<const std::string_view, std::string_view>>&) const override;
+			virtual std::unique_ptr<IteratorBase<std::pair<const std::string_view, std::string_view>>> clone() const override;
+
+			ViewMapIteratorImpl(ViewMapIterator iterator) : iterator(iterator) {}
+			~ViewMapIteratorImpl() {}
+		private:
+			ViewMapIterator iterator;
+		};
+
+		using ViewVector = std::vector<std::shared_ptr<ObjectView>>;
+		using ViewVectorIterator = ViewVector::iterator;
+
+		class ViewVectorIteratorImpl : public IteratorBase<std::shared_ptr<DataObject>>
+		{
+		public:
+			virtual std::shared_ptr<DataObject> current() const override;
+			virtual void next() override;
+			virtual bool equals(const IteratorBase<std::shared_ptr<DataObject>>&) const override;
+			virtual std::unique_ptr<IteratorBase<std::shared_ptr<DataObject>>> clone() const override;
+
+			ViewVectorIteratorImpl(ViewVectorIterator iterator) : iterator(iterator) {}
+		private:
+			ViewVectorIterator iterator;
+		};
+
 		union
 		{
 			std::string storage;
@@ -83,8 +210,7 @@ namespace Guider::Parsing
 		};
 
 		std::string_view type;
-		std::unordered_map<std::string_view, std::string_view> properties;
-		std::vector<std::unordered_map<std::string_view, std::string_view>::const_iterator> props;
+		ViewMap properties;
 		std::vector<std::shared_ptr<ObjectView>> children;
 
 		bool owner;

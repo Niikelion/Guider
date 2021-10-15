@@ -26,7 +26,7 @@ namespace Guider
 			return static_cast<bool>(cache);
 		}
 
-		void VariableReference::attach(const std::shared_ptr<Value>& value)
+		void VariableReference::attach(const Value::Ptr& value)
 		{
 			cache = value;
 		}
@@ -36,7 +36,7 @@ namespace Guider
 			return name;
 		}
 
-		std::shared_ptr<Value> VariableReference::getValue() const
+		Value::Ptr VariableReference::getValue() const
 		{
 			return cache;
 		}
@@ -192,16 +192,16 @@ namespace Guider
 		}
 	}
 	
-	std::shared_ptr<Styles::Value> Style::getAttribute(const String& name) const
+	Styles::Value::Ptr Style::getAttribute(const String& name) const
 	{
 		auto attr = attributes.find(name);
 		if (attr != attributes.end())
 			return attr->second;
-		return std::shared_ptr<Styles::Value>();
+		return Styles::Value::Ptr();
 	}
 	
 	
-	void Style::setAttribute(const String& name, const std::shared_ptr<Styles::Value>& value)
+	void Style::setAttribute(const String& name, const Styles::Value::Ptr& value)
 	{
 		attributes[name] = value;
 	}
@@ -226,7 +226,7 @@ namespace Guider
 	std::shared_ptr<Styles::Variable> Theme::dereferenceVariable(const String& name) const
 	{
 		auto var = getVariable(name);
-		std::unordered_set<Styles::Variable*> visited;
+		HashSet<Styles::Variable*> visited;
 		while (var && var->isReference() && !visited.count(var.get()))
 		{
 			visited.insert(var.get());

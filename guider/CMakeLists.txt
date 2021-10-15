@@ -2,6 +2,7 @@ if (NOT INTERNAL_PARSELIB)
 	find_package(parselib CONFIG REQUIRED)
 endif()
 set(sources
+	src/definitions.cpp
 	src/base.cpp
 	src/manager.cpp
 	src/styles.cpp
@@ -11,6 +12,7 @@ set(sources
 )
 
 set(headers
+	include/guider/definitions.hpp
 	include/guider/base.hpp
 	include/guider/manager.hpp
 	include/guider/parsing.hpp
@@ -26,3 +28,7 @@ target_include_directories(guider PUBLIC include)
 target_link_libraries(guider PUBLIC parselib::xml)
 set_target_properties(guider PROPERTIES CXX_STANDARD 17)
 set_target_properties(guider PROPERTIES VS_JUST_MY_CODE_DEBUGGING ON)
+
+if(BUILD_TESTS)
+	add_subdirectory(tests)
+endif()

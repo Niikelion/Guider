@@ -25,7 +25,7 @@ namespace Guider
 		child->setParent(*this);
 		child->poke();
 		toUpdate.insert(child.get());
-		std::pair<DimensionDesc, DimensionDesc> measurements = child->measure(
+		Pair<DimensionDesc, DimensionDesc> measurements = child->measure(
 			DimensionDesc(bounds.width, DimensionMode::Max),
 			DimensionDesc(bounds.height, DimensionMode::Max)
 		);
@@ -72,7 +72,7 @@ namespace Guider
 			//TODO: move to another method
 			i.component->poke();
 			Rect bounds = getBounds();
-			std::pair<DimensionDesc, DimensionDesc> measurements = i.component->measure(DimensionDesc(bounds.width, DimensionMode::Max),
+			Pair<DimensionDesc, DimensionDesc> measurements = i.component->measure(DimensionDesc(bounds.width, DimensionMode::Max),
 				DimensionDesc(bounds.height, DimensionMode::Max)
 			);
 
@@ -109,7 +109,7 @@ namespace Guider
 			if (i.component.get() == &c)
 			{
 				Rect bounds = getBounds();
-				std::pair<DimensionDesc, DimensionDesc> measurements = c.measure(DimensionDesc(bounds.width, DimensionMode::Max),
+				Pair<DimensionDesc, DimensionDesc> measurements = c.measure(DimensionDesc(bounds.width, DimensionMode::Max),
 					DimensionDesc(bounds.height, DimensionMode::Max)
 				);
 
@@ -127,7 +127,6 @@ namespace Guider
 						toUpdate.insert(j.component.get());
 					}
 				}
-
 				break;
 			}
 		}
@@ -387,7 +386,7 @@ namespace Guider
 			hh.value = 0;
 			hh.mode = DimensionMode::Min;
 		}
-		std::vector<Component*> toPoke;
+		Vector<Component*> toPoke;
 		toPoke.reserve(toUpdate.size());
 		for (auto i : toUpdate)
 		{
@@ -768,7 +767,7 @@ namespace Guider
 		flags = (flags & ~EdgeSecondMask) | (start ? 0 : EdgeSecondMask);
 	}
 	
-	std::vector<Component*> ConstraintsContainer::Constraint::getDeps() const
+	Vector<Component*> ConstraintsContainer::Constraint::getDeps() const
 	{
 		Vector<Component*> ret;
 
@@ -1045,10 +1044,10 @@ namespace Guider
 		updated.clear();
 		size_t n = clusters.size();
 		//number of references i have
-		std::unordered_map<std::list<Cluster>::iterator, unsigned, ClusterHash> ndeps;
+		HashMap<List<Cluster>::iterator, unsigned, ClusterHash> ndeps;
 
 		//list of elements dependent on me
-		std::unordered_map<std::list<Cluster>::iterator, std::unordered_set<std::list<Cluster>::iterator, ClusterHash>, ClusterHash> clusterDependencies;
+		HashMap<List<Cluster>::iterator, HashSet<List<Cluster>::iterator, ClusterHash>, ClusterHash> clusterDependencies;
 
 		for (auto it = clusters.begin(); it != clusters.end(); ++it)
 		{
@@ -1073,7 +1072,7 @@ namespace Guider
 
 		// Create an queue and enqueue all vertices with 
 		// depth 0 
-		std::queue<std::list<Cluster>::iterator> q;
+		std::queue<List<Cluster>::iterator> q;
 
 		for (auto it = clusters.begin(); it != clusters.end(); ++it)
 		{
@@ -1083,7 +1082,7 @@ namespace Guider
 
 		unsigned cnt = 0;
 
-		std::unordered_set<std::list<Cluster>::iterator, ClusterHash> visited;
+		HashSet<List<Cluster>::iterator, ClusterHash> visited;
 		Vector<Cluster*> ret;
 
 		ret.reserve(n);
@@ -1106,7 +1105,7 @@ namespace Guider
 			return false;
 		}
 
-		std::list<Cluster> tmp;
+		List<Cluster> tmp;
 
 		for (auto i : ret)
 		{
@@ -1362,7 +1361,7 @@ namespace Guider
 			if (i != this)
 			{
 				Rect& bounds = boundaries[i];
-				std::pair<DimensionDesc, DimensionDesc> measures = i->measure(
+				Pair<DimensionDesc, DimensionDesc> measures = i->measure(
 					DimensionDesc(bounds.width, DimensionMode::Max),
 					DimensionDesc(bounds.height, DimensionMode::Max)
 				);
@@ -1392,7 +1391,7 @@ namespace Guider
 				return;
 			messyClusters = false;
 		}
-		std::unordered_map<Component*, Rect> lastBoundaries = boundaries;
+		HashMap<Component*, Rect> lastBoundaries = boundaries;
 
 		Rect bounds;
 		Rect parentBounds;
@@ -1524,7 +1523,7 @@ namespace Guider
 	{
 		Rect pbounds = getBounds().at(Vec2(0.f, 0.f));
 		Rect bounds = boundaries[&c];
-		std::pair<DimensionDesc, DimensionDesc> measurements = c.measure(DimensionDesc(pbounds.width, DimensionMode::Max), DimensionDesc(pbounds.height, DimensionMode::Max));
+		Pair<DimensionDesc, DimensionDesc> measurements = c.measure(DimensionDesc(pbounds.width, DimensionMode::Max), DimensionDesc(pbounds.height, DimensionMode::Max));
 		if (measurements.first.value != bounds.width || measurements.second.value != bounds.height)
 		{
 			invalidLayout = true;
@@ -1555,7 +1554,7 @@ namespace Guider
 		return Container::handleEvent(event);
 	}
 	
-	std::pair<DimensionDesc, DimensionDesc> ConstraintsContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
+	Pair<DimensionDesc, DimensionDesc> ConstraintsContainer::measure(const DimensionDesc& w, const DimensionDesc& h)
 	{
 		Rect bounds = boundaries[this];
 		float ws = bounds.width, hs = bounds.height;
@@ -1643,7 +1642,7 @@ namespace Guider
 						}
 						case Constraint::Type::Chain:
 						{
-							auto toRemove = std::remove_if(constraint->chain.targets.begin(), constraint->chain.targets.end(), [p](const std::pair<Component*, float>& a) {
+							auto toRemove = std::remove_if(constraint->chain.targets.begin(), constraint->chain.targets.end(), [p](const Pair<Component*, float>& a) {
 								return a.first == p;
 								});
 							constraint->chain.targets.erase(toRemove,constraint->chain.targets.end());
@@ -1663,7 +1662,7 @@ namespace Guider
 				for (auto constraint : constraintsToRemove)
 				{
 					//remove dependency reference from cluster
-					std::vector<Component*> deps = constraint->getDeps();
+					Vector<Component*> deps = constraint->getDeps();
 					for (auto dep : deps)
 						cit->second->dependencies.at(dep)--;
 					cit->second->constraints.erase(constraint);
@@ -1677,7 +1676,7 @@ namespace Guider
 				else
 				{
 					//otherwise remove handing dependencies
-					std::vector<Component*> dependenciesToRemove;
+					Vector<Component*> dependenciesToRemove;
 					for (const auto& i : cit->second->dependencies)
 						if (i.second == 0)
 							dependenciesToRemove.push_back(i.first);
@@ -1794,7 +1793,7 @@ namespace Guider
 		return std::unique_ptr<RegularConstraintBuilder>();
 	}
 	
-	std::unique_ptr<ConstraintsContainer::ChainConstraintBuilder> ConstraintsContainer::addChainConstraint(Orientation orientation, const std::vector<Component::Ptr>& targets, bool constOffset)
+	std::unique_ptr<ConstraintsContainer::ChainConstraintBuilder> ConstraintsContainer::addChainConstraint(Orientation orientation, const Vector<Component::Ptr>& targets, bool constOffset)
 	{
 		if (targets.empty())
 			return std::unique_ptr<ChainConstraintBuilder>();
@@ -1803,7 +1802,7 @@ namespace Guider
 
 		c.chain.targets.reserve(targets.size());
 
-		std::unordered_set<std::list<Cluster>::iterator, ClusterHash> clustersToMerge;
+		HashSet<List<Cluster>::iterator, ClusterHash> clustersToMerge;
 
 		for (const auto& target : targets)
 		{
@@ -1930,10 +1929,10 @@ namespace Guider
 			}
 			else
 			{
-				std::unordered_set<Component*> forceRedraw;
+				HashSet<Component*> forceRedraw;
 
-				Vector<std::pair<Rect, Component*>> base;
-				Vector<std::pair<Rect, Component*>> lastBase;
+				Vector<Pair<Rect, Component*>> base;
+				Vector<Pair<Rect, Component*>> lastBase;
 				base.reserve(needsRedraw.size());
 				for (auto i : needsRedraw)
 				{
@@ -2028,7 +2027,7 @@ namespace Guider
 	
 	void ConstraintsContainer::postXmlConstruction(Manager& manager, const XML::Tag& config, const StylingPack& pack)
 	{
-		std::unordered_map<String, Component::Ptr> nameMapping;
+		HashMap<String, Component::Ptr> nameMapping;
 		Manager::handleDefaultArguments(*this, config, pack.style);
 
 		Vector<Component::Ptr> childMapping;

@@ -52,7 +52,7 @@ namespace Guider
 		};
 		Vector<Element> children;
 
-		std::unordered_set<Component*> toUpdate;
+		HashSet<Component*> toUpdate;
 	};
 
 	//TODO: rewrite
@@ -89,7 +89,7 @@ namespace Guider
 		virtual Iterator begin() override;
 		virtual Iterator end() override;
 
-		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
+		Pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
 
 		ListContainer();
 
@@ -105,7 +105,7 @@ namespace Guider
 			Element(Element&&) noexcept = default;
 		};
 
-		using iterator = std::list<Element>::iterator;
+		using iterator = List<Element>::iterator;
 
 		struct IteratorType : public PackedIteratorTemplate<IteratorType, iterator>
 		{
@@ -120,17 +120,17 @@ namespace Guider
 		Orientation orientation;
 		float size, offset, newOffset;
 
-		std::list<Element> children;
-		std::unordered_set<Component*> toUpdate, toOffset;
-		std::unordered_set<Component*> toRedraw;
+		List<Element> children;
+		HashSet<Component*> toUpdate, toOffset;
+		HashSet<Component*> toRedraw;
 
-		std::unordered_map<Component*, iterator> childMapping;
+		HashMap<Component*, iterator> childMapping;
 
-		std::unordered_set<Component*> toMeasure, updated;
+		HashSet<Component*> toMeasure, updated;
 
 		iterator visibleBegin;
 		iterator visibleEnd;
-		std::unordered_set<Component*> visible, beforeVisible;
+		HashSet<Component*> visible, beforeVisible;
 
 		Color backgroundColor;
 
@@ -158,7 +158,7 @@ namespace Guider
 		public:
 			Component* left, * right;
 			float leftOffset, rightOffset;
-			std::vector<std::pair<Component*, float>> targets;
+			Vector<Pair<Component*, float>> targets;
 			float spacing;
 
 			ChainConstraintData() : left(nullptr), right(nullptr), leftOffset(0), rightOffset(0), spacing(0) {}
@@ -239,9 +239,9 @@ namespace Guider
 		class Cluster
 		{
 		public:
-			std::unordered_set<Constraint*> constraints;
-			std::unordered_set<Component*> components;
-			std::unordered_map<Component*, size_t> dependencies;
+			HashSet<Constraint*> constraints;
+			HashSet<Component*> components;
+			HashMap<Component*, size_t> dependencies;
 
 			Cluster() = default;
 			Cluster(Cluster&& t) noexcept : constraints(std::move(t.constraints)), components(std::move(t.components)), dependencies(std::move(t.dependencies)) {}
@@ -250,7 +250,7 @@ namespace Guider
 		class ClusterHash
 		{
 		public:
-			std::size_t operator() (const std::list<Guider::ConstraintsContainer::Cluster>::iterator& it) const
+			std::size_t operator() (const List<Guider::ConstraintsContainer::Cluster>::iterator& it) const
 			{
 				return std::hash<const Guider::ConstraintsContainer::Cluster*>{}(&(*it));
 			}
@@ -260,7 +260,7 @@ namespace Guider
 		{
 		private:
 			Constraint& constraint;
-			std::list<Cluster>::iterator cluster;
+			List<Cluster>::iterator cluster;
 		public:
 			void setSize(float size);
 			void setFlow(float flow);
@@ -279,7 +279,7 @@ namespace Guider
 
 			void applyChanges();
 
-			RegularConstraintBuilder(Constraint& c, std::list<Cluster>::iterator cc) : constraint(c), cluster(cc)
+			RegularConstraintBuilder(Constraint& c, List<Cluster>::iterator cc) : constraint(c), cluster(cc)
 			{
 				if (c.getType() != Constraint::Type::Regular)
 					throw std::logic_error("Wrong constraint type");
@@ -289,7 +289,7 @@ namespace Guider
 		{
 		private:
 			Constraint& constraint;
-			std::list<Cluster>::iterator cluster;
+			List<Cluster>::iterator cluster;
 		public:
 			//TODO: add methods for element sizing/flow
 
@@ -320,7 +320,7 @@ namespace Guider
 			{
 				attachBetween(start, startToStart, offset, end, endToStart, offset);
 			}
-			ChainConstraintBuilder(Constraint& c, std::list<Cluster>::iterator cc) : constraint(c), cluster(cc)
+			ChainConstraintBuilder(Constraint& c, List<Cluster>::iterator cc) : constraint(c), cluster(cc)
 			{
 				if (c.getType() != Constraint::Type::Chain)
 					throw std::logic_error("Wrong constraint type");
@@ -343,7 +343,7 @@ namespace Guider
 
 		virtual bool handleEvent(const Event& event) override;
 
-		std::pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
+		Pair<DimensionDesc, DimensionDesc> measure(const DimensionDesc& w, const DimensionDesc& h) override;
 
 		virtual void removeChild(const Component::Ptr& child) override;
 		virtual void clearChildren() override;
@@ -363,7 +363,7 @@ namespace Guider
 		/// @param targets targets,
 		/// @param constOffset if true, size of target is calculated based on offset from edges, otherwise offset is calculated based on size.
 		/// @return Returns wrapper for created constraint.
-		std::unique_ptr<ChainConstraintBuilder> addChainConstraint(Orientation orientation, const std::vector<Component::Ptr>& targets, bool constOffset);
+		std::unique_ptr<ChainConstraintBuilder> addChainConstraint(Orientation orientation, const Vector<Component::Ptr>& targets, bool constOffset);
 
 		virtual void onMaskDraw(Canvas& canvas) const override;
 		virtual void onDraw(Canvas& canvas) override;
@@ -373,18 +373,18 @@ namespace Guider
 
 		ConstraintsContainer();
 	private:
-		using IteratorType = CommonIteratorTemplate<Vector < std::shared_ptr<Component> >::iterator>;
+		using IteratorType = CommonIteratorTemplate<Vector<Component::Ptr>::iterator>;
 
-		std::vector<Component::Ptr> children;
-		std::unordered_map<Component*, Rect> boundaries;
-		std::list<Constraint> constraints;
-		std::list<Cluster> clusters;
+		Vector<Component::Ptr> children;
+		HashMap<Component*, Rect> boundaries;
+		List<Constraint> constraints;
+		List<Cluster> clusters;
 
-		std::unordered_map<const Component*, std::list<Cluster>::iterator> clusterMapping;
-		std::unordered_set<Component*> updated;
+		HashMap<const Component*, List<Cluster>::iterator> clusterMapping;
+		HashSet<Component*> updated;
 
-		std::unordered_set<Component*> needsRedraw;
-		std::unordered_map<Component*, Rect> drawnLastFrame;
+		HashSet<Component*> needsRedraw;
+		HashMap<Component*, Rect> drawnLastFrame;
 
 		bool firstDraw;
 
