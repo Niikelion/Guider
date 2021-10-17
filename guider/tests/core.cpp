@@ -29,9 +29,45 @@ constexpr const char* sampleFile = "\x3F\x0\x0\x0"\
 
 constexpr size_t sampleFileSize = 63;
 
+bool RecursiveCompare(Guider::Parsing::DataObject& a, Guider::Parsing::DataObject& b)
+{
+	if (a.getType() != b.getType()) return false;
+	std::unordered_map<std::string_view, std::string_view> cache;
+	for (const auto& prop : a.attributesIt())
+	{
+		cache.emplace(prop.first, prop.second);
+	}
+	for (const auto& prop : b.attributesIt())
+	{
+		auto it = cache.find(prop.first);
+		if (it == cache.end()) return false;
+		if (it->second != prop.second) return false;
+		cache.erase(it);
+	}
+	auto ca = a.childrenIt(), cb = b.childrenIt();
+	auto cae = ca.end(), cbe = cb.end();
+	auto cab = ca.begin(), cbb = cb.begin();
+	for (; cab != cae && cbb != cbe; ++cab, ++cbb)
+	{
+		if (!RecursiveCompare(**cab, **cbb))
+			return false;
+	}
+
+	return cab == cae && cbb == cbe;
+}
+
 TEST(Parsing, MutableObject_BasicUnit)
 {
-	//
+	Guider::Parsing::MutableObject obj;
+	obj.setType("template");
+	obj.getProperties().emplace("hide", "true");
+	obj.getProperties().emplace("theme", "default");
+	auto child = obj.getChildren().emplace_back(std::make_shared<Guider::Parsing::MutableObject>());
+	child->setType("div");
+	child->getProperties().emplace("a", "b");
+	auto s = obj.serialize();
+	ASSERT_EQ(s.size(), sampleFileSize);
+	ASSERT_TRUE(memcmp(s.data(), sampleFile, sampleFileSize) == 0);
 }
 
 TEST(Parsing, ObjectView_BasicUnit)
@@ -91,7 +127,9 @@ TEST(Parsing, ObjectViewAndMutableObject_BasicIntegration)
 	Guider::Parsing::MutableObject s;
 	std::shared_ptr<Guider::Parsing::ObjectView> obj;
 	//construct object
+	s.setType("Themes");
 
 	ASSERT_NO_THROW(obj = std::make_shared<Guider::Parsing::ObjectView>(s.serialize()));
 	//compare two objects
+	ASSERT_TRUE(RecursiveCompare(*obj, s));
 }

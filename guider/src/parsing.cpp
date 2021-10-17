@@ -31,7 +31,7 @@ namespace Guider::Parsing
 		uint64_t off = 0xFF;
 		for (size_t i = 0; i < sizeof(uT); ++i)
 		{
-			buff[i] = uint8_t((uX & off) >> (i*8));
+			buff[i] = uint8_t((uX & off) >> (i * 8));
 			off <<= 8;
 		}
 		return ret;
@@ -119,20 +119,20 @@ namespace Guider::Parsing
 		return std::string_view(type);
 	}
 
-	MutableObject::Iterable<std::shared_ptr<DataObject>> MutableObject::childrenIt()
+	MutableObject::Iterable<std::shared_ptr<DataObject>> MutableObject::childrenIt() const
 	{
 		return Iterable<std::shared_ptr<DataObject>>(
 			Iterator<std::shared_ptr<DataObject>>(std::make_unique<VectorIteratorImpl>(children.begin())),
 			Iterator<std::shared_ptr<DataObject>>(std::make_unique<VectorIteratorImpl>(children.end()))
-		);
+			);
 	}
 
-	MutableObject::Iterable<std::pair<const std::string_view, std::string_view>> MutableObject::attributesIt()
+	MutableObject::Iterable<std::pair<const std::string_view, std::string_view>> MutableObject::attributesIt() const
 	{
 		return Iterable<std::pair<const std::string_view, std::string_view>>(
 			Iterator<std::pair<const std::string_view, std::string_view>>(std::make_unique<MapIteratorImpl>(properties.begin())),
 			Iterator<std::pair<const std::string_view, std::string_view>>(std::make_unique<MapIteratorImpl>(properties.end()))
-		);
+			);
 	}
 
 	std::string_view MutableObject::getAttribute(const std::string_view& key) const
@@ -161,7 +161,7 @@ namespace Guider::Parsing
 
 	void MutableObject::serialize(std::string& ret) const
 	{
-		size_t sizeNeeded = 2 * sizeof(uint32_t) + (3 + 2 * properties.size()) * sizeof(uint8_t) + sizeof(uint16_t);
+		size_t sizeNeeded = 2 * sizeof(uint32_t) + (2 + 2 * properties.size() + type.size()) * sizeof(uint8_t) + sizeof(uint16_t);
 		for (const auto& i : properties)
 			sizeNeeded += i.first.size() + i.second.size();
 
@@ -173,11 +173,32 @@ namespace Guider::Parsing
 		}
 		//write values
 		size_t size = ret.size() - off;
-		ParseWrapper p = ParseWrapper(std::string_view(ret));
-		
-		assert(p.canGet<uint32_t>());
+		ParseWrapper p = ParseWrapper(std::string_view(ret).substr(off));
+		assert(p.canGet(size));
+
+		//put size
 		p.put<uint32_t>(size);
-		//if 
+		//put type size
+		p.put<uint8_t>(type.size());
+		//put type name
+		p.put(type.data(), type.size());
+		//put properties count
+		p.put<uint8_t>(properties.size());
+		//put properties
+		for (const auto& i : properties)
+		{
+			//put property sizes
+			p.put<uint8_t>(i.first.size());
+			p.put<uint8_t>(i.second.size());
+			//put property key and value
+			p.put(i.first.data(), i.first.size());
+			p.put(i.second.data(), i.second.size());
+		}
+		//put hash
+		p.put<uint32_t>(0);
+		//put children count
+		p.put<uint16_t>(children.size());
+		//no need to put children, the should be there already
 	}
 
 	std::string MutableObject::serialize() const
@@ -232,22 +253,22 @@ namespace Guider::Parsing
 		return type;
 	}
 
-	ObjectView::Iterable<std::shared_ptr<DataObject>> ObjectView::childrenIt()
+	ObjectView::Iterable<std::shared_ptr<DataObject>> ObjectView::childrenIt() const
 	{
 		return Iterable<std::shared_ptr<DataObject>>(
 			Iterator<std::shared_ptr<DataObject>>(std::make_unique<ViewVectorIteratorImpl>(children.begin())),
 			Iterator<std::shared_ptr<DataObject>>(std::make_unique<ViewVectorIteratorImpl>(children.end()))
-		);
+			);
 	}
 
-	ObjectView::Iterable<std::pair<const std::string_view, std::string_view>> ObjectView::attributesIt()
+	ObjectView::Iterable<std::pair<const std::string_view, std::string_view>> ObjectView::attributesIt() const
 	{
 		using T = std::pair<const std::string_view, std::string_view>;
-		
+
 		auto b = Iterator<T>(std::make_unique<ViewMapIteratorImpl>(properties.begin()));
 		auto e = Iterator<T>(std::make_unique<ViewMapIteratorImpl>(properties.end()));
 
-		return Iterable<T>(std::move(b),std::move(e));
+		return Iterable<T>(std::move(b), std::move(e));
 	}
 
 	std::string_view ObjectView::getAttribute(const std::string_view& key) const
@@ -271,7 +292,7 @@ namespace Guider::Parsing
 	{
 		parse();
 	}
-	
+
 	ObjectView::~ObjectView()
 	{
 		properties.clear();
@@ -356,7 +377,7 @@ namespace Guider::Parsing
 	{
 		return static_cast<const ViewMapIteratorImpl&>(t).iterator == iterator;
 	}
-	std::unique_ptr<ObjectView::IteratorBase<std::pair<const std::string_view,std::string_view>>> ObjectView::ViewMapIteratorImpl::clone() const
+	std::unique_ptr<ObjectView::IteratorBase<std::pair<const std::string_view, std::string_view>>> ObjectView::ViewMapIteratorImpl::clone() const
 	{
 		return std::make_unique<ViewMapIteratorImpl>(iterator);
 	}

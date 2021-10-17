@@ -82,8 +82,8 @@ namespace Guider::Parsing
 
 		virtual std::string_view getType() const abstract;
 
-		virtual Iterable<std::shared_ptr<DataObject>> childrenIt() abstract;
-		virtual Iterable<std::pair<const std::string_view, std::string_view>> attributesIt() abstract;
+		virtual Iterable<std::shared_ptr<DataObject>> childrenIt() const abstract;
+		virtual Iterable<std::pair<const std::string_view, std::string_view>> attributesIt() const abstract;
 
 		virtual std::string_view getAttribute(const std::string_view& key) const abstract;
 	};
@@ -103,8 +103,8 @@ namespace Guider::Parsing
 	public:
 		virtual std::string_view getType() const override;
 
-		virtual Iterable<std::shared_ptr<DataObject>> childrenIt() override;
-		virtual Iterable<std::pair<const std::string_view, std::string_view>> attributesIt() override;
+		virtual Iterable<std::shared_ptr<DataObject>> childrenIt() const override;
+		virtual Iterable<std::pair<const std::string_view, std::string_view>> attributesIt() const override;
 
 		virtual std::string_view getAttribute(const std::string_view& key) const override;
 
@@ -116,10 +116,10 @@ namespace Guider::Parsing
 		std::string serialize() const;
 	private:
 		using Vector = std::vector<std::shared_ptr<MutableObject>>;
-		using VectorIterator = Vector::iterator;
+		using VectorIterator = Vector::const_iterator;
 
 		using Map = std::unordered_map<std::string, std::string>;
-		using MapIterator = Map::iterator;
+		using MapIterator = Map::const_iterator;
 
 		class VectorIteratorImpl : public IteratorBase<std::shared_ptr<DataObject>>
 		{
@@ -157,8 +157,8 @@ namespace Guider::Parsing
 	public:
 		virtual std::string_view getType() const override;
 
-		virtual Iterable<std::shared_ptr<DataObject>> childrenIt() override;
-		virtual Iterable<std::pair<const std::string_view, std::string_view>> attributesIt() override;
+		virtual Iterable<std::shared_ptr<DataObject>> childrenIt() const override;
+		virtual Iterable<std::pair<const std::string_view, std::string_view>> attributesIt() const override;
 
 		virtual std::string_view getAttribute(const std::string_view& key) const override;
 
@@ -171,7 +171,7 @@ namespace Guider::Parsing
 		~ObjectView();
 	private:
 		using ViewMap = std::unordered_map<std::string_view, std::string_view>;
-		using ViewMapIterator = ViewMap::iterator;
+		using ViewMapIterator = ViewMap::const_iterator;
 
 		class ViewMapIteratorImpl : public IteratorBase<std::pair<const std::string_view, std::string_view>>
 		{
@@ -188,7 +188,7 @@ namespace Guider::Parsing
 		};
 
 		using ViewVector = std::vector<std::shared_ptr<ObjectView>>;
-		using ViewVectorIterator = ViewVector::iterator;
+		using ViewVectorIterator = ViewVector::const_iterator;
 
 		class ViewVectorIteratorImpl : public IteratorBase<std::shared_ptr<DataObject>>
 		{
