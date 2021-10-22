@@ -31,6 +31,32 @@ namespace Guider::Parsing
 			virtual ~IteratorBase() = default;
 		};
 
+		template<typename T, typename iterator, typename Base> class IteratorTemplate : public IteratorBase<T>
+		{
+		public:
+			virtual T current() const override
+			{
+				return convert(it);
+			}
+			virtual T convert(const iterator&) const abstract;
+			virtual void next() override
+			{
+				++it;
+			}
+			virtual bool equals(const IteratorBase<T>& t) const override
+			{
+				return static_cast<const IteratorTemplate<T, iterator, Base>&>(t).it == it;
+			}
+			virtual std::unique_ptr<IteratorBase<T>> clone() const override
+			{
+				return std::make_unique<Base>(*static_cast<const Base*>(this));
+			}
+
+			IteratorTemplate(const iterator& i) : it(i) {}
+		private:
+			iterator it;
+		};
+
 		template<typename T> class Iterator : std::forward_iterator_tag
 		{
 		public:
@@ -121,17 +147,12 @@ namespace Guider::Parsing
 		using Map = std::unordered_map<std::string, std::string>;
 		using MapIterator = Map::const_iterator;
 
-		class VectorIteratorImpl : public IteratorBase<std::shared_ptr<DataObject>>
+		class VectorIteratorImpl : public IteratorTemplate<std::shared_ptr<DataObject>, VectorIterator, VectorIteratorImpl>
 		{
 		public:
-			virtual std::shared_ptr<DataObject> current() const override;
-			virtual void next() override;
-			virtual bool equals(const IteratorBase<std::shared_ptr<DataObject>>&) const override;
-			virtual std::unique_ptr<IteratorBase<std::shared_ptr<DataObject>>> clone() const override;
-
-			VectorIteratorImpl(VectorIterator iterator) : iterator(iterator) {}
-		private:
-			VectorIterator iterator;
+			virtual std::shared_ptr<DataObject> convert(const VectorIterator& iterator) const override;
+			
+			using IteratorTemplate::IteratorTemplate;
 		};
 
 		class MapIteratorImpl : public IteratorBase<std::pair<const std::string_view, std::string_view>>

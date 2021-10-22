@@ -7,6 +7,8 @@ set(sources
 	src/manager.cpp
 	src/styles.cpp
 	src/parsing.cpp
+	src/parsing/xml.cpp
+	src/parsing/json.cpp
 	src/components.cpp
 	src/containers.cpp
 )
@@ -16,6 +18,8 @@ set(headers
 	include/guider/base.hpp
 	include/guider/manager.hpp
 	include/guider/parsing.hpp
+	include/guider/parsing/xml.hpp
+	include/guider/parsing/json.hpp
 	include/guider/components.hpp
 	include/guider/containers.hpp
 	include/guider/styles.hpp

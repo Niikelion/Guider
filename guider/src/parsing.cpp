@@ -1,9 +1,40 @@
 #include <guider/parsing.hpp>
 #include <type_traits>
+#include <algorithm>
 #include <cassert>
+#include <numeric>
+#include <array>
 
 namespace Guider::Parsing
 {
+	constexpr std::array<std::uint32_t, 256> generate_crc_table() noexcept
+	{
+		const std::uint_fast32_t rev = 0xEDB88320uL;
+
+		auto table = std::array<std::uint32_t, 256>{};
+		size_t n = 0;
+		for (uint16_t i = 0; i < 256; ++i)
+		{
+			uint_fast32_t s = n++;
+			for (uint8_t i = 0; i < 8; ++i)
+				s = (s >> 1) ^ ((s & 0x1u) ? rev : 0);
+			table[i] = s;
+		}
+		return table;
+	}
+
+	constexpr auto crc_table = generate_crc_table();
+
+	std::uint32_t crc32(const char* src, size_t size)
+	{
+		uint32_t ret = 0xFFFFFFFFuL;
+		for (size_t i = 0; i < size; ++i)
+		{
+			ret = crc_table[(ret ^ static_cast<uint8_t>(src[i])) & 0xFFu] ^ (ret >> 8);
+		}
+		return std::uint32_t{ 0xFFFFFFFFuL } &~ret;
+	}
+
 	template<typename T> struct pure_mem {};
 	template<typename T> using pure_mem_t = typename pure_mem<T>::type;
 	template<> struct pure_mem<uint8_t> { using type = uint8_t; };
@@ -195,7 +226,7 @@ namespace Guider::Parsing
 			p.put(i.second.data(), i.second.size());
 		}
 		//put hash
-		p.put<uint32_t>(0);
+		p.put<uint32_t>(crc32(ret.data() + off, sizeNeeded - sizeof(uint16_t) - sizeof(uint32_t)));
 		//put children count
 		p.put<uint16_t>(children.size());
 		//no need to put children, the should be there already
@@ -208,19 +239,9 @@ namespace Guider::Parsing
 		return ret;
 	}
 
-	std::shared_ptr<DataObject> MutableObject::VectorIteratorImpl::current() const
+	std::shared_ptr<DataObject> MutableObject::VectorIteratorImpl::convert(const VectorIterator& iterator) const
 	{
-		return std::static_pointer_cast<DataObject>(*iterator);
-	}
-
-	void MutableObject::VectorIteratorImpl::next()
-	{
-		++iterator;
-	}
-
-	bool MutableObject::VectorIteratorImpl::equals(const IteratorBase<std::shared_ptr<DataObject>>& t) const
-	{
-		return static_cast<const VectorIteratorImpl&>(t).iterator == iterator;
+		return std::shared_ptr<DataObject>();
 	}
 
 	std::pair<const std::string_view, std::string_view> MutableObject::MapIteratorImpl::current() const
@@ -241,11 +262,6 @@ namespace Guider::Parsing
 	std::unique_ptr<MutableObject::IteratorBase<std::pair<const std::string_view, std::string_view>>> MutableObject::MapIteratorImpl::clone() const
 	{
 		return std::make_unique<MapIteratorImpl>(iterator);
-	}
-
-	std::unique_ptr<MutableObject::IteratorBase<std::shared_ptr<DataObject>>> MutableObject::VectorIteratorImpl::clone() const
-	{
-		return std::make_unique<VectorIteratorImpl>(iterator);
 	}
 
 	std::string_view ObjectView::getType() const
@@ -308,7 +324,8 @@ namespace Guider::Parsing
 	}
 	void ObjectView::parse()
 	{
-		ParseWrapper wrapper(getSourceView());
+		const auto s = getSourceView();
+		ParseWrapper wrapper(s);
 		//header
 		{
 			if (!wrapper.canGet<uint32_t>())
@@ -346,19 +363,20 @@ namespace Guider::Parsing
 		}
 		//hash
 		{
-			//TODO: calc and check hash
-			wrapper.get<uint32_t>();
+			auto hs = s.size() - wrapper.remainingSize();
+			auto hash = wrapper.get<uint32_t>();
+			assert(crc32(s.data(), hs) == hash);
 		}
 		//children
 		{
 			if (!wrapper.canGet<uint16_t>())
 				throw ParseException("Missing child count");
-			uint16_t childCount = wrapper.get<uint16_t>();
+			auto childCount = wrapper.get<uint16_t>();
 			for (uint16_t i = 0; i < childCount; ++i)
 			{
 				if (!wrapper.canGet<uint32_t>())
 					throw ParseException("Corrupted child header");
-				uint32_t childSize = wrapper.peek<uint32_t>();
+				auto childSize = wrapper.peek<uint32_t>();
 				if (!wrapper.canGet(childSize))
 					throw ParseException("Corrupted child data");
 				children.emplace_back(std::make_shared<ObjectView>(wrapper.get(childSize)));

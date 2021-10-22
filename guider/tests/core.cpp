@@ -12,19 +12,19 @@
 * [child]{childCount}
 */
 
-constexpr const char* sampleFile = "\x3F\x0\x0\x0"\
-"\x8template"/*type of parent*/\
-"\x2"/*number of attributes*/\
-	"\x4\x4" "hide" "true"/*first attribute*/\
-	"\x5\x7" "theme" "default"/*second attribute*/\
-"\x0\x0\x0\x0"/*hash*/\
-"\x1\x0"/*number of children*/\
-	"\x13\x0\x0\x0"\
-	"\x3" "div"/*first child*/\
-	"\x1"/*number of attributes*/\
-		"\x1\x1" "a" "b"/*first attribute*/\
-	"\x0\x0\x0\x0"/*hash of child*/\
-	"\x0\x0"/*number of children*/
+constexpr const char* sampleFile = "\x3F\x00\x00\x00"\
+"\x08" "template"/*type of parent*/\
+"\x02"/*number of attributes*/\
+	"\x04\x04" "hide" "true"/*first attribute*/\
+	"\x05\x07" "theme" "default"/*second attribute*/\
+"\x0F\x72\x3D\xD1"/*hash*/\
+"\x01\x00"/*number of children*/\
+	"\x13\x00\x00\x00"\
+	"\x03" "div"/*first child*/\
+	"\x01"/*number of attributes*/\
+		"\x01\x01" "a" "b"/*first attribute*/\
+	"\x88\x87\x84\xF3"/*hash of child*/\
+	"\x00\x00"/*number of children*/
 ;
 
 constexpr size_t sampleFileSize = 63;
@@ -67,7 +67,12 @@ TEST(Parsing, MutableObject_BasicUnit)
 	child->getProperties().emplace("a", "b");
 	auto s = obj.serialize();
 	ASSERT_EQ(s.size(), sampleFileSize);
-	ASSERT_TRUE(memcmp(s.data(), sampleFile, sampleFileSize) == 0);
+
+	for (unsigned i = 0; i < s.size(); ++i)
+	{
+		EXPECT_EQ(s.data()[i], sampleFile[i]) << "at i =" << i;
+	}
+	ASSERT_EQ(memcmp(s.data(),sampleFile, sampleFileSize), 0);
 }
 
 TEST(Parsing, ObjectView_BasicUnit)

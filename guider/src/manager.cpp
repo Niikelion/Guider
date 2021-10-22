@@ -529,7 +529,6 @@ namespace Guider
 				mode = Component::SizingMode::GivenSize;
 			else
 			{
-				//TODO: add str to float conversion
 				value = Styles::strToFloat(str);
 				mode = Component::SizingMode::OwnSize;
 			}

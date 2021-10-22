@@ -238,7 +238,7 @@ namespace Guider
 
 		invalidate();
 	}
-	//TODO: do some smart trick to avoid recalculating everything when erasing elements
+
 	void ListContainer::removeChild(const Component::Ptr& child)
 	{
 		auto it = std::find_if(children.begin(), children.end(), [&child](const Element& e) {
